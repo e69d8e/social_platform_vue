@@ -5,14 +5,17 @@ import { createPinia } from "pinia";
 
 import App from "./App.vue";
 import router from "./router";
+import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 
-import ElementPlus from "element-plus";
+import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 
 const app = createApp(App);
 
-app.use(ElementPlus, { size: "small", zIndex: 3000 });
-
-app.use(createPinia());
+app.use(createPinia().use(piniaPluginPersistedstate));
 app.use(router);
+
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+  app.component(key, component);
+}
 
 app.mount("#app");
