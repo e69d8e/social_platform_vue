@@ -16,7 +16,13 @@ export const getIndexPostsApi = async (params) => {
 //         "http://127.0.0.1:8080/imgs/post/5/4/52827fe6-6a45-4a71-bd21-5bfe5d35d7ae.png"
 //     ]
 // }
-export const postApi = async (data) => {
+export const publicPostApi = async (data) => {
   const res = await request.post("/post", data);
+  return res;
+};
+
+// 获取帖子分类
+export const getPostCategoryApi = async () => {
+  const res = await request.get("/category");
   return res;
 };

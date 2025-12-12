@@ -131,12 +131,7 @@ const toFans = () => {
         <router-view />
       </el-main>
     </el-container>
-    <el-dialog
-      v-model="dialogVisible"
-      title="确认注销？"
-      width="500"
-      :before-close="handleClose"
-    >
+    <el-dialog v-model="dialogVisible" title="确认注销？" width="500">
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false"> 取消 </el-button>

@@ -74,7 +74,9 @@ onUnmounted(() => {
         />
       </el-col>
     </el-row>
-    <div class="fixed-element">+</div>
+    <div class="fixed-element" @click="$router.push('/publicPost')">
+      <el-icon><Plus /></el-icon>
+    </div>
   </div>
 </template>
 
@@ -89,7 +91,7 @@ onUnmounted(() => {
   .fixed-element {
     text-align: center;
     line-height: 80px;
-    font-size: 70px;
+    font-size: 60px;
     width: 80px;
     height: 80px;
     // 半透明
