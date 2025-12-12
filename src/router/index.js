@@ -19,6 +19,16 @@ const router = createRouter({
           name: "search",
           component: () => import("@/views/SearchView.vue"),
         },
+        {
+          path: "/follow",
+          name: "follow",
+          component: () => import("@/views/FollowListVIew.vue"),
+        },
+        {
+          path: "/fans",
+          name: "fans",
+          component: () => import("@/views/FansListView.vue"),
+        },
       ],
     },
     {
@@ -30,6 +40,11 @@ const router = createRouter({
       path: "/my",
       name: "my",
       component: () => import("@/views/MyView.vue"),
+    },
+    {
+      path: "/publicPost",
+      name: "publicPost",
+      component: () => import("@/views/PublicPostView.vue"),
     },
   ],
 });

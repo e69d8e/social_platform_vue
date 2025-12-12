@@ -67,20 +67,41 @@ onUnmounted(() => {
       <el-col class="colItem" v-for="post in posts" :key="post.id" :span="6">
         <PostCard
           class="postCard"
+          :id="post.id"
           :img-url="post.imgUrl"
           :title="post.title"
           :content="post.content"
         />
       </el-col>
     </el-row>
+    <div class="fixed-element">+</div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.colItem {
-  margin-bottom: 20px;
-}
-.postCard:hover {
-  cursor: pointer;
+.home {
+  .colItem {
+    margin-bottom: 20px;
+  }
+  .postCard:hover {
+    cursor: pointer;
+  }
+  .fixed-element {
+    text-align: center;
+    line-height: 80px;
+    font-size: 70px;
+    width: 80px;
+    height: 80px;
+    // 半透明
+    background-color: rgba($color: #409eff, $alpha: 0.6);
+    border-radius: 50%;
+    position: fixed;
+    bottom: 80px; /* 距离顶部 */
+    right: 80px; /* 距离右侧 */
+    z-index: 999; /* 确保在最上层 */
+  }
+  .fixed-element:hover {
+    cursor: pointer;
+  }
 }
 </style>

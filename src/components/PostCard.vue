@@ -1,5 +1,9 @@
 <script setup>
 const props = defineProps({
+  id: {
+    type: String,
+    default: "",
+  },
   title: {
     type: String,
     default: "title",
@@ -46,7 +50,7 @@ const props = defineProps({
     transform: scale(1);
   }
   100% {
-    transform: scale(1.05 );
+    transform: scale(1.05);
   }
 }
 

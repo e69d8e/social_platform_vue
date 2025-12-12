@@ -72,10 +72,8 @@ export const getPostsApi = (data) => {
 };
 
 // 分页查询用户
-export const getUsersApi = (data) => {
-  return request({
-    url: "user/list/user",
-    method: "GET",
-    data,
+export const searchUsersApi = (params) => {
+  return request.get("user/list/user", {
+    params,
   });
 };

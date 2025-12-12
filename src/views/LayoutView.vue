@@ -5,7 +5,7 @@ import { Search } from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
 import { layoutApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
-import { ElButton } from "element-plus";
+const dialogVisible = ref(false);
 const router = useRouter();
 const userStore = useUserStore();
 const logoUrl = "http://127.0.0.1:8080/imgs/logo.png";
@@ -13,9 +13,30 @@ const searchContent = ref("");
 const logout = async () => {
   await userStore.removeInfo();
   const data = await layoutApi();
+  dialogVisible.value = false;
   // eslint-disable-next-line no-undef
   ElMessage.success(data.data.message);
   router.push("/login");
+};
+
+const search = () => {
+  const route = router.resolve({
+    path: "/search",
+    query: {
+      keyword: searchContent.value,
+    },
+  });
+  window.open(route.href, "_blank");
+};
+const toFollow = () => {
+  router.push({
+    path: "/follow",
+  });
+};
+const toFans = () => {
+  router.push({
+    path: "/fans",
+  });
 };
 </script>
 
@@ -32,6 +53,9 @@ const logout = async () => {
                 :src="logoUrl"
               />
               <div class="text">小蓝书</div>
+              <el-icon style="margin-left: 10px; width: 20px"
+                ><HomeFilled
+              /></el-icon>
             </div>
           </el-col>
           <el-col :span="10">
@@ -44,7 +68,7 @@ const logout = async () => {
                 :prefix-icon="Search"
               />
               <el-button
-                @click="$router.push('/search')"
+                @click="search"
                 style="
                   height: 50px;
                   width: 60px;
@@ -68,24 +92,32 @@ const logout = async () => {
               >
             </div>
             <!-- 用户信息 -->
-            <div class="user" @click="$router.push('/my')" v-else>
+            <div class="user" v-else>
               <el-avatar
+                @click="$router.push('/my')"
                 style="height: 50px; width: 50px"
                 :src="userStore.userInfo.avatar"
               />
-              <div class="nickname">{{ userStore.userInfo.nickname }}</div>
+              <div class="box">
+                <div class="nickname" @click="$router.push('/my')">
+                  {{ userStore.userInfo.nickname }}
+                </div>
+                <el-text>{{ userStore.userInfo.count }} 粉丝</el-text>
+              </div>
               <el-button
                 style="height: 50px; width: 60px; margin-left: 10px"
                 type="primary"
+                @click="toFollow"
                 >关注</el-button
               >
               <el-button
                 style="height: 50px; width: 60px; margin-left: 10px"
                 type="primary"
+                @click="toFans"
                 >粉丝</el-button
               >
               <el-button
-                @click="logout"
+                @click="dialogVisible = true"
                 style="height: 50px; margin-left: 10px"
                 type="warning"
                 >注销</el-button
@@ -99,6 +131,19 @@ const logout = async () => {
         <router-view />
       </el-main>
     </el-container>
+    <el-dialog
+      v-model="dialogVisible"
+      title="确认注销？"
+      width="500"
+      :before-close="handleClose"
+    >
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false"> 取消 </el-button>
+          <el-button type="primary" @click="logout"> 确认 </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -132,13 +177,15 @@ const logout = async () => {
       justify-content: flex-end;
       display: flex;
     }
-    .nickname {
+    .box {
       margin: 0px 10px;
-      line-height: 50px;
-      white-space: nowrap; /* 强制文本不换行 */
-      overflow: hidden; /* 隐藏溢出内容 */
-      text-overflow: ellipsis; /* 显示省略号 */
-      width: 70px; /* 需要指定宽度 */
+      .nickname {
+        line-height: 30px;
+        white-space: nowrap; /* 强制文本不换行 */
+        overflow: hidden; /* 隐藏溢出内容 */
+        text-overflow: ellipsis; /* 显示省略号 */
+        width: 70px; /* 需要指定宽度 */
+      }
     }
     .user {
       justify-content: flex-end;

@@ -117,6 +117,8 @@ const submitForm = async (ref) => {
         <el-button type="primary" @click="submitForm(ruleFormRef)">
           确认修改
         </el-button>
+        <!-- /返回上一页 -->
+        <el-button @click="$router.go(-1)">取消修改</el-button>
       </el-form-item>
     </el-form>
   </div>

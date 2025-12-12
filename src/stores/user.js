@@ -13,6 +13,7 @@ export const useUserStore = defineStore(
       nickname: "",
       followPrivate: false,
       fansPrivate: false,
+      count: 0,
     });
     const setInfo = async (newUserInfo) => {
       userInfo.value = newUserInfo;

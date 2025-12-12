@@ -29,6 +29,7 @@ request.interceptors.response.use(
     if (response.data.code !== 1) {
       // eslint-disable-next-line no-undef
       ElMessage.error(response.data.message);
+      return;
     }
     return response;
   },
