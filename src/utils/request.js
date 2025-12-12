@@ -1,6 +1,6 @@
 import axios from "axios";
-import { useRouter } from "vue-router";
-const router = useRouter();
+import { router } from "@/main.js";
+import { useUserStore } from "@/stores/user";
 
 // 创建axios实例
 const request = axios.create({
@@ -36,6 +36,8 @@ request.interceptors.response.use(
     // 超出 2xx 范围的状态码都会触发该函数。
     // 对响应错误做点什么
     if (error.response.status === 401 || error.response.status == 403) {
+      const userStore = useUserStore();
+      userStore.removeInfo();
       // eslint-disable-next-line no-undef
       ElMessage.error("用户未授权");
       router.push("/login");

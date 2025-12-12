@@ -1,36 +1,86 @@
 <script setup>
 import PostCard from "@/components/PostCard.vue";
+import { ref, onMounted, onUnmounted } from "vue";
+import { getIndexPostsApi } from "@/api/postApi";
+// 获取当前时间时间戳
+const timestamp = Date.parse(new Date());
+const params = ref({
+  lastId: timestamp,
+  offset: 0,
+});
+const posts = ref([]);
+onMounted(async () => {
+  await getPosts();
+});
+const getPosts = async () => {
+  const postList = await getIndexPostsApi(params.value);
+  posts.value = [...posts.value, ...postList.data.data.list];
+  params.value.lastId = postList.data.data.minTime;
+  params.value.offset = postList.data.data.offset;
+  console.log(postList.data.data.minTime);
+};
+
+const isLoading = ref(false);
+
+const handleWindowScroll = () => {
+  if (isLoading.value) return;
+
+  // 窗口滚动到底部的判断
+  const scrollTop =
+    document.documentElement.scrollTop || document.body.scrollTop;
+  const clientHeight = document.documentElement.clientHeight;
+  const scrollHeight =
+    document.documentElement.scrollHeight || document.body.scrollHeight;
+
+  const threshold = 50; // 距离底部100px时触发
+
+  if (scrollTop + clientHeight >= scrollHeight - threshold) {
+    loadMore();
+  }
+};
+
+const loadMore = async () => {
+  if (isLoading.value) return;
+
+  isLoading.value = true;
+  try {
+    console.log("加载更多...");
+    // 数据加载逻辑
+    await getPosts();
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener("scroll", handleWindowScroll);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("scroll", handleWindowScroll);
+});
 </script>
 
 <template>
-  <div class="home">
+  <div class="home" v-loading="isLoading">
     <el-row>
-      <el-col :span="6">
+      <el-col class="colItem" v-for="post in posts" :key="post.id" :span="6">
         <PostCard
-          img-url="https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png"
-          title="hello"
-        />
-      </el-col>
-      <el-col :span="6">
-        <PostCard
-          img-url="https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png"
-          title="hello"
-        />
-      </el-col>
-      <el-col :span="6">
-        <PostCard
-          img-url="https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png"
-          title="hello"
-        />
-      </el-col>
-      <el-col :span="6">
-        <PostCard
-          img-url="https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png"
-          title="hello"
+          class="postCard"
+          :img-url="post.imgUrl"
+          :title="post.title"
+          :content="post.content"
         />
       </el-col>
     </el-row>
   </div>
 </template>
 
-<style lang="sass" scoped></style>
+<style lang="scss" scoped>
+.colItem {
+  margin-bottom: 20px;
+}
+.postCard:hover {
+  cursor: pointer;
+}
+</style>

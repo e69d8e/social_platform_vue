@@ -11,6 +11,8 @@ export const useUserStore = defineStore(
       authority: "",
       createTime: "",
       nickname: "",
+      followPrivate: false,
+      fansPrivate: false,
     });
     const setInfo = async (newUserInfo) => {
       userInfo.value = newUserInfo;
