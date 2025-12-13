@@ -44,7 +44,7 @@ const publicPost = async () => {
   loading.value = false;
   // eslint-disable-next-line no-undef
   ElMessage({
-    message: res.data.data.message,
+    message: res.data.message,
     type: "success",
   });
   router.back();

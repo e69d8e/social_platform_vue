@@ -42,8 +42,9 @@ const pageChange = async (pageNum) => {
     <div class="back" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>
-    <el-text size="large" type="primary">关注列表</el-text>
-    <div class="size" style="height: 20px"></div>
+    <div class="text">
+      <el-text size="large" type="primary">关注列表</el-text>
+    </div>
     <el-row>
       <el-col
         class="colItem"
@@ -78,9 +79,9 @@ const pageChange = async (pageNum) => {
 .follow {
   .back {
     cursor: pointer;
-    height: 40px;
   }
-  .colItem {
+  .text {
+    text-align: center;
     margin-bottom: 10px;
   }
   .pagination {

@@ -71,11 +71,13 @@ const unfollow = async () => {
         </div>
         <el-text
           style="display: flex; justify-content: flex-start; cursor: pointer"
+          @click="$router.push(`/fans/${props.id}`)"
+          size="small"
           type="primary"
           >{{ count }} 粉丝</el-text
         >
       </template>
-      <div class="bio">
+      <div class="bio pointer" @click="$router.push(`/user/${props.id}`)">
         {{ props.bio }}
       </div>
     </el-card>
@@ -84,10 +86,10 @@ const unfollow = async () => {
 
 <style lang="scss" scoped>
 .userCard {
+  .pointer {
+    cursor: pointer;
+  }
   .card-header {
-    .pointer {
-      cursor: pointer;
-    }
     display: flex;
     align-items: center;
     line-height: 50px;
@@ -120,12 +122,12 @@ const unfollow = async () => {
     transform: scale(1);
   }
   100% {
-    transform: scale(1.05);
+    transform: scale(1.03);
   }
 }
 @keyframes shrink {
   0% {
-    transform: scale(1.05);
+    transform: scale(1.03);
   }
   100% {
     transform: scale(1);

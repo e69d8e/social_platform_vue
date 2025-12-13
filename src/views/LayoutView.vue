@@ -28,9 +28,15 @@ const search = () => {
   });
   window.open(route.href, "_blank");
 };
-const toFollow = () => {
+
+const myFollowPosts = () => {
   router.push({
-    path: "/follow/" + userStore.userInfo.id,
+    path: "/followPosts",
+  });
+};
+const myPosts = () => {
+  router.push({
+    path: "/postList/" + userStore.userInfo.id,
   });
 };
 const toFans = () => {
@@ -102,21 +108,21 @@ const toFans = () => {
                 <div class="nickname" @click="$router.push('/my')">
                   {{ userStore.userInfo.nickname }}
                 </div>
-                <el-text size="small" type="primary"
+                <el-text @click="toFans" size="small" type="primary"
                   >{{ userStore.userInfo.count }} 粉丝</el-text
                 >
               </div>
               <el-button
                 style="height: 50px; width: 60px; margin-left: 10px"
                 type="success"
-                @click="toFollow"
-                >关注</el-button
+                @click="myPosts"
+                >我的帖子</el-button
               >
               <el-button
                 style="height: 50px; width: 60px; margin-left: 10px"
                 type="primary"
-                @click="toFans"
-                >粉丝</el-button
+                @click="myFollowPosts"
+                >我的关注</el-button
               >
               <el-button
                 @click="dialogVisible = true"

@@ -46,3 +46,11 @@ export const getPostDetailApi = async (id) => {
   const res = await request.get("/post/" + id);
   return res;
 };
+
+// 我关注的帖子
+export const getFollowPostsApi = async (params) => {
+  const res = await request.get("/post/follow/list", {
+    params,
+  });
+  return res;
+};

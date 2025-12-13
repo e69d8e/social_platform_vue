@@ -1,7 +1,7 @@
 <script setup>
 import PostCard from "@/components/PostCard.vue";
 import { ref, onMounted, onUnmounted } from "vue";
-import { getIndexPostsApi } from "@/api/postApi";
+import { getFollowPostsApi } from "@/api/postApi";
 // 获取当前时间时间戳
 const timestamp = Date.parse(new Date());
 const params = ref({
@@ -13,7 +13,7 @@ onMounted(async () => {
   await getPosts();
 });
 const getPosts = async () => {
-  const postList = await getIndexPostsApi(params.value);
+  const postList = await getFollowPostsApi(params.value);
   posts.value = [...posts.value, ...postList.data.data.list];
   params.value.lastId = postList.data.data.minTime;
   params.value.offset = postList.data.data.offset;
@@ -62,7 +62,15 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="home" v-loading="isLoading">
+  <div class="follow" v-loading="isLoading">
+    <div class="back">
+      <el-icon size="large">
+        <ArrowLeft @click="$router.back()" />
+      </el-icon>
+    </div>
+    <div class="text">
+      <el-text size="large" type="primary">我的关注</el-text>
+    </div>
     <el-row>
       <el-col class="colItem" v-for="post in posts" :key="post.id" :span="6">
         <PostCard
@@ -77,32 +85,20 @@ onUnmounted(() => {
         />
       </el-col>
     </el-row>
-    <div class="fixed-element" @click="$router.push('/publicPost')">
-      <el-icon><CirclePlus style="color: #fff" /></el-icon>
-    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.home {
+.follow {
+  .back {
+    cursor: pointer;
+  }
+  .text {
+    text-align: center;
+    margin-bottom: 10px;
+  }
   .colItem {
     margin-bottom: 20px;
-  }
-  .fixed-element {
-    text-align: center;
-    font-size: 60px;
-    width: 60px;
-    height: 60px;
-    background-color: #409eff;
-    border-radius: 50%;
-    position: fixed;
-    bottom: 140px; /* 距离顶部 */
-    right: 180px; /* 距离右侧 */
-    z-index: 999; /* 确保在最上层 */
-  }
-  .fixed-element:hover {
-    cursor: pointer;
-    background-color: rgba($color: #409eff, $alpha: 0.6);
   }
 }
 </style>

@@ -1,20 +1,33 @@
 <script setup>
 import { useUserStore } from "@/stores/user";
-import { ref, reactive } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { updateUserInfoApi } from "@/api/userApi";
 import AuthorityBox from "@/components/AuthorityBox.vue";
 import { ElText } from "element-plus";
+import { getUserInfoApi } from "@/api/userApi";
+import { useRouter } from "vue-router";
+const router = useRouter();
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
 const imageUrl = ref(userInfo.avatar);
-// onMounted(async () => {
-//   await getUserInfoApi();
-// });
+
+const ruleFormRef = ref();
+const ruleForm = reactive({
+  ...userInfo,
+});
+const getUserInfo = async () => {
+  const res = await getUserInfoApi();
+  Object.assign(ruleForm, res.data.data);
+  userStore.setInfo(res.data.data);
+};
+onMounted(async () => {
+  await getUserInfo();
+});
 const newImgUrl = ref("");
 newImgUrl.value = userInfo.avatar;
 const handleAvatarSuccess = (response, uploadFile) => {
   console.log(response.data);
-  newImgUrl.value = response.data.data;
+  newImgUrl.value = response.data;
   imageUrl.value = URL.createObjectURL(uploadFile.raw);
 };
 
@@ -31,10 +44,6 @@ const beforeAvatarUpload = (rawFile) => {
   return true;
 };
 
-const ruleFormRef = ref();
-const ruleForm = reactive({
-  ...userInfo,
-});
 const validateNickname = (rule, value, callback) => {
   if (value.length < 4 || value.length > 16) {
     callback(new Error("用户名长度不能小于 2"));
@@ -50,12 +59,27 @@ const submitForm = async (ref) => {
   await ref.validate(async (valid) => {
     if (valid) {
       ruleForm.avatar = newImgUrl.value;
+      console.log(ruleForm);
       const res = await updateUserInfoApi({
         ...ruleForm,
       });
+      // await getUserInfo();
       // eslint-disable-next-line no-undef
       ElMessage.success(res.data.message);
+    } else {
+      // eslint-disable-next-line no-undef
+      ElMessage.error("请填写正确的信息");
     }
+  });
+};
+const toFollow = () => {
+  router.push({
+    path: "/follow/" + userStore.userInfo.id,
+  });
+};
+const toFans = () => {
+  router.push({
+    path: "/fans/" + userStore.userInfo.id,
   });
 };
 </script>
@@ -81,17 +105,22 @@ const submitForm = async (ref) => {
       <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
     </el-upload>
     <div class="info" v-if="userInfo.authority === 'USER'">
-      <el-text type="success">账号: {{ userInfo.nickname }}</el-text>
+      <el-text type="success">账号: {{ userInfo.username }}</el-text>
     </div>
     <div class="info" v-if="userInfo.authority === 'ADMIN'">
-      <el-text type="danger">账号: {{ userInfo.nickname }}</el-text>
+      <el-text type="danger">账号: {{ userInfo.username }}</el-text>
     </div>
     <div class="info" v-if="userInfo.authority === 'REVIEWER'">
-      <el-text type="primary">账号: {{ userInfo.nickname }}</el-text>
+      <el-text type="primary">账号: {{ userInfo.username }}</el-text>
     </div>
     <AuthorityBox :authority="userInfo.authority" />
     <div style="margin: 10px 0">
-      <el-text type="primary">{{ userInfo.count }} 粉丝</el-text>
+      <el-button @click="toFans()" type="primary"
+        >{{ userInfo.count }} 粉丝</el-button
+      >
+      <el-button style="margin-left: 20px" @click="toFollow()" type="primary"
+        >我的关注</el-button
+      >
     </div>
     <el-form
       ref="ruleFormRef"
@@ -147,6 +176,9 @@ const submitForm = async (ref) => {
   margin: 140px auto;
   width: 400px;
   text-align: center;
+  .pointer {
+    cursor: pointer;
+  }
   .back {
     height: 30px;
     display: flex;

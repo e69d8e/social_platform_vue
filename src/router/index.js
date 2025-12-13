@@ -39,6 +39,11 @@ const router = createRouter({
           name: "postList",
           component: () => import("@/views/PostListView.vue"),
         },
+        {
+          path: "/followPosts",
+          name: "MyFollowPostsView",
+          component: () => import("@/views/MyFollowPostsView.vue"),
+        },
       ],
     },
     {
@@ -55,6 +60,11 @@ const router = createRouter({
       path: "/publicPost",
       name: "publicPost",
       component: () => import("@/views/PublicPostView.vue"),
+    },
+    {
+      path: "/post/:id",
+      name: "post",
+      component: () => import("@/views/PostView.vue"),
     },
   ],
 });

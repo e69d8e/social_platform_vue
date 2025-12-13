@@ -1,6 +1,7 @@
 <script setup>
 import { likeApi } from "@/api/postApi";
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 const props = defineProps({
   id: {
     type: String,
@@ -33,6 +34,7 @@ const props = defineProps({
 });
 const count = ref(props.count);
 const liked = ref(props.liked);
+const router = useRouter();
 const like = async () => {
   if (liked.value) {
     count.value--;
@@ -46,6 +48,11 @@ const like = async () => {
   ElMessage({
     message: res.data.message,
     type: "success",
+  });
+};
+const toPostDetail = () => {
+  router.push({
+    path: "/post/" + props.id,
   });
 };
 </script>
@@ -69,13 +76,19 @@ const like = async () => {
             }}</el-text>
           </div>
         </div>
-        <div class="time">
+        <div class="time pointer" @click="toPostDetail()">
           <el-text type="primary">{{ props.time }}</el-text>
         </div>
       </template>
-      <img :src="props.imgUrl" shadow="hover" style="width: 100%" />
+      <img
+        class="pointer"
+        :src="props.imgUrl"
+        shadow="hover"
+        style="width: 100%"
+        @click="toPostDetail()"
+      />
       <template #footer>
-        <div class="content">
+        <div class="content pointer" @click="toPostDetail()">
           {{ props.content }}
         </div>
       </template>
@@ -85,6 +98,9 @@ const like = async () => {
 
 <style lang="scss" scoped>
 .postcard {
+  .pointer {
+    cursor: pointer;
+  }
   width: 280px;
   .header {
     .star:hover {
@@ -117,12 +133,12 @@ const like = async () => {
     transform: scale(1);
   }
   100% {
-    transform: scale(1.05);
+    transform: scale(1.03);
   }
 }
 @keyframes shrink {
   0% {
-    transform: scale(1.05);
+    transform: scale(1.03);
   }
   100% {
     transform: scale(1);

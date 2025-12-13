@@ -43,8 +43,9 @@ const pageChange = async (pageNum) => {
     <div class="back" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>
-    <el-text size="large" type="primary">粉丝列表</el-text>
-    <div class="size" style="height: 20px"></div>
+    <div class="text">
+      <el-text size="large" type="primary">粉丝列表</el-text>
+    </div>
     <el-row>
       <el-col class="colItem" v-for="user in fansList" :key="user.id" :span="6">
         <UserCard
@@ -74,9 +75,9 @@ const pageChange = async (pageNum) => {
 .fans {
   .back {
     cursor: pointer;
-    height: 40px;
   }
-  .colItem {
+  .text {
+    text-align: center;
     margin-bottom: 10px;
   }
   .pagination {
