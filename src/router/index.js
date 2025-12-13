@@ -20,14 +20,24 @@ const router = createRouter({
           component: () => import("@/views/SearchView.vue"),
         },
         {
-          path: "/follow",
+          path: "/follow/:id",
           name: "follow",
-          component: () => import("@/views/FollowListVIew.vue"),
+          component: () => import("@/views/FollowListView.vue"),
         },
         {
-          path: "/fans",
+          path: "/fans/:id",
           name: "fans",
           component: () => import("@/views/FansListView.vue"),
+        },
+        {
+          path: "/user/:id",
+          name: "user",
+          component: () => import("@/views/UserView.vue"),
+        },
+        {
+          path: "/postList/:id",
+          name: "postList",
+          component: () => import("@/views/PostListView.vue"),
         },
       ],
     },

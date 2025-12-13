@@ -26,3 +26,23 @@ export const getPostCategoryApi = async () => {
   const res = await request.get("/category");
   return res;
 };
+
+// 根据用户id获取帖子
+export const getPostListApi = async (id, params) => {
+  const res = await request.get("/post/user/" + id, {
+    params,
+  });
+  return res;
+};
+
+// 点赞
+export const likeApi = async (id) => {
+  const res = await request.put("/like/" + id);
+  return res;
+};
+
+// 获取帖子详情
+export const getPostDetailApi = async (id) => {
+  const res = await request.get("/post/" + id);
+  return res;
+};

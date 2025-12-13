@@ -76,6 +76,9 @@ const handleClick = async () => {
               :img-url="post.imgUrl"
               :title="post.title"
               :content="post.content"
+              :liked="post.liked"
+              :count="post.count"
+              :time="post.createTime"
             />
           </el-col>
         </el-row>

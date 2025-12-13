@@ -1,13 +1,15 @@
 <script setup>
 import { useUserStore } from "@/stores/user";
-import { ref, onMounted, reactive } from "vue";
-import { getUserInfoApi, updateUserInfoApi } from "@/api/userApi";
+import { ref, reactive } from "vue";
+import { updateUserInfoApi } from "@/api/userApi";
+import AuthorityBox from "@/components/AuthorityBox.vue";
+import { ElText } from "element-plus";
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
 const imageUrl = ref(userInfo.avatar);
-onMounted(async () => {
-  await getUserInfoApi();
-});
+// onMounted(async () => {
+//   await getUserInfoApi();
+// });
 const newImgUrl = ref("");
 newImgUrl.value = userInfo.avatar;
 const handleAvatarSuccess = (response, uploadFile) => {
@@ -65,6 +67,9 @@ const submitForm = async (ref) => {
         src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
       />
     </div> -->
+    <div class="back" @click="$router.back()">
+      <el-icon><ArrowLeft size="large" /></el-icon>
+    </div>
     <el-upload
       class="avatar-uploader"
       action="http://127.0.0.1:8080/api/upload/avatar"
@@ -75,8 +80,18 @@ const submitForm = async (ref) => {
       <img v-if="imageUrl" :src="imageUrl" class="avatar" />
       <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
     </el-upload>
-    <div class="info">
-      <div class="nickname">账号: {{ userInfo.nickname }}</div>
+    <div class="info" v-if="userInfo.authority === 'USER'">
+      <el-text type="success">账号: {{ userInfo.nickname }}</el-text>
+    </div>
+    <div class="info" v-if="userInfo.authority === 'ADMIN'">
+      <el-text type="danger">账号: {{ userInfo.nickname }}</el-text>
+    </div>
+    <div class="info" v-if="userInfo.authority === 'REVIEWER'">
+      <el-text type="primary">账号: {{ userInfo.nickname }}</el-text>
+    </div>
+    <AuthorityBox :authority="userInfo.authority" />
+    <div style="margin: 10px 0">
+      <el-text type="primary">{{ userInfo.count }} 粉丝</el-text>
     </div>
     <el-form
       ref="ruleFormRef"
@@ -94,8 +109,12 @@ const submitForm = async (ref) => {
       <el-form-item label="性别" prop="resource">
         <el-radio-group v-model="ruleForm.gender">
           <el-radio :value="0">未知</el-radio>
-          <el-radio :value="1">男</el-radio>
-          <el-radio :value="2">女</el-radio>
+          <el-radio :value="1"
+            ><el-icon><Male /></el-icon>男</el-radio
+          >
+          <el-radio :value="2"
+            ><el-icon><Female /></el-icon>女</el-radio
+          >
         </el-radio-group>
       </el-form-item>
       <el-form-item label="隐藏我的关注" prop="resource">
@@ -118,7 +137,7 @@ const submitForm = async (ref) => {
           确认修改
         </el-button>
         <!-- /返回上一页 -->
-        <el-button @click="$router.go(-1)">取消修改</el-button>
+        <el-button @click="$router.back()">取消修改</el-button>
       </el-form-item>
     </el-form>
   </div>
@@ -128,6 +147,14 @@ const submitForm = async (ref) => {
   margin: 140px auto;
   width: 400px;
   text-align: center;
+  .back {
+    height: 30px;
+    display: flex;
+    justify-content: flex-start;
+  }
+  .back {
+    cursor: pointer;
+  }
   .avatar {
     width: 100px;
     height: 100px;

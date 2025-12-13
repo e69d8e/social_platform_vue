@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { getPostCategoryApi, publicPostApi } from "@/api/postApi";
+import { useRouter } from "vue-router";
 const fileList = ref([]);
 const dialogImageUrl = ref("");
 const dialogVisible = ref(false);
@@ -9,6 +10,7 @@ const categoryId = ref("");
 const title = ref("");
 const content = ref("");
 const loading = ref(false);
+const router = useRouter();
 
 const handleRemove = (uploadFile, uploadFiles) => {
   console.log(uploadFile, uploadFiles);
@@ -27,12 +29,12 @@ const handlePictureCardPreview = (uploadFile) => {
   dialogVisible.value = true;
 };
 const images = computed(() => {
-  return fileList.value.map((item) => item.url);
+  return fileList.value.map((item) => item.response.data);
 });
 const publicPost = async () => {
   loading.value = true;
   console.log(fileList.value);
-  await publicPostApi({
+  const res = await publicPostApi({
     categoryId: categoryId.value,
     title: title.value,
     content: content.value,
@@ -40,6 +42,12 @@ const publicPost = async () => {
   });
   dialogConfirmVisible.value = false;
   loading.value = false;
+  // eslint-disable-next-line no-undef
+  ElMessage({
+    message: res.data.data.message,
+    type: "success",
+  });
+  router.back();
 };
 </script>
 <template>

@@ -50,8 +50,16 @@ const unfollow = async () => {
     <el-card>
       <template #header>
         <div class="card-header">
-          <el-avatar :src="props.avatar" />
-          <span class="nickname">{{ props.nickname }}</span>
+          <el-avatar
+            class="pointer"
+            @click="$router.push(`/user/${props.id}`)"
+            :src="props.avatar"
+          />
+          <span
+            @click="$router.push(`/user/${props.id}`)"
+            class="nickname pointer"
+            >{{ props.nickname }}</span
+          >
           <el-button
             @click="follow"
             v-if="!followed"
@@ -61,9 +69,15 @@ const unfollow = async () => {
           >
           <el-button @click="unfollow" v-else class="follow">已关注</el-button>
         </div>
-        <div class="count">{{ count }} 粉丝</div>
+        <el-text
+          style="display: flex; justify-content: flex-start; cursor: pointer"
+          type="primary"
+          >{{ count }} 粉丝</el-text
+        >
       </template>
-      {{ props.bio }}
+      <div class="bio">
+        {{ props.bio }}
+      </div>
     </el-card>
   </div>
 </template>
@@ -71,6 +85,9 @@ const unfollow = async () => {
 <style lang="scss" scoped>
 .userCard {
   .card-header {
+    .pointer {
+      cursor: pointer;
+    }
     display: flex;
     align-items: center;
     line-height: 50px;
@@ -81,11 +98,21 @@ const unfollow = async () => {
     // 限制显示一行内容
   }
   .nickname {
+    text-align: left;
+
     white-space: 1; /* 强制文本不换行 */
     overflow: hidden; /* 隐藏溢出内容 */
     text-overflow: ellipsis; /* 显示省略号 */
     width: 50%; /* 需要指定宽度 */
     margin-left: 10px;
+  }
+  .bio {
+    text-align: left;
+    // 限制显示一行内容
+    white-space: nowrap; /* 强制文本不换行 */
+    overflow: hidden; /* 隐藏溢出内容 */
+    text-overflow: ellipsis; /* 显示省略号 */
+    width: 100%; /* 需要指定宽度 */
   }
 }
 @keyframes grow {
@@ -96,10 +123,20 @@ const unfollow = async () => {
     transform: scale(1.05);
   }
 }
-
+@keyframes shrink {
+  0% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
 .userCard:hover {
-  cursor: pointer;
   animation: grow 0.5s ease-in-out;
+  animation-fill-mode: forwards; /* 保持最后状态 */
+}
+.userCard:not(:hover) {
+  animation: shrink 0.5s ease-in-out;
   animation-fill-mode: forwards; /* 保持最后状态 */
 }
 </style>

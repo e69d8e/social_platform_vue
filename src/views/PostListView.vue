@@ -1,67 +1,50 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { getFollowListApi, getUserFollowListApi } from "@/api/followApi";
 import { useRoute } from "vue-router";
-import { useUserStore } from "@/stores/user";
+import { getPostListApi } from "@/api/postApi";
+import PostCard from "@/components/PostCard.vue";
 const route = useRoute();
-const userStore = useUserStore();
-const followList = ref([]);
+const postList = ref([]);
 const pageNum = ref(1);
-const pageSize = ref(8);
+const pageSize = ref(10);
 const total = ref(0);
-const getFollowList = async () => {
-  if (route.params.id === userStore.userInfo.id) {
-    const res = await getFollowListApi({
-      pageNum: pageNum.value,
-      pageSize: pageSize.value,
-    });
-    followList.value = res.data.data;
-    total.value = res.data.total;
-  } else {
-    const res = await getUserFollowListApi(
-      {
-        pageNum: pageNum.value,
-        pageSize: pageSize.value,
-      },
-      route.params.id,
-    );
-    followList.value = res.data.data;
-    total.value = res.data.total;
-  }
+const getPostList = async () => {
+  const res = await getPostListApi(route.params.id, {
+    pageNum: pageNum.value,
+    pageSize: pageSize.value,
+  });
+  postList.value = res.data.data;
+  total.value = res.data.total;
 };
 onMounted(async () => {
-  await getFollowList();
+  await getPostList();
 });
 const pageChange = async (pageNum) => {
   pageNum.value = pageNum;
-  await getFollowList();
+  await getPostList();
 };
 </script>
 <template>
-  <div class="follow">
+  <div class="post-list">
     <div class="back" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>
-    <el-text size="large" type="primary">关注列表</el-text>
+    <el-text size="large" type="primary">帖子列表</el-text>
     <div class="size" style="height: 20px"></div>
     <el-row>
-      <el-col
-        class="colItem"
-        v-for="user in followList"
-        :key="user.id"
-        :span="6"
-      >
-        <UserCard
-          class="postCard"
-          :id="user.id"
-          :avatar="user.avatar"
-          :nickname="user.nickname"
-          :bio="user.bio"
-          :followed="user.followed"
-          :count="user.count"
+      <el-col class="colItem" v-for="post in postList" :key="post.id" :span="6">
+        <PostCard
+          :id="post.id"
+          :img-url="post.imgUrl"
+          :title="post.title"
+          :content="post.content"
+          :liked="post.liked"
+          :count="post.count"
+          :time="post.createTime"
         />
       </el-col>
     </el-row>
+
     <div class="pagination">
       <el-pagination
         @current-change="pageChange"
@@ -75,7 +58,7 @@ const pageChange = async (pageNum) => {
   </div>
 </template>
 <style lang="scss" scoped>
-.follow {
+.post-list {
   .back {
     cursor: pointer;
     height: 40px;
