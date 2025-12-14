@@ -1,10 +1,17 @@
 <script setup>
 const logoUrl = "http://localhost:8080/imgs/logo.png";
-import { loginApi, registerApi, getUserInfoApi } from "@/api/userApi";
+import {
+  loginApi,
+  registerApi,
+  getUserInfoApi,
+  getSignInDaysApi,
+} from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useSignStore } from "@/stores/sign";
 const router = useRouter();
+const signStore = useSignStore();
 const ruleFormRef = ref();
 const ruleForm = ref({
   username: "",
@@ -68,11 +75,19 @@ const submitForm = (formEl) => {
           ruleForm.value.username,
           ruleForm.value.password,
         );
+        if (success.data.code !== 1) {
+          // eslint-disable-next-line no-undef
+          ElMessage.error(success.data.message);
+          return;
+        }
         // eslint-disable-next-line no-undef
         ElMessage.success(success.data.message);
         // 获取用户信息
-        const userinfo = await getUserInfoApi();
-        userStore.setInfo(userinfo.data.data);
+        const userInfo = await getUserInfoApi();
+        userStore.setInfo(userInfo.data.data);
+        // 获取签到天数
+        const res = await getSignInDaysApi();
+        signStore.setSignDay(res.data.data);
         // 跳转
         router.push("/");
       } else {

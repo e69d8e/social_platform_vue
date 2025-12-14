@@ -3,8 +3,10 @@ import { ref } from "vue";
 import { RouterView } from "vue-router";
 import { Search } from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
-import { layoutApi } from "@/api/userApi";
+import { layoutApi, signInApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
+import { useSignStore } from "@/stores/sign";
+const signStore = useSignStore();
 const dialogVisible = ref(false);
 const router = useRouter();
 const userStore = useUserStore();
@@ -44,6 +46,22 @@ const toFans = () => {
     path: "/fans/" + userStore.userInfo.id,
   });
 };
+const sign = async () => {
+  const res = await signInApi();
+  if (res.data.code === 1) {
+    if (signStore.signDay < res.data.data) {
+      // eslint-disable-next-line no-undef
+      ElMessage.success("签到成功");
+    } else {
+      // eslint-disable-next-line no-undef
+      ElMessage.info("今天已经签到过了");
+    }
+    signStore.signDay = res.data.data;
+  } else {
+    // eslint-disable-next-line no-undef
+    ElMessage.error(res.data.message);
+  }
+};
 </script>
 
 <template>
@@ -62,6 +80,10 @@ const toFans = () => {
               <el-icon style="margin-left: 10px; width: 20px"
                 ><HomeFilled
               /></el-icon>
+            </div>
+            <div class="sign" v-if="userStore.userInfo.username" @click="sign">
+              <el-tag>点击签到</el-tag>
+              <el-tag>本月已经连续签到{{ signStore.signDay }}天</el-tag>
             </div>
           </el-col>
           <el-col :span="10">
@@ -89,7 +111,7 @@ const toFans = () => {
           </el-col>
           <el-col :span="8">
             <!-- 登录按钮 -->
-            <div class="lgoin" v-if="!userStore.userInfo.username">
+            <div class="login" v-if="!userStore.userInfo.username">
               <el-button
                 @click="$router.push('/login')"
                 style="height: 50px"
@@ -167,6 +189,10 @@ const toFans = () => {
         text-align: center;
       }
     }
+    .sign {
+      margin-left: 10px;
+      cursor: pointer;
+    }
     .logo:hover {
       cursor: pointer;
     }
@@ -176,7 +202,7 @@ const toFans = () => {
         flex: 1;
       }
     }
-    .lgoin {
+    .login {
       justify-content: flex-end;
       display: flex;
     }

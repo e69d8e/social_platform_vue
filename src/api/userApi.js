@@ -62,10 +62,18 @@ export const signInApi = () => {
   });
 };
 
+// 获取签到天数
+export const getSignInDaysApi = () => {
+  return request({
+    url: "/user/sign",
+    method: "GET",
+  });
+};
+
 // 分页查询帖子
 export const getPostsApi = (data) => {
   return request({
-    url: "user/list/post",
+    url: "/user/list/post",
     method: "GET",
     data,
   });
@@ -73,7 +81,7 @@ export const getPostsApi = (data) => {
 
 // 分页查询用户
 export const searchUsersApi = (params) => {
-  return request.get("user/list/user", {
+  return request.get("/user/list/user", {
     params,
   });
 };

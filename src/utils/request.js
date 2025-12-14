@@ -39,10 +39,10 @@ request.interceptors.response.use(
     if (error.response.status === 401 || error.response.status == 403) {
       const userStore = useUserStore();
       userStore.removeInfo();
-      // eslint-disable-next-line no-undef
-      ElMessage.error("用户未授权");
       router.push("/login");
     }
+    // eslint-disable-next-line no-undef
+    ElMessage.error(error.response.data.message);
     return Promise.reject(error);
   },
 );
