@@ -31,17 +31,21 @@ const followed = ref(props.followed);
 const count = ref(props.count);
 const follow = async () => {
   const res = await followUserApi(props.id);
-  // eslint-disable-next-line no-undef
-  ElMessage.success(res.data.message);
-  followed.value = true;
-  count.value++;
+  if (res.data.code === 1) {
+    // eslint-disable-next-line no-undef
+    ElMessage.success(res.data.message);
+    followed.value = true;
+    count.value++;
+  }
 };
 const unfollow = async () => {
   const res = await unfollowUserApi(props.id);
-  // eslint-disable-next-line no-undef
-  ElMessage.success(res.data.message);
-  followed.value = false;
-  count.value--;
+  if (res.data.code === 1) {
+    // eslint-disable-next-line no-undef
+    ElMessage.success(res.data.message);
+    followed.value = false;
+    count.value--;
+  }
 };
 </script>
 

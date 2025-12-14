@@ -1,10 +1,14 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { getPostDetailApi } from "@/api/postApi";
-import { useRoute } from "vue-router";
-import { likeApi } from "@/api/postApi";
+import { useRoute, useRouter } from "vue-router";
+import { likeApi, deletePostApi } from "@/api/postApi";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
+import { useUserStore } from "@/stores/user";
+import { banPostApi } from "@/api/reviewerApi";
+const userStore = useUserStore();
 const route = useRoute();
+const router = useRouter();
 const post = ref({
   id: "",
   title: "标题",
@@ -19,57 +23,95 @@ const post = ref({
   avatar: "",
   followed: false,
 });
+const dialogVisible = ref(false);
 const getPost = async (id) => {
   const res = await getPostDetailApi(id);
   post.value = res.data.data;
-  followed.value = post.value.followed;
-  liked.value = post.value.liked;
-  count.value = post.value.count;
 };
 onMounted(async () => {
   await getPost(route.params.id);
   console.log(post.value);
 });
-const followed = ref(false);
-const liked = ref(false);
-const count = ref(0);
 const like = async () => {
-  await likeApi(post.value.id);
-  liked.value = true;
-  count.value++;
-  // eslint-disable-next-line no-undef
-  ElMessage({
-    message: "点赞成功",
-    type: "success",
-  });
+  const res = await likeApi(post.value.id);
+
+  if (res.data.code === 1) {
+    post.value.liked = true;
+    post.value.count++;
+    // eslint-disable-next-line no-undef
+    ElMessage({
+      message: "点赞成功",
+      type: "success",
+    });
+  }
 };
 const unLike = async () => {
-  await likeApi(post.value.id);
-  liked.value = false;
-  count.value--;
-  // eslint-disable-next-line no-undef
-  ElMessage({
-    message: "取消成功",
-    type: "success",
-  });
+  const res = await likeApi(post.value.id);
+
+  if (res.data.code === 1) {
+    post.value.liked = false;
+    post.value.count--;
+    // eslint-disable-next-line no-undef
+    ElMessage({
+      message: "取消成功",
+      type: "success",
+    });
+  }
 };
 const follow = async () => {
-  await followUserApi(post.value.userId);
-  followed.value = true;
-  // eslint-disable-next-line no-undef
-  ElMessage({
-    message: "关注成功",
-    type: "success",
-  });
+  if (userStore.userInfo.id === post.value.userId) {
+    // eslint-disable-next-line no-undef
+    ElMessage({
+      message: "不能关注自己",
+      type: "warning",
+    });
+    return;
+  }
+  const res = await followUserApi(post.value.userId);
+  post.value.followed = true;
+
+  if (res.data.code === 1) {
+    // eslint-disable-next-line no-undef
+    ElMessage({
+      message: res.data.message,
+      type: "success",
+    });
+  }
 };
 const unFollow = async () => {
-  await unfollowUserApi(post.value.userId);
-  followed.value = false;
-  // eslint-disable-next-line no-undef
-  ElMessage({
-    message: "取消成功",
-    type: "success",
-  });
+  const res = await unfollowUserApi(post.value.userId);
+  post.value.followed = false;
+
+  if (res.data.code === 1) {
+    // eslint-disable-next-line no-undef
+    ElMessage({
+      message: res.data.message,
+      type: "success",
+    });
+  }
+};
+const deletePost = async () => {
+  const res = await deletePostApi(post.value.id);
+  if (res.data.code === 1) {
+    // eslint-disable-next-line no-undef
+    ElMessage({
+      message: res.data.message,
+      type: "success",
+    });
+  }
+  dialogVisible.value = false;
+  router.back();
+};
+const banPost = async () => {
+  const res = await banPostApi(post.value.id);
+  if (res.data.code === 1) {
+    // eslint-disable-next-line no-undef
+    ElMessage({
+      message: res.data.message,
+      type: "success",
+    });
+  }
+  router.back();
 };
 </script>
 
@@ -92,19 +134,41 @@ const unFollow = async () => {
         class="nickname pointer"
         >{{ post.nickname }}</el-text
       >
-      <el-button @click="follow" type="primary" v-if="!followed"
+      <el-button @click="follow" type="primary" v-if="!post.followed"
         >关注</el-button
       >
       <el-button @click="unFollow" v-else>已关注</el-button>
+      <el-icon
+        v-if="userStore.userInfo.id === post.userId"
+        @click="dialogVisible = true"
+        class="icon pointer"
+        ><Delete
+      /></el-icon>
+      <el-popconfirm
+        class="box-item"
+        title="确定封禁/解封该文章吗？"
+        placement="right-start"
+        @confirm="banPost"
+      >
+        <template #reference>
+          <el-icon
+            v-if="userStore.userInfo.authority === 'REVIEWER'"
+            class="icon pointer"
+            ><RemoveFilled
+          /></el-icon>
+        </template>
+      </el-popconfirm>
     </div>
     <div class="other">
       <el-text type="primary" class="time">
         {{ post.createTime }}
       </el-text>
       <div class="like">
-        <el-icon @click="like" size="large" v-if="!liked"><Star /></el-icon>
+        <el-icon @click="like" size="large" v-if="!post.liked"
+          ><Star
+        /></el-icon>
         <el-icon @click="unLike" size="large" v-else><StarFilled /></el-icon>
-        <el-text class="text" type="primary">{{ count }} 赞</el-text>
+        <el-text class="text" type="primary">{{ post.count }} 赞</el-text>
       </div>
       <div class="category">
         <el-tag>{{ post.category }}</el-tag>
@@ -122,6 +186,19 @@ const unFollow = async () => {
     <div class="content">
       {{ post.content }}
     </div>
+    <el-dialog
+      v-model="dialogVisible"
+      title="确认删除?"
+      width="500"
+      :before-close="handleClose"
+    >
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="deletePost"> 确认 </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -141,6 +218,14 @@ const unFollow = async () => {
     display: flex;
     .nickname {
       margin: 0 20px 10px;
+    }
+    .icon {
+      margin-left: 20px;
+      font-size: 32px;
+      color: red;
+    }
+    .icon:hover {
+      color: #ff9999;
     }
   }
   .other {

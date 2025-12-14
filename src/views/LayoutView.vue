@@ -152,7 +152,7 @@ const toFans = () => {
 
 <style scoped>
 .layout {
-  padding: 40px 180px;
+  padding: 30px 180px;
   .header {
     /* background-color: orange; */
     height: 100px;

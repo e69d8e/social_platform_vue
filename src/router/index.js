@@ -44,6 +44,11 @@ const router = createRouter({
           name: "MyFollowPostsView",
           component: () => import("@/views/MyFollowPostsView.vue"),
         },
+        {
+          path: "/category/:id",
+          name: "category",
+          component: () => import("@/views/CategoryPostsView.vue"),
+        },
       ],
     },
     {
@@ -65,6 +70,16 @@ const router = createRouter({
       path: "/post/:id",
       name: "post",
       component: () => import("@/views/PostView.vue"),
+    },
+    {
+      path: "/banPosts",
+      name: "banPosts",
+      component: () => import("@/views/BanPostListView.vue"),
+    },
+    {
+      path: "/banUsers",
+      name: "banUsers",
+      component: () => import("@/views/BanUserListView.vue"),
     },
   ],
 });

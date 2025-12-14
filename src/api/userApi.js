@@ -46,7 +46,7 @@ export const updateUserInfoApi = (data) => {
 };
 
 // 修改密码
-export const updatePasswordApi = ({ password }) => {
+export const updatePasswordApi = (password) => {
   return request({
     url: "/user/password",
     method: "PUT",

@@ -14,7 +14,7 @@ const props = defineProps({
     <el-text v-if="props.authority === 'USER'" type="success">
       <el-icon><Avatar /></el-icon>用户
     </el-text>
-    <el-text v-if="props.authority === 'VIEWER'" type="primary">
+    <el-text v-if="props.authority === 'REVIEWER'" type="primary">
       <el-icon><Notebook /></el-icon>审核
     </el-text>
   </div>

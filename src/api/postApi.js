@@ -54,3 +54,9 @@ export const getFollowPostsApi = async (params) => {
   });
   return res;
 };
+
+// 删除帖子
+export const deletePostApi = async (id) => {
+  const res = await request.delete("/post/" + id);
+  return res;
+};

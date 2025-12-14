@@ -1,7 +1,7 @@
 <script setup>
 import { useUserStore } from "@/stores/user";
 import { ref, reactive, onMounted } from "vue";
-import { updateUserInfoApi } from "@/api/userApi";
+import { updateUserInfoApi, updatePasswordApi } from "@/api/userApi";
 import AuthorityBox from "@/components/AuthorityBox.vue";
 import { ElText } from "element-plus";
 import { getUserInfoApi } from "@/api/userApi";
@@ -10,7 +10,7 @@ const router = useRouter();
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
 const imageUrl = ref(userInfo.avatar);
-
+const dialogFormVisible = ref(false);
 const ruleFormRef = ref();
 const ruleForm = reactive({
   ...userInfo,
@@ -82,15 +82,30 @@ const toFans = () => {
     path: "/fans/" + userStore.userInfo.id,
   });
 };
+const toBanPosts = () => {
+  router.push({
+    path: "/banPosts",
+  });
+};
+const toBanUsers = () => {
+  router.push({
+    path: "/banUsers",
+  });
+};
+const form = reactive({
+  password: "",
+});
+const changePassword = async () => {
+  const res = await updatePasswordApi(form.password);
+  if (res.data.code === 1) {
+    // eslint-disable-next-line no-undef
+    ElMessage.success(res.data.message);
+  }
+  dialogFormVisible.value = false;
+};
 </script>
 <template>
   <div class="my">
-    <!-- <div class="avatar">
-      <el-avatar
-        style="width: 80px; height: 80px"
-        src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
-      />
-    </div> -->
     <div class="back" @click="$router.back()">
       <el-icon><ArrowLeft size="large" /></el-icon>
     </div>
@@ -121,6 +136,23 @@ const toFans = () => {
       <el-button style="margin-left: 20px" @click="toFollow()" type="primary"
         >我的关注</el-button
       >
+      <el-button
+        v-if="userInfo.authority === 'REVIEWER'"
+        style="margin-left: 20px"
+        @click="toBanPosts"
+        type="primary"
+        >我的封禁</el-button
+      >
+      <el-button
+        v-if="userInfo.authority === 'ADMIN'"
+        style="margin-left: 20px"
+        @click="toBanUsers"
+        type="primary"
+        >我的封禁</el-button
+      >
+    </div>
+    <div class="password">
+      <el-button @click="dialogFormVisible = true">修改密码</el-button>
     </div>
     <el-form
       ref="ruleFormRef"
@@ -169,6 +201,24 @@ const toFans = () => {
         <el-button @click="$router.back()">取消修改</el-button>
       </el-form-item>
     </el-form>
+
+    <el-dialog v-model="dialogFormVisible" title="修改密码" width="500">
+      <el-form :model="form">
+        <el-form-item label="密码">
+          <el-input
+            type="password"
+            v-model="form.password"
+            autocomplete="off"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogFormVisible = false">取消</el-button>
+          <el-button type="primary" @click="changePassword"> 确认 </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 <style lang="scss" scoped>

@@ -2,6 +2,7 @@
 import PostCard from "@/components/PostCard.vue";
 import { ref, onMounted, onUnmounted } from "vue";
 import { getIndexPostsApi } from "@/api/postApi";
+import CategoryBox from "@/components/CategoryBox.vue";
 // 获取当前时间时间戳
 const timestamp = Date.parse(new Date());
 const params = ref({
@@ -63,6 +64,9 @@ onUnmounted(() => {
 
 <template>
   <div class="home" v-loading="isLoading">
+    <div class="category">
+      <CategoryBox />
+    </div>
     <el-row>
       <el-col class="colItem" v-for="post in posts" :key="post.id" :span="6">
         <PostCard
@@ -85,6 +89,9 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .home {
+  .category {
+    padding:0 20px;
+  }
   .colItem {
     margin-bottom: 20px;
   }
