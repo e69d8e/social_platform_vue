@@ -31,7 +31,7 @@ const validateUsername = (rule, value, callback) => {
 const validatePassword = (rule, value, callback) => {
   if (value === "") return callback(new Error("密码不能为空"));
   if (value.length < 6 || value.length > 16) {
-    callback(new Error("密码格式错误"));
+    callback(new Error("密码应该为6-16位字符或-_"));
   } else {
     callback();
   }
@@ -52,49 +52,54 @@ const rules = reactive({
 const submitForm = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
-    loading.value = true;
     if (valid) {
       if (!isCheck.value) {
         // eslint-disable-next-line no-undef
         ElMessage.error("请勾选用户协议");
         return;
       }
-      // 去掉前后空格
-      ruleForm.value.username = ruleForm.value.username.trim();
-      ruleForm.value.password = ruleForm.value.password.trim();
-      console.log("提交");
-      if (isLogin.value) {
-        // 登录
-        const success = await loginApi(
-          ruleForm.value.username,
-          ruleForm.value.password,
-        );
-        if (success.data.code !== 1) {
+      try {
+        // 去掉前后空格
+        ruleForm.value.username = ruleForm.value.username.trim();
+        ruleForm.value.password = ruleForm.value.password.trim();
+        if (isLogin.value) {
+          loading.value = true;
+          // 登录
+          const res = await loginApi(
+            ruleForm.value.username,
+            ruleForm.value.password,
+          );
+          if (res.data.code !== 1) {
+            loading.value = false;
+            // eslint-disable-next-line no-undef
+            ElMessage.error(res.data.message);
+            return;
+          }
           // eslint-disable-next-line no-undef
-          ElMessage.error(success.data.message);
-          return;
+          ElMessage.success(res.data.message);
+          // 获取用户信息
+          const userInfo = await getUserInfoApi();
+          userStore.setInfo(userInfo.data.data);
+          // 获取签到天数
+          const data = await getSignInDaysApi();
+          signStore.setSignDay(data.data.data);
+          // 跳转
+          router.push("/");
+        } else {
+          // 注册
+          const res = await registerApi(ruleForm.value);
+          // eslint-disable-next-line no-undef
+          ElMessage.success(res.data.message);
+          isLogin.value = true;
         }
-        // eslint-disable-next-line no-undef
-        ElMessage.success(success.data.message);
-        // 获取用户信息
-        const userInfo = await getUserInfoApi();
-        userStore.setInfo(userInfo.data.data);
-        // 获取签到天数
-        const res = await getSignInDaysApi();
-        signStore.setSignDay(res.data.data);
-        // 跳转
-        router.push("/");
-      } else {
-        // 注册
-        const success = await registerApi(ruleForm.value);
-        // eslint-disable-next-line no-undef
-        ElMessage.success(success.data.message);
-        isLogin.value = true;
+      } catch (error) {
+        console.log(error);
+      } finally {
+        loading.value = false;
       }
     } else {
-      console.log("校验失败");
+      console.log("请检查输入");
     }
-    loading.value = false;
   });
 };
 const toLogin = () => {

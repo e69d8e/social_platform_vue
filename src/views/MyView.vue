@@ -44,7 +44,6 @@ const beforeAvatarUpload = (rawFile) => {
   }
   return true;
 };
-
 const validateNickname = (rule, value, callback) => {
   if (value.length < 4 || value.length > 16) {
     callback(new Error("用户名长度不能小于 2"));
@@ -90,23 +89,68 @@ const toBanPosts = () => {
     path: "/banPosts",
   });
 };
+const passwordFormRef = ref();
+
+const passwordForm = ref({
+  password: "",
+  confirmPassword: "",
+});
+const validatePassword = (rule, value, callback) => {
+  if (value === "") return callback(new Error("密码不能为空"));
+  if (value.length < 6 || value.length > 16) {
+    callback(new Error("密码应该为6-16位字符或-_"));
+  } else {
+    callback();
+  }
+};
+const validateConfirmPassword = (rule, value, callback) => {
+  if (value === "") return callback(new Error("请输入确认密码"));
+  if (value !== passwordForm.value.password) {
+    callback(new Error("两次输入的密码不一致"));
+  } else {
+    callback();
+  }
+};
+const passwordRules = reactive({
+  password: [{ validator: validatePassword, trigger: "blur" }],
+  confirmPassword: [{ validator: validateConfirmPassword, trigger: "blur" }],
+});
 const toBanUsers = () => {
   router.push({
     path: "/banUsers",
   });
 };
-const form = reactive({
-  password: "",
-});
-const changePassword = async () => {
-  loading.value = true;
-  const res = await updatePasswordApi(form.password);
-  if (res.data.code === 1) {
-    // eslint-disable-next-line no-undef
-    ElMessage.success(res.data.message);
-  }
-  dialogFormVisible.value = false;
-  loading.value = false;
+
+const changePassword = (formEl) => {
+  if (!formEl) return;
+  formEl.validate(async (valid) => {
+    if (valid) {
+      try {
+        loading.value = true;
+        const res = await updatePasswordApi(passwordForm.value.password);
+        passwordForm.value = {
+          password: "",
+          confirmPassword: "",
+        };
+        if (res.data.code !== 1) {
+          loading.value = false;
+          // eslint-disable-next-line no-undef
+          ElMessage.error(res.data.message);
+          return;
+        }
+        // eslint-disable-next-line no-undef
+        ElMessage.success(res.data.message);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        loading.value = false;
+        dialogFormVisible.value = false;
+      }
+    } else {
+      // eslint-disable-next-line no-undef
+      ElMessage.error("请检查输入");
+    }
+  });
 };
 </script>
 <template>
@@ -208,21 +252,40 @@ const changePassword = async () => {
     </el-form>
 
     <el-dialog v-model="dialogFormVisible" title="修改密码" width="500">
-      <el-form :model="form">
-        <el-form-item label="密码">
+      <el-form
+        :model="passwordForm"
+        :rules="passwordRules"
+        ref="passwordFormRef"
+        label-position="top"
+      >
+        <el-form-item label="密码" prop="password">
           <el-input
             type="password"
-            v-model="form.password"
+            v-model="passwordForm.password"
             autocomplete="off"
           />
         </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input
+            type="password"
+            v-model="passwordForm.confirmPassword"
+            autocomplete="off"
+          />
+        </el-form-item>
+        <div class="box" style="height: 20px"></div>
+        <el-form-item>
+          <el-button type="primary" @click="changePassword(passwordFormRef)">
+            确认
+          </el-button>
+          <el-button @click="dialogFormVisible = false">取消</el-button>
+        </el-form-item>
       </el-form>
-      <template #footer>
+      <!-- <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogFormVisible = false">取消</el-button>
           <el-button type="primary" @click="changePassword"> 确认 </el-button>
         </div>
-      </template>
+      </template> -->
     </el-dialog>
   </div>
 </template>
