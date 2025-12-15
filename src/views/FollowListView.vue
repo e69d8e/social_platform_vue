@@ -9,6 +9,7 @@ const followList = ref([]);
 const pageNum = ref(1);
 const pageSize = ref(12);
 const total = ref(0);
+const loading = ref(true);
 const getFollowList = async () => {
   if (route.params.id === userStore.userInfo.id) {
     const res = await getFollowListApi({
@@ -31,13 +32,16 @@ const getFollowList = async () => {
 };
 onMounted(async () => {
   await getFollowList();
+  loading.value = false;
 });
 const pageChange = async () => {
+  loading.value = true;
   await getFollowList();
+  loading.value = false;
 };
 </script>
 <template>
-  <div class="follow">
+  <div class="follow" v-loading="loading">
     <div class="back" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>

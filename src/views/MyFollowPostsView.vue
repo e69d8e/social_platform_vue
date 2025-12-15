@@ -8,9 +8,11 @@ const params = ref({
   lastId: timestamp,
   offset: 0,
 });
+const loading = ref(true);
 const posts = ref([]);
 onMounted(async () => {
   await getPosts();
+  loading.value = false;
 });
 const getPosts = async () => {
   const postList = await getFollowPostsApi(params.value);
@@ -19,11 +21,8 @@ const getPosts = async () => {
   params.value.offset = postList.data.data.offset;
   console.log(postList.data.data.minTime);
 };
-
-const isLoading = ref(false);
-
 const handleWindowScroll = () => {
-  if (isLoading.value) return;
+  if (loading.value) return;
 
   // 窗口滚动到底部的判断
   const scrollTop =
@@ -40,15 +39,15 @@ const handleWindowScroll = () => {
 };
 
 const loadMore = async () => {
-  if (isLoading.value) return;
+  if (loading.value) return;
 
-  isLoading.value = true;
+  loading.value = true;
   try {
     console.log("加载更多...");
     // 数据加载逻辑
     await getPosts();
   } finally {
-    isLoading.value = false;
+    loading.value = false;
   }
 };
 
@@ -62,7 +61,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="follow" v-loading="isLoading">
+  <div class="follow" v-loading="loading">
     <div class="back">
       <el-icon size="large">
         <ArrowLeft @click="$router.back()" />

@@ -20,7 +20,9 @@ export const setUserApi = async (id) => {
 };
 
 // 查询封禁用户
-export const getBanUsersApi = async () => {
-  const res = await request.get("/admin/ban");
+export const getBanUsersApi = async (params) => {
+  const res = await request.get("/admin/ban", {
+    params,
+  });
   return res;
 };

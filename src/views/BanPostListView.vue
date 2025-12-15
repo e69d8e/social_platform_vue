@@ -1,15 +1,14 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
 import { getBanPostsApi } from "@/api/reviewerApi";
 import PostCard from "@/components/PostCard.vue";
-const route = useRoute();
 const postList = ref([]);
 const pageNum = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(8);
 const total = ref(0);
+const loading = ref(true);
 const getPostList = async () => {
-  const res = await getBanPostsApi(route.params.id, {
+  const res = await getBanPostsApi({
     pageNum: pageNum.value,
     pageSize: pageSize.value,
   });
@@ -18,19 +17,21 @@ const getPostList = async () => {
 };
 onMounted(async () => {
   await getPostList();
+  loading.value = false;
 });
-const pageChange = async (pageNum) => {
-  pageNum.value = pageNum;
+const pageChange = async () => {
+  loading.value = true;
   await getPostList();
+  loading.value = false;
 };
 </script>
 <template>
-  <div class="post-list">
+  <div class="post-list" v-loading="loading">
     <div class="back" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>
     <div class="text">
-      <el-text size="large" type="primary">已封禁帖子</el-text>
+      <el-text size="large" type="primary">我封禁封禁帖子</el-text>
     </div>
     <el-row>
       <el-col class="colItem" v-for="post in postList" :key="post.id" :span="6">
@@ -50,7 +51,8 @@ const pageChange = async (pageNum) => {
       <el-pagination
         @current-change="pageChange"
         :total="total"
-        :default-page-size="pageSize"
+        v-model:current-page="pageNum"
+        v-model:page-size="pageSize"
         size="large"
         background
         layout="prev, pager, next"
@@ -66,6 +68,9 @@ const pageChange = async (pageNum) => {
   }
   .text {
     text-align: center;
+    margin-bottom: 20px;
+  }
+  .colItem {
     margin-bottom: 10px;
   }
   .pagination {

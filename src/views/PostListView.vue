@@ -8,6 +8,7 @@ const postList = ref([]);
 const pageNum = ref(1);
 const pageSize = ref(8);
 const total = ref(0);
+const loading = ref(true);
 const getPostList = async () => {
   const res = await getPostListApi(route.params.id, {
     pageNum: pageNum.value,
@@ -18,13 +19,16 @@ const getPostList = async () => {
 };
 onMounted(async () => {
   await getPostList();
+  loading.value = false;
 });
 const pageChange = async () => {
+  loading.value = true;
   await getPostList();
+  loading.value = false;
 };
 </script>
 <template>
-  <div class="post-list">
+  <div class="post-list" v-loading="loading">
     <div class="back" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>

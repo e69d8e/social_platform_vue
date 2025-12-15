@@ -13,11 +13,11 @@ const userStore = useUserStore();
 const logoUrl = "http://127.0.0.1:8080/imgs/logo.png";
 const searchContent = ref("");
 const logout = async () => {
+  const res = await layoutApi();
   await userStore.removeInfo();
-  const data = await layoutApi();
   dialogVisible.value = false;
   // eslint-disable-next-line no-undef
-  ElMessage.success(data.data.message);
+  ElMessage.success(res.data.message);
   router.push("/login");
 };
 

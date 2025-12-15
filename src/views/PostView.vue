@@ -24,13 +24,14 @@ const post = ref({
   followed: false,
 });
 const dialogVisible = ref(false);
+const loading = ref(false);
 const getPost = async (id) => {
   const res = await getPostDetailApi(id);
   post.value = res.data.data;
 };
 onMounted(async () => {
   await getPost(route.params.id);
-  console.log(post.value);
+  loading.value = false;
 });
 const like = async () => {
   const res = await likeApi(post.value.id);
@@ -116,7 +117,7 @@ const banPost = async () => {
 </script>
 
 <template>
-  <div class="post">
+  <div class="post" v-loading="loading">
     <div class="pointer" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>

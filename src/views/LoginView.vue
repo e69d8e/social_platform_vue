@@ -7,7 +7,7 @@ import {
   getSignInDaysApi,
 } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 const router = useRouter();
@@ -18,16 +18,7 @@ const ruleForm = ref({
   password: "",
   confirmPassword: "",
 });
-// const userInfo = ref({
-//   username: "",
-//   avatar: "",
-//   bio: "",
-//   gender: 0,
-//   authority: "",
-//   createTime: "",
-//   nickname: "",
-// });
-onMounted(() => {});
+const loading = ref(false);
 const userStore = useUserStore();
 const validateUsername = (rule, value, callback) => {
   if (value === "") return callback(new Error("用户名不能为空"));
@@ -61,6 +52,7 @@ const rules = reactive({
 const submitForm = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
+    loading.value = true;
     if (valid) {
       if (!isCheck.value) {
         // eslint-disable-next-line no-undef
@@ -102,6 +94,7 @@ const submitForm = (formEl) => {
     } else {
       console.log("校验失败");
     }
+    loading.value = false;
   });
 };
 const toLogin = () => {
@@ -129,7 +122,7 @@ const isLogin = ref(true);
 </script>
 
 <template>
-  <div class="login">
+  <div class="login" v-loading="loading">
     <div class="logo">
       <el-image
         style="width: 80px; height: 80px; border-radius: 50%"

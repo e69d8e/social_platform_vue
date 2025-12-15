@@ -20,13 +20,14 @@ const getUserInfo = async () => {
   Object.assign(ruleForm, res.data.data);
   userStore.setInfo(res.data.data);
 };
+const loading = ref(true);
 onMounted(async () => {
   await getUserInfo();
+  loading.value = false;
 });
 const newImgUrl = ref("");
 newImgUrl.value = userInfo.avatar;
 const handleAvatarSuccess = (response, uploadFile) => {
-  console.log(response.data);
   newImgUrl.value = response.data;
   imageUrl.value = URL.createObjectURL(uploadFile.raw);
 };
@@ -57,6 +58,7 @@ const rules = reactive({
 });
 const submitForm = async (ref) => {
   await ref.validate(async (valid) => {
+    loading.value = true;
     if (valid) {
       ruleForm.avatar = newImgUrl.value;
       console.log(ruleForm);
@@ -70,6 +72,7 @@ const submitForm = async (ref) => {
       // eslint-disable-next-line no-undef
       ElMessage.error("请填写正确的信息");
     }
+    loading.value = false;
   });
 };
 const toFollow = () => {
@@ -96,16 +99,18 @@ const form = reactive({
   password: "",
 });
 const changePassword = async () => {
+  loading.value = true;
   const res = await updatePasswordApi(form.password);
   if (res.data.code === 1) {
     // eslint-disable-next-line no-undef
     ElMessage.success(res.data.message);
   }
   dialogFormVisible.value = false;
+  loading.value = false;
 };
 </script>
 <template>
-  <div class="my">
+  <div class="my" v-loading="loading">
     <div class="back" @click="$router.back()">
       <el-icon><ArrowLeft size="large" /></el-icon>
     </div>

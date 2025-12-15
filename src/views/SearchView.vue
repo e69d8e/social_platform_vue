@@ -7,21 +7,24 @@ import { searchUsersApi } from "@/api/userApi";
 import UserCard from "@/components/UserCard.vue";
 const route = useRoute();
 const pageNum = ref(1);
-const pageSize = ref(8);
-
+const postPageSize = ref(8);
+const userPageSize = ref(12);
+const loading = ref(true);
 const searchQuery = computed(() => route.query.keyword || "");
 const posts = ref([]);
 const users = ref([]);
 const postTotal = ref(0);
 const usersTotal = ref(0);
 onMounted(async () => {
+  loading.value = true;
   await searchPosts(searchQuery.value);
   await searchUsers(searchQuery.value);
+  loading.value = false;
 });
 const searchPosts = async (search) => {
   const res = await searchPostsApi({
     pageNum: pageNum.value,
-    pageSize: pageSize.value,
+    pageSize: postPageSize.value,
     search,
   });
   posts.value = res.data.data;
@@ -30,30 +33,33 @@ const searchPosts = async (search) => {
 const searchUsers = async (search) => {
   const res = await searchUsersApi({
     pageNum: pageNum.value,
-    pageSize: pageSize.value,
+    pageSize: userPageSize.value,
     nickname: search,
   });
   users.value = res.data.data;
   usersTotal.value = res.data.total;
 };
 const pageChange = async (newPageNum) => {
+  loading.value = true;
   pageNum.value = newPageNum;
   await searchPosts(searchQuery.value);
   await searchUsers(searchQuery.value);
+  loading.value = false;
 };
 const activeName = ref("1");
 watch(
   () => route.query.keyword,
   async (newSearchQuery) => {
-    pageSize.value = 8;
+    loading.value = true;
     pageNum.value = 1;
     await searchPosts(newSearchQuery);
     await searchUsers(newSearchQuery);
+    loading.value = false;
   },
 );
 </script>
 <template>
-  <div class="search">
+  <div class="search" v-loading="loading">
     <div class="pointer back" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>
@@ -115,7 +121,7 @@ watch(
       <el-pagination
         @current-change="pageChange"
         :total="activeName === '1' ? postTotal : usersTotal"
-        :default-page-size="pageSize"
+        :default-page-size="activeName === '1' ? postPageSize : userPageSize"
         size="large"
         background
         layout="prev, pager, next"

@@ -9,6 +9,7 @@ const fansList = ref([]);
 const pageNum = ref(1);
 const pageSize = ref(12);
 const total = ref(0);
+const loading = ref(true);
 const getFansList = async () => {
   if (route.params.id === userStore.userInfo.id) {
     console.log(route.params.id);
@@ -32,13 +33,16 @@ const getFansList = async () => {
 };
 onMounted(async () => {
   await getFansList();
+  loading.value = false;
 });
 const pageChange = async () => {
+  loading.value = true;
   await getFansList();
+  loading.value = false;
 };
 </script>
 <template>
-  <div class="fans">
+  <div class="fans" v-loading="loading">
     <div class="back" @click="$router.back()">
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>

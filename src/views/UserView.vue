@@ -23,8 +23,10 @@ const userInfo = ref({
   authority: "",
   enabled: true,
 });
+const loading = ref(true);
 onMounted(async () => {
   await getUserInfo();
+  loading.value = false;
 });
 const getUserInfo = async () => {
   if (route.params.id == undefined) {
@@ -96,7 +98,7 @@ const setReviewer = async () => {
 };
 </script>
 <template>
-  <div class="user">
+  <div class="user" v-loading="loading">
     <div class="back" @click="$router.back()">
       <el-icon><ArrowLeft size="large" /></el-icon>
     </div>
