@@ -22,15 +22,13 @@ const logout = async () => {
 };
 
 const search = () => {
-  const route = router.resolve({
+  router.push({
     path: "/search",
     query: {
       keyword: searchContent.value,
     },
   });
-  window.open(route.href, "_blank");
 };
-
 const myFollowPosts = () => {
   router.push({
     path: "/followPosts",
@@ -94,6 +92,7 @@ const sign = async () => {
                 v-model="searchContent"
                 placeholder="搜索"
                 :prefix-icon="Search"
+                @keyup.enter="search"
               />
               <el-button
                 @click="search"

@@ -52,6 +52,9 @@ const publicPost = async () => {
 </script>
 <template>
   <div class="public" v-loading="loading">
+    <div class="pointer back" @click="$router.back()">
+      <el-icon size="large"><ArrowLeft /></el-icon>
+    </div>
     <div class="img">
       <el-upload
         v-model:file-list="fileList"
@@ -121,6 +124,12 @@ const publicPost = async () => {
 .public {
   width: 500px;
   margin: 100px auto;
+  .pointer {
+    cursor: pointer;
+  }
+  .back {
+    margin: 20px 0;
+  }
   .img {
     margin-bottom: 20px;
   }

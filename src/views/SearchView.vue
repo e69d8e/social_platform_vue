@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import { searchPostsApi } from "@/api/searchApi";
 import PostCard from "@/components/PostCard.vue";
@@ -12,51 +12,52 @@ const pageSize = ref(8);
 const searchQuery = computed(() => route.query.keyword || "");
 const posts = ref([]);
 const users = ref([]);
-const total = ref(0);
-
+const postTotal = ref(0);
+const usersTotal = ref(0);
 onMounted(async () => {
-  await searchPosts();
-  await searchUsers();
+  await searchPosts(searchQuery.value);
+  await searchUsers(searchQuery.value);
 });
-const searchPosts = async () => {
+const searchPosts = async (search) => {
   const res = await searchPostsApi({
     pageNum: pageNum.value,
     pageSize: pageSize.value,
-    search: searchQuery.value,
+    search,
   });
   posts.value = res.data.data;
-  total.value = res.data.total;
+  postTotal.value = res.data.total;
 };
-const searchUsers = async () => {
+const searchUsers = async (search) => {
   const res = await searchUsersApi({
     pageNum: pageNum.value,
     pageSize: pageSize.value,
-    nickname: searchQuery.value,
+    nickname: search,
   });
   users.value = res.data.data;
-  total.value = res.data.total;
+  usersTotal.value = res.data.total;
 };
 const pageChange = async (newPageNum) => {
   pageNum.value = newPageNum;
-  await searchPosts();
-  await searchUsers();
+  await searchPosts(searchQuery.value);
+  await searchUsers(searchQuery.value);
 };
 const activeName = ref("1");
-const handleClick = async () => {
-  pageSize.value = 8;
-  pageNum.value = 1;
-  await searchPosts();
-  await searchUsers();
-};
+watch(
+  () => route.query.keyword,
+  async (newSearchQuery) => {
+    pageSize.value = 8;
+    pageNum.value = 1;
+    await searchPosts(newSearchQuery);
+    await searchUsers(newSearchQuery);
+  },
+);
 </script>
 <template>
   <div class="search">
-    <el-tabs
-      stretch="true"
-      v-model="activeName"
-      class="demo-tabs"
-      @tab-click="handleClick"
-    >
+    <div class="pointer back" @click="$router.back()">
+      <el-icon size="large"><ArrowLeft /></el-icon>
+    </div>
+    <el-tabs :stretch="true" v-model="activeName" class="demo-tabs">
       <el-tab-pane label="帖子" name="1">
         <template #label>
           <span class="custom-tabs-label">
@@ -113,7 +114,7 @@ const handleClick = async () => {
     <div class="pagination">
       <el-pagination
         @current-change="pageChange"
-        :total="total"
+        :total="activeName === '1' ? postTotal : usersTotal"
         :default-page-size="pageSize"
         size="large"
         background
@@ -126,6 +127,13 @@ const handleClick = async () => {
 .search {
   margin: 0 auto;
   text-align: center;
+  .pointer {
+    cursor: pointer;
+  }
+  .back {
+    margin: 10px 0;
+    text-align: start;
+  }
   .colItem {
     margin-bottom: 10px;
   }
