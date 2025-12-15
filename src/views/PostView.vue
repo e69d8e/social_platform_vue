@@ -186,12 +186,7 @@ const banPost = async () => {
     <div class="content">
       {{ post.content }}
     </div>
-    <el-dialog
-      v-model="dialogVisible"
-      title="确认删除?"
-      width="500"
-      :before-close="handleClose"
-    >
+    <el-dialog v-model="dialogVisible" title="确认删除?" width="500">
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>

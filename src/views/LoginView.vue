@@ -31,7 +31,9 @@ onMounted(() => {});
 const userStore = useUserStore();
 const validateUsername = (rule, value, callback) => {
   if (value === "") return callback(new Error("用户名不能为空"));
-  else {
+  if (!isLogin.value && (value.length > 16 || value.length < 4)) {
+    callback(new Error("账号应为4-16位字符"));
+  } else {
     callback();
   }
 };
@@ -102,6 +104,22 @@ const submitForm = (formEl) => {
     }
   });
 };
+const toLogin = () => {
+  isLogin.value = true;
+  ruleForm.value = {
+    username: "",
+    password: "",
+    confirmPassword: "",
+  };
+};
+const toRegister = () => {
+  isLogin.value = false;
+  ruleForm.value = {
+    username: "",
+    password: "",
+    confirmPassword: "",
+  };
+};
 const resetForm = (formEl) => {
   if (!formEl) return;
   formEl.resetFields();
@@ -149,26 +167,22 @@ const isLogin = ref(true);
         </el-form-item>
         <div class="switch" v-if="isLogin">
           <span>还没有账号？</span>
-          <el-link
-            style="font-size: 14px"
-            @click="isLogin = !isLogin"
-            underline="never"
+          <el-link style="font-size: 14px" @click="toRegister" underline="never"
             >去注册</el-link
           >
         </div>
         <div class="switch" v-else>
           <span>已有账号？</span>
-          <el-link
-            style="font-size: 14px"
-            @click="isLogin = !isLogin"
-            underline="never"
+          <el-link style="font-size: 14px" @click="toLogin" underline="never"
             >去登录</el-link
           >
         </div>
         <!-- 用户协议 -->
         <div class="check">
           <el-checkbox v-model="isCheck" label="" size="large" />
-          <span class="text">我已阅读并同意</span>
+          <span class="text" style="cursor: pointer" @click="isCheck = !isCheck"
+            >我已阅读并同意</span
+          >
           <el-link
             underline="never"
             href="http://localhost:8080/userAgreement.html"

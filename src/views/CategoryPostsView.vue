@@ -6,7 +6,7 @@ import PostCard from "@/components/PostCard.vue";
 const route = useRoute();
 const postList = ref([]);
 const pageNum = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(8);
 const total = ref(0);
 const getPostList = async () => {
   const res = await searchPostsApi({
@@ -19,11 +19,9 @@ const getPostList = async () => {
 };
 onMounted(async () => {
   console.log(route.query.category);
-
   await getPostList();
 });
-const pageChange = async (pageNum) => {
-  pageNum.value = pageNum;
+const pageChange = async () => {
   await getPostList();
 };
 </script>
@@ -52,8 +50,9 @@ const pageChange = async (pageNum) => {
     <div class="pagination">
       <el-pagination
         @current-change="pageChange"
+        v-model:current-page="pageNum"
+        v-model:page-size="pageSize"
         :total="total"
-        :default-page-size="pageSize"
         size="large"
         background
         layout="prev, pager, next"
@@ -68,7 +67,7 @@ const pageChange = async (pageNum) => {
   }
   .text {
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
   }
   .pagination {
     position: fixed;

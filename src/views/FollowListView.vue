@@ -7,7 +7,7 @@ const route = useRoute();
 const userStore = useUserStore();
 const followList = ref([]);
 const pageNum = ref(1);
-const pageSize = ref(8);
+const pageSize = ref(12);
 const total = ref(0);
 const getFollowList = async () => {
   if (route.params.id === userStore.userInfo.id) {
@@ -32,8 +32,7 @@ const getFollowList = async () => {
 onMounted(async () => {
   await getFollowList();
 });
-const pageChange = async (pageNum) => {
-  pageNum.value = pageNum;
+const pageChange = async () => {
   await getFollowList();
 };
 </script>
@@ -67,7 +66,8 @@ const pageChange = async (pageNum) => {
       <el-pagination
         @current-change="pageChange"
         :total="total"
-        :default-page-size="pageSize"
+        v-model:current-page="pageNum"
+        v-model:page-size="pageSize"
         size="large"
         background
         layout="prev, pager, next"
@@ -79,6 +79,9 @@ const pageChange = async (pageNum) => {
 .follow {
   .back {
     cursor: pointer;
+  }
+  .colItem {
+    margin-bottom: 10px;
   }
   .text {
     text-align: center;

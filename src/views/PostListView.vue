@@ -6,7 +6,7 @@ import PostCard from "@/components/PostCard.vue";
 const route = useRoute();
 const postList = ref([]);
 const pageNum = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(8);
 const total = ref(0);
 const getPostList = async () => {
   const res = await getPostListApi(route.params.id, {
@@ -19,8 +19,7 @@ const getPostList = async () => {
 onMounted(async () => {
   await getPostList();
 });
-const pageChange = async (pageNum) => {
-  pageNum.value = pageNum;
+const pageChange = async () => {
   await getPostList();
 };
 </script>
@@ -50,7 +49,8 @@ const pageChange = async (pageNum) => {
       <el-pagination
         @current-change="pageChange"
         :total="total"
-        :default-page-size="pageSize"
+        v-model:current-page="pageNum"
+        v-model:page-size="pageSize"
         size="large"
         background
         layout="prev, pager, next"
@@ -60,6 +60,9 @@ const pageChange = async (pageNum) => {
 </template>
 <style lang="scss" scoped>
 .post-list {
+  .colItem {
+    margin-bottom: 10px;
+  }
   .back {
     cursor: pointer;
   }

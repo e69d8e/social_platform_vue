@@ -7,7 +7,7 @@ const route = useRoute();
 const userStore = useUserStore();
 const fansList = ref([]);
 const pageNum = ref(1);
-const pageSize = ref(8);
+const pageSize = ref(12);
 const total = ref(0);
 const getFansList = async () => {
   if (route.params.id === userStore.userInfo.id) {
@@ -33,8 +33,7 @@ const getFansList = async () => {
 onMounted(async () => {
   await getFansList();
 });
-const pageChange = async (pageNum) => {
-  pageNum.value = pageNum;
+const pageChange = async () => {
   await getFansList();
 };
 </script>
@@ -63,7 +62,8 @@ const pageChange = async (pageNum) => {
       <el-pagination
         @current-change="pageChange"
         :total="total"
-        :default-page-size="pageSize"
+        v-model:current-page="pageNum"
+        v-model:page-size="pageSize"
         size="large"
         background
         layout="prev, pager, next"
@@ -78,6 +78,9 @@ const pageChange = async (pageNum) => {
   }
   .text {
     text-align: center;
+    margin-bottom: 10px;
+  }
+  .colItem {
     margin-bottom: 10px;
   }
   .pagination {
