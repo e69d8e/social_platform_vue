@@ -12,3 +12,9 @@ export const getBanPostsApi = async (params) => {
   });
   return res;
 };
+
+// 删除评论
+export const deleteCommentApi = async (postId, id) => {
+  const res = await request.delete("/reviewer/comment/" + postId + "/" + id);
+  return res;
+};

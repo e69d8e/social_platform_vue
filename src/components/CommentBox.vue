@@ -3,7 +3,8 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { ElMessage } from "element-plus";
 import { addCommentApi, getCommentApi } from "@/api/commentApi";
 import { useUserStore } from "@/stores/user";
-
+import { Delete } from "@element-plus/icons-vue";
+import { deleteCommentApi } from "@/api/reviewerApi";
 const userStore = useUserStore();
 const content = ref("");
 // 帖子id
@@ -166,6 +167,17 @@ const submitComment = async () => {
   content.value = "";
   clearReply();
 };
+const deleteComment = async (id) => {
+  console.log("删除评论", id);
+
+  const res = await deleteCommentApi(props.postId, id);
+  if (res.data.code === 1) {
+    ElMessage.success("删除成功");
+    lastId.value = null;
+    offset.value = 0;
+    await getComments();
+  }
+};
 </script>
 
 <template>
@@ -217,6 +229,17 @@ const submitComment = async () => {
 
         <div class="comment-actions">
           <span @click="reply(item, null)">回复</span>
+          <el-popconfirm
+            v-if="userStore.userInfo.authority === 'REVIEWER'"
+            class="box-item"
+            title="确认删除该评论?"
+            placement="right"
+            @confirm="deleteComment(item.id)"
+          >
+            <template #reference>
+              <el-button size="small" type="danger" :icon="Delete" circle />
+            </template>
+          </el-popconfirm>
         </div>
 
         <!-- 二级评论 -->
@@ -233,6 +256,17 @@ const submitComment = async () => {
             <span>{{ child.content }}</span>
 
             <span class="reply-btn" @click="reply(item, child)"> 回复 </span>
+            <el-popconfirm
+              v-if="userStore.userInfo.authority === 'REVIEWER'"
+              class="box-item"
+              title="确认删除该评论?"
+              placement="right"
+              @confirm="deleteComment(child.id)"
+            >
+              <template #reference>
+                <el-button size="small" type="danger" :icon="Delete" circle />
+              </template>
+            </el-popconfirm>
           </div>
         </div>
       </div>
