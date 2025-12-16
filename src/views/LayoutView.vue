@@ -1,11 +1,13 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onUnmounted } from "vue";
 import { RouterView } from "vue-router";
 import { Search } from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
 import { layoutApi, signInApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
+import { debounce } from "lodash-es";
+
 const signStore = useSignStore();
 const dialogVisible = ref(false);
 const router = useRouter();
@@ -20,15 +22,17 @@ const logout = async () => {
   ElMessage.success(res.data.message);
   router.push("/login");
 };
-
-const search = () => {
+const search = debounce(() => {
   router.push({
     path: "/search",
     query: {
       keyword: searchContent.value,
     },
   });
-};
+}, 300);
+onUnmounted(() => {
+  search.cancel(); // 清理
+});
 const myFollowPosts = () => {
   router.push({
     path: "/followPosts",

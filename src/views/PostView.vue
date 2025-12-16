@@ -6,6 +6,7 @@ import { likeApi, deletePostApi } from "@/api/postApi";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
+import CommentBox from "@/components/CommentBox.vue";
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
@@ -195,6 +196,7 @@ const banPost = async () => {
         </div>
       </template>
     </el-dialog>
+    <CommentBox :post-id="route.params.id" />
   </div>
 </template>
 
