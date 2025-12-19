@@ -23,6 +23,11 @@ const logout = async () => {
   router.push("/login");
 };
 const search = debounce(() => {
+  if (searchContent.value.trim() === "") {
+    // eslint-disable-next-line no-undef
+    ElMessage.warning("请输入搜索内容");
+    return;
+  }
   router.push({
     path: "/search",
     query: {
@@ -78,7 +83,7 @@ const sign = async () => {
                 style="width: 50px; height: 50px; border-radius: 20%"
                 :src="logoUrl"
               />
-              <div class="text">小蓝书</div>
+              <div class="text">声迹</div>
               <el-icon style="margin-left: 10px; width: 20px"
                 ><HomeFilled
               /></el-icon>

@@ -277,7 +277,7 @@ const deleteComment = async (id) => {
 <style scoped>
 .comment-container {
   max-width: 800px;
-  margin: 30px auto 200px;
+  margin: 30px auto 240px;
 }
 
 .comment-input-card {

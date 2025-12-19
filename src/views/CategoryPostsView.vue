@@ -13,7 +13,7 @@ const getPostList = async () => {
   const res = await searchPostsApi({
     pageNum: pageNum.value,
     pageSize: pageSize.value,
-    id: route.params.id,
+    categoryId: route.params.id,
   });
   postList.value = res.data.data;
   total.value = res.data.total;

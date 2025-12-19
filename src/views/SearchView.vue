@@ -25,7 +25,7 @@ const searchPosts = async (search) => {
   const res = await searchPostsApi({
     pageNum: pageNum.value,
     pageSize: postPageSize.value,
-    search,
+    keyword: search,
   });
   posts.value = res.data.data;
   postTotal.value = res.data.total;
@@ -34,7 +34,7 @@ const searchUsers = async (search) => {
   const res = await searchUsersApi({
     pageNum: pageNum.value,
     pageSize: userPageSize.value,
-    nickname: search,
+    keyword: search,
   });
   users.value = res.data.data;
   usersTotal.value = res.data.total;

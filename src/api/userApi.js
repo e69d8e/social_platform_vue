@@ -71,11 +71,11 @@ export const getSignInDaysApi = () => {
 };
 
 // 分页查询帖子
-export const getPostsApi = (data) => {
+export const getPostsApi = (params) => {
   return request({
     url: "/user/list/post",
     method: "GET",
-    data,
+    params,
   });
 };
 
