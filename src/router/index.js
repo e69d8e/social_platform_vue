@@ -35,6 +35,11 @@ const router = createRouter({
           component: () => import("@/views/UserView.vue"),
         },
         {
+          path: "/friends",
+          name: "friend",
+          component: () => import("@/views/FriendListView.vue"),
+        },
+        {
           path: "/postList/:id",
           name: "postList",
           component: () => import("@/views/PostListView.vue"),

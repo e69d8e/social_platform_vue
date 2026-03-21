@@ -42,3 +42,10 @@ export const getUserFollowerListApi = async (params, id) => {
   });
   return res;
 };
+
+export const getFriendListApi = async (params) => {
+  const res = await request.get("/follow/friend", {
+    params,
+  });
+  return res;
+};

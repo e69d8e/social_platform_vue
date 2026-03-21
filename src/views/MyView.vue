@@ -84,6 +84,11 @@ const toFans = () => {
     path: "/fans/" + userStore.userInfo.id,
   });
 };
+const toFriends = () => {
+  router.push({
+    path: "/friends",
+  });
+};
 const toBanPosts = () => {
   router.push({
     path: "/banPosts",
@@ -184,6 +189,9 @@ const changePassword = (formEl) => {
       >
       <el-button style="margin-left: 20px" @click="toFollow()" type="primary"
         >我的关注</el-button
+      >
+      <el-button style="margin-left: 20px" @click="toFriends()" type="primary"
+        >我的好友</el-button
       >
       <el-button
         v-if="userInfo.authority === 'REVIEWER'"
