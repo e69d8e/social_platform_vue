@@ -2,6 +2,7 @@
 import { likeApi } from "@/api/postApi";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { throttle } from "lodash";
 const props = defineProps({
   id: {
     type: String,
@@ -32,28 +33,33 @@ const props = defineProps({
     default: "2023-05-05 00:00:00",
   },
 });
+const { title, imgUrl, content, time } = props;
 const count = ref(props.count);
 const liked = ref(props.liked);
 const router = useRouter();
-const like = async () => {
-  if (liked.value) {
-    count.value--;
-    liked.value = false;
-  } else {
-    count.value++;
-    liked.value = true;
+const handleLike = async () => {
+  const oldLiked = liked.value;
+  const oldCount = count.value;
+
+  liked.value = !liked.value;
+  count.value += liked.value ? 1 : -1;
+
+  try {
+    const res = await likeApi(props.id);
+    // eslint-disable-next-line no-undef
+    ElMessage.success(res.data.message);
+  } catch (e) {
+    liked.value = oldLiked;
+    count.value = oldCount;
+    console.log(e);
+    // eslint-disable-next-line no-undef
+    ElMessage.error("操作失败");
   }
-  const res = await likeApi(props.id);
-  // eslint-disable-next-line no-undef
-  ElMessage({
-    message: res.data.message,
-    type: "success",
-  });
 };
+// 节流
+const like = throttle(handleLike, 800);
 const toPostDetail = () => {
-  router.push({
-    path: "/post/" + props.id,
-  });
+  router.push(`/post/${props.id}`);
 };
 </script>
 
@@ -61,35 +67,39 @@ const toPostDetail = () => {
   <div class="postcard">
     <el-card style="">
       <template #header>
-        <div class="header">
-          {{ props.title }}
-          <div class="like">
-            <el-icon
-              @click="like"
-              class="star"
-              size="large"
-              :color="liked ? 'red' : '  '"
-              ><Star
-            /></el-icon>
-            <el-text style="margin-left: 3px" size="large" type="primary">{{
-              count
-            }}</el-text>
+        <div>
+          <div class="header">
+            {{ title }}
+            <div class="like">
+              <el-icon
+                @click="like"
+                class="star"
+                size="large"
+                :color="liked ? 'red' : ''"
+                ><Star
+              /></el-icon>
+              <el-text style="margin-left: 3px" size="large" type="primary">{{
+                count
+              }}</el-text>
+            </div>
+          </div>
+          <div class="time pointer" @click="toPostDetail()">
+            <el-text type="primary">{{ time }}</el-text>
           </div>
         </div>
-        <div class="time pointer" @click="toPostDetail()">
-          <el-text type="primary">{{ props.time }}</el-text>
-        </div>
       </template>
-      <img
-        class="pointer"
-        :src="props.imgUrl"
-        shadow="hover"
-        style="width: 100%"
-        @click="toPostDetail()"
-      />
+      <div>
+        <img
+          class="pointer"
+          :src="imgUrl"
+          shadow="hover"
+          style="width: 100%"
+          @click="toPostDetail()"
+        />
+      </div>
       <template #footer>
         <div class="content pointer" @click="toPostDetail()">
-          {{ props.content }}
+          {{ content }}
         </div>
       </template>
     </el-card>

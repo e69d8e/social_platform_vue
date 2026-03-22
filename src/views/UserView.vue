@@ -5,6 +5,7 @@ import { getUserInfoByIdApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { banUserApi, setReviewerApi, setUserApi } from "@/api/adminApi";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
+import { throttle } from "lodash";
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
@@ -45,24 +46,50 @@ const toFans = () => {
     path: "/fans/" + route.params.id,
   });
 };
-const follow = async () => {
-  const res = await followUserApi(route.params.id);
-  if (res.data.code === 1) {
+
+const followLoading = ref(false);
+
+const toggleFollow = throttle(async () => {
+  // 不能关注自己
+  if (userStore.userInfo.id === userInfo.value.id) {
+    // eslint-disable-next-line no-undef
+    ElMessage.warning("不能关注自己");
+    return;
+  }
+
+  // 防并发
+  if (followLoading.value) return;
+  followLoading.value = true;
+
+  // 记录旧状态（回滚用）
+  const oldFollowed = userInfo.value.followed;
+
+  // 乐观更新（UI先变）
+  const nextFollowed = !oldFollowed;
+  userInfo.value.followed = nextFollowed;
+
+  try {
+    // 用“旧状态”判断接口（更安全）
+    const api = oldFollowed ? unfollowUserApi : followUserApi;
+    const res = await api(userInfo.value.id);
+
+    if (res.data.code !== 1) {
+      throw new Error(res.data.message || "操作失败");
+    }
+
     // eslint-disable-next-line no-undef
     ElMessage.success(res.data.message);
-    userInfo.value.followed = true;
-    userInfo.value.count++;
-  }
-};
-const unfollow = async () => {
-  const res = await unfollowUserApi(route.params.id);
-  if (res.data.code === 1) {
+  } catch (e) {
+    // 回滚
+    userInfo.value.followed = oldFollowed;
+
+    console.error(e);
     // eslint-disable-next-line no-undef
-    ElMessage.success(res.data.message);
-    userInfo.value.followed = false;
-    userInfo.value.count--;
+    ElMessage.error(e.message || "操作失败，请重试");
+  } finally {
+    followLoading.value = false;
   }
-};
+}, 800);
 const ban = async () => {
   const res = await banUserApi(route.params.id);
   if (res.data.code === 1) {
@@ -110,10 +137,10 @@ const setReviewer = async () => {
       <el-text type="primary">{{ userInfo.count }} 粉丝</el-text>
     </div>
     <div class="follow">
-      <el-button @click="follow" v-if="!userInfo.followed" type="primary"
+      <el-button @click="toggleFollow" v-if="!userInfo.followed" type="primary"
         >关注</el-button
       >
-      <el-button @click="unfollow" v-else>已关注</el-button>
+      <el-button @click="toggleFollow" v-else>已关注</el-button>
     </div>
     <div class="account">
       <div class="info" v-if="userInfo.authority === 'USER'">

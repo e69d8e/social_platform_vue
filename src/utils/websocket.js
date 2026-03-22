@@ -24,3 +24,11 @@ export function connect(onMessage) {
 
   client.activate();
 }
+
+export function disconnect() {
+  if (client) {
+    client.deactivate();
+    client = null;
+    console.log("WebSocket已断开");
+  }
+}

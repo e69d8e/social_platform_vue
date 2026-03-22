@@ -266,7 +266,7 @@ const changePassword = (formEl) => {
         ref="passwordFormRef"
         label-position="top"
       >
-        <el-form-item label="密码" prop="password">
+        <el-form-item label="请输入新密码" prop="password">
           <el-input
             type="password"
             v-model="passwordForm.password"

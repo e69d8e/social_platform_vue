@@ -7,6 +7,7 @@ import { layoutApi, signInApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 import { debounce } from "lodash-es";
+import { disconnect } from "@/utils/websocket.js";
 
 const signStore = useSignStore();
 const dialogVisible = ref(false);
@@ -17,6 +18,7 @@ const searchContent = ref("");
 const logout = async () => {
   const res = await layoutApi();
   await userStore.removeInfo();
+  disconnect();
   dialogVisible.value = false;
   // eslint-disable-next-line no-undef
   ElMessage.success(res.data.message);

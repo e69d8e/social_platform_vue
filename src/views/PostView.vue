@@ -7,6 +7,7 @@ import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
 import CommentBox from "@/components/CommentBox.vue";
+import { throttle } from "lodash";
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
@@ -34,33 +35,54 @@ onMounted(async () => {
   await getPost(route.params.id);
   loading.value = false;
 });
-const like = async () => {
-  const res = await likeApi(post.value.id);
+const likeLoading = ref(false);
 
-  if (res.data.code === 1) {
-    post.value.liked = true;
-    post.value.count++;
-    // eslint-disable-next-line no-undef
-    ElMessage({
-      message: "点赞成功",
-      type: "success",
-    });
-  }
-};
-const unLike = async () => {
-  const res = await likeApi(post.value.id);
+const toggleLike = throttle(async () => {
+  if (likeLoading.value) return;
 
-  if (res.data.code === 1) {
+  likeLoading.value = true;
+
+  // 记录旧状态（用于回滚）
+  const oldLiked = post.value.liked;
+  const oldCount = post.value.count;
+
+  // 乐观更新（UI 先变）
+  if (post.value.liked) {
     post.value.liked = false;
     post.value.count--;
+  } else {
+    post.value.liked = true;
+    post.value.count++;
+  }
+
+  try {
+    //（点赞 / 取消点赞）
+    const res = await likeApi(post.value.id);
+
+    if (res.data.code !== 1) {
+      throw new Error("操作失败");
+    }
+    // eslint-disable-next-line no-undef
+    ElMessage.success(res.data.message);
+  } catch (e) {
+    // 失败回滚
+    post.value.liked = oldLiked;
+    post.value.count = oldCount;
+    console.log(e);
+
     // eslint-disable-next-line no-undef
     ElMessage({
-      message: "取消成功",
-      type: "success",
+      message: "操作失败，请重试",
+      type: "error",
     });
+  } finally {
+    likeLoading.value = false;
   }
-};
-const follow = async () => {
+}, 800);
+
+const followLoading = ref(false);
+const toggleFollow = throttle(async () => {
+  // 不能关注自己
   if (userStore.userInfo.id === post.value.userId) {
     // eslint-disable-next-line no-undef
     ElMessage({
@@ -69,29 +91,46 @@ const follow = async () => {
     });
     return;
   }
-  const res = await followUserApi(post.value.userId);
-  post.value.followed = true;
 
-  if (res.data.code === 1) {
+  // 防并发
+  if (followLoading.value) return;
+  followLoading.value = true;
+
+  // 记录旧状态（用于回滚）
+  const oldFollowed = post.value.followed;
+
+  // 乐观更新（UI先变）
+  post.value.followed = !post.value.followed;
+
+  try {
+    // 根据状态调用不同接口
+    const res = post.value.followed
+      ? await followUserApi(post.value.userId)
+      : await unfollowUserApi(post.value.userId);
+
+    if (res.data.code !== 1) {
+      throw new Error("操作失败");
+    }
+
     // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
       type: "success",
     });
-  }
-};
-const unFollow = async () => {
-  const res = await unfollowUserApi(post.value.userId);
-  post.value.followed = false;
+  } catch (e) {
+    // 失败回滚
+    post.value.followed = oldFollowed;
+    console.log(e);
 
-  if (res.data.code === 1) {
     // eslint-disable-next-line no-undef
     ElMessage({
-      message: res.data.message,
-      type: "success",
+      message: "操作失败，请重试",
+      type: "error",
     });
+  } finally {
+    followLoading.value = false;
   }
-};
+}, 800);
 const deletePost = async () => {
   const res = await deletePostApi(post.value.id);
   if (res.data.code === 1) {
@@ -136,10 +175,10 @@ const banPost = async () => {
         class="nickname pointer"
         >{{ post.nickname }}</el-text
       >
-      <el-button @click="follow" type="primary" v-if="!post.followed"
+      <el-button @click="toggleFollow" type="primary" v-if="!post.followed"
         >关注</el-button
       >
-      <el-button @click="unFollow" v-else>已关注</el-button>
+      <el-button @click="toggleFollow" v-else>已关注</el-button>
       <el-icon
         v-if="userStore.userInfo.id === post.userId"
         @click="dialogVisible = true"
@@ -166,10 +205,12 @@ const banPost = async () => {
         {{ post.createTime }}
       </el-text>
       <div class="like">
-        <el-icon @click="like" size="large" v-if="!post.liked"
+        <el-icon @click="toggleLike" size="large" v-if="!post.liked"
           ><Star
         /></el-icon>
-        <el-icon @click="unLike" size="large" v-else><StarFilled /></el-icon>
+        <el-icon @click="toggleLike" size="large" v-else
+          ><StarFilled
+        /></el-icon>
         <el-text class="text" type="primary">{{ post.count }} 赞</el-text>
       </div>
       <div class="category">

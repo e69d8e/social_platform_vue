@@ -1,4 +1,8 @@
 <script setup>
+import { followUserApi, unfollowUserApi } from "@/api/followApi";
+import { ref } from "vue";
+import { throttle } from "lodash";
+import { useUserStore } from "@/stores/user";
 const props = defineProps({
   id: {
     type: String,
@@ -25,28 +29,61 @@ const props = defineProps({
     default: 0,
   },
 });
-import { followUserApi, unfollowUserApi } from "@/api/followApi";
-import { ref } from "vue";
 const followed = ref(props.followed);
 const count = ref(props.count);
-const follow = async () => {
-  const res = await followUserApi(props.id);
-  if (res.data.code === 1) {
+const userStore = useUserStore();
+
+const followLoading = ref(false);
+const toggleFollow = throttle(async () => {
+  // 不能关注自己
+  if (userStore.userInfo.id === props.id) {
     // eslint-disable-next-line no-undef
-    ElMessage.success(res.data.message);
-    followed.value = true;
-    count.value++;
+    ElMessage({
+      message: "不能关注自己",
+      type: "warning",
+    });
+    return;
   }
-};
-const unfollow = async () => {
-  const res = await unfollowUserApi(props.id);
-  if (res.data.code === 1) {
+
+  // 防并发
+  if (followLoading.value) return;
+  followLoading.value = true;
+
+  // 记录旧状态（用于回滚）
+  const oldFollowed = followed.value;
+
+  // 乐观更新（UI先变）
+  followed.value = !followed.value;
+
+  try {
+    // 根据状态调用不同接口
+    const res = followed.value
+      ? await followUserApi(props.id)
+      : await unfollowUserApi(props.id);
+
+    if (res.data.code !== 1) {
+      throw new Error("操作失败");
+    }
+
     // eslint-disable-next-line no-undef
-    ElMessage.success(res.data.message);
-    followed.value = false;
-    count.value--;
+    ElMessage({
+      message: res.data.message,
+      type: "success",
+    });
+  } catch (e) {
+    // 失败回滚
+    followed.value = oldFollowed;
+    console.log(e);
+
+    // eslint-disable-next-line no-undef
+    ElMessage({
+      message: "操作失败，请重试",
+      type: "error",
+    });
+  } finally {
+    followLoading.value = false;
   }
-};
+}, 800);
 </script>
 
 <template>
@@ -65,13 +102,15 @@ const unfollow = async () => {
             >{{ props.nickname }}</span
           >
           <el-button
-            @click="follow"
+            @click="toggleFollow"
             v-if="!followed"
             type="primary"
             class="follow"
             >关注</el-button
           >
-          <el-button @click="unfollow" v-else class="follow">已关注</el-button>
+          <el-button @click="toggleFollow" v-else class="follow"
+            >已关注</el-button
+          >
         </div>
         <el-text
           style="display: flex; justify-content: flex-start; cursor: pointer"

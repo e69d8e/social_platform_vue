@@ -99,6 +99,8 @@ const submitForm = (formEl) => {
       }
     } else {
       console.log("请检查输入");
+      // eslint-disable-next-line no-undef
+      ElMessage.error("请检查输入");
     }
   });
 };
@@ -142,7 +144,7 @@ const isLogin = ref(true);
         :model="ruleForm"
         status-icon
         :rules="rules"
-        label-width="auto"
+        label-width="70px"
         class="demo-ruleForm"
       >
         <el-form-item label="用户名" prop="username">
