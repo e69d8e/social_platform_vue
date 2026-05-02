@@ -82,7 +82,7 @@ watch(
               :id="post.id"
               :img-url="post.imgUrl"
               :title="post.title"
-              :content="post.content"
+              :cover="post.cover"
               :liked="post.liked"
               :count="post.count"
               :time="post.createTime"
@@ -104,7 +104,7 @@ watch(
             :span="6"
           >
             <UserCard
-              class="postCard"
+              class="userCard"
               :id="user.id"
               :avatar="user.avatar"
               :nickname="user.nickname"

@@ -12,10 +12,10 @@ export const uploadAvatar = async (file) => {
 };
 
 // 上传帖子图片
-export const uploadPostImg = async (file) => {
+export const uploadPostImgApi = async (file) => {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await request.post("/upload/", formData, {
+  const res = await request.post("/upload/post", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

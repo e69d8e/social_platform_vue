@@ -17,7 +17,7 @@ const post = ref({
   content: "内容",
   category: "分类",
   createTime: "",
-  postImages: [{ id: "", url: "" }],
+  cover: "",
   liked: false,
   count: 0,
   userId: "",
@@ -218,17 +218,11 @@ const banPost = async () => {
       </div>
     </div>
     <div class="other"></div>
-    <div class="demo-image__lazy" v-if="post.postImages.length > 0">
-      <el-image
-        v-for="img in post.postImages"
-        :key="img.id"
-        :src="img.url"
-        lazy
-      />
+    <div class="cover" v-show="post.cover">
+      <el-image :src="post.cover"></el-image>
     </div>
-    <div class="content">
-      {{ post.content }}
-    </div>
+    <div class="line"></div>
+    <div class="content" v-html="post.content"></div>
     <el-dialog v-model="dialogVisible" title="确认删除?" width="500">
       <template #footer>
         <div class="dialog-footer">
@@ -281,19 +275,9 @@ const banPost = async () => {
       }
     }
   }
-  .demo-image__lazy {
-    margin: 20px auto;
-    width: 800px;
-    height: 400px;
-    overflow-y: auto;
-  }
-  .demo-image__lazy .el-image {
-    display: block;
-    min-height: 200px;
-    margin-bottom: 10px;
-  }
-  .demo-image__lazy .el-image:last-child {
-    margin-bottom: 0;
+  .line {
+    border-top: 2px solid #dcdfe6;
+    margin: 20px 0;
   }
 }
 </style>
