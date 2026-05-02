@@ -1,20 +1,20 @@
 <script setup>
 const props = defineProps({
-  authority: {
-    type: String,
-    default: "USER",
+  authorityId: {
+    type: Number,
+    default: 1,
   },
 });
 </script>
 <template>
   <div class="authority">
-    <el-text v-if="props.authority === 'ADMIN'" type="danger">
+    <el-text v-if="props.authorityId === 2" type="danger">
       <el-icon><Cpu /></el-icon>管理员
     </el-text>
-    <el-text v-if="props.authority === 'USER'" type="success">
+    <el-text v-if="props.authorityId === 1" type="success">
       <el-icon><Avatar /></el-icon>用户
     </el-text>
-    <el-text v-if="props.authority === 'REVIEWER'" type="primary">
+    <el-text v-if="props.authorityId === 3" type="primary">
       <el-icon><Notebook /></el-icon>审核
     </el-text>
   </div>

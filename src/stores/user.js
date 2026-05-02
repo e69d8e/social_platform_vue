@@ -8,7 +8,7 @@ export const useUserStore = defineStore(
       avatar: "",
       bio: "",
       gender: 0,
-      authority: "",
+      authorityId: 1,
       createTime: "",
       nickname: "",
       followPrivate: false,
@@ -24,7 +24,7 @@ export const useUserStore = defineStore(
         avatar: "",
         bio: "",
         gender: 0,
-        authority: "",
+        authorityId: 1,
         createTime: "",
         nickname: "",
       };

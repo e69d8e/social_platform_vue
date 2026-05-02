@@ -41,6 +41,7 @@ const pageChange = async () => {
           :img-url="post.imgUrl"
           :title="post.title"
           :cover="post.cover"
+          :content="post.content"
           :liked="post.liked"
           :count="post.count"
           :time="post.createTime"

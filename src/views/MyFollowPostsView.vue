@@ -78,6 +78,7 @@ onUnmounted(() => {
           :img-url="post.imgUrl"
           :title="post.title"
           :cover="post.cover"
+          :content="post.content"
           :count="post.count"
           :liked="post.liked"
           :time="post.createTime"

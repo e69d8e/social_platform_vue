@@ -85,6 +85,7 @@ onUnmounted(() => {
           :id="post.id"
           :img-url="post.imgUrl"
           :title="post.title"
+          :content="post.content"
           :count="post.count"
           :liked="post.liked"
           :time="post.createTime"
@@ -92,9 +93,6 @@ onUnmounted(() => {
         />
       </el-col>
     </el-row>
-    <div class="fixed-element" @click="$router.push('/publicPost')">
-      <el-icon><CirclePlus style="color: #fff" /></el-icon>
-    </div>
   </div>
 </template>
 
@@ -105,22 +103,6 @@ onUnmounted(() => {
   }
   .colItem {
     margin-bottom: 20px;
-  }
-  .fixed-element {
-    text-align: center;
-    font-size: 60px;
-    width: 60px;
-    height: 60px;
-    background-color: #409eff;
-    border-radius: 50%;
-    position: fixed;
-    bottom: 140px; /* 距离顶部 */
-    right: 180px; /* 距离右侧 */
-    z-index: 999; /* 确保在最上层 */
-  }
-  .fixed-element:hover {
-    cursor: pointer;
-    background-color: rgba($color: #409eff, $alpha: 0.6);
   }
 }
 </style>

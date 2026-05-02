@@ -82,6 +82,7 @@ watch(
               :id="post.id"
               :img-url="post.imgUrl"
               :title="post.title"
+              :content="post.content"
               :cover="post.cover"
               :liked="post.liked"
               :count="post.count"

@@ -2,6 +2,9 @@
 import { useUserStore } from "@/stores/user";
 import { ref, reactive, onMounted } from "vue";
 import { updateUserInfoApi, updatePasswordApi } from "@/api/userApi";
+import { disconnect } from "@/utils/websocket.js";
+import { layoutApi } from "@/api/userApi";
+
 import AuthorityBox from "@/components/AuthorityBox.vue";
 import { ElText } from "element-plus";
 import { getUserInfoApi } from "@/api/userApi";
@@ -125,7 +128,16 @@ const toBanUsers = () => {
     path: "/banUsers",
   });
 };
-
+const dialogVisible = ref(false);
+const logout = async () => {
+  const res = await layoutApi();
+  await userStore.removeInfo();
+  disconnect();
+  dialogVisible.value = false;
+  // eslint-disable-next-line no-undef
+  ElMessage.success(res.data.message);
+  router.push("/login");
+};
 const changePassword = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -173,16 +185,16 @@ const changePassword = (formEl) => {
       <img v-if="imageUrl" :src="imageUrl" class="avatar" />
       <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
     </el-upload>
-    <div class="info" v-if="userInfo.authority === 'USER'">
+    <div class="info" v-if="userInfo.authorityId === 1">
       <el-text type="success">账号: {{ userInfo.username }}</el-text>
     </div>
-    <div class="info" v-if="userInfo.authority === 'ADMIN'">
+    <div class="info" v-if="userInfo.authorityId === 2">
       <el-text type="danger">账号: {{ userInfo.username }}</el-text>
     </div>
-    <div class="info" v-if="userInfo.authority === 'REVIEWER'">
+    <div class="info" v-if="userInfo.authorityId === 3">
       <el-text type="primary">账号: {{ userInfo.username }}</el-text>
     </div>
-    <AuthorityBox :authority="userInfo.authority" />
+    <AuthorityBox :authority="userInfo.authorityId" />
     <div style="margin: 10px 0">
       <el-button @click="toFans()" type="primary"
         >{{ userInfo.count }} 粉丝</el-button
@@ -194,14 +206,14 @@ const changePassword = (formEl) => {
         >我的好友</el-button
       >
       <el-button
-        v-if="userInfo.authority === 'REVIEWER'"
+        v-if="userInfo.authorityId === 3"
         style="margin-left: 20px"
         @click="toBanPosts"
         type="primary"
         >我的封禁</el-button
       >
       <el-button
-        v-if="userInfo.authority === 'ADMIN'"
+        v-if="userInfo.authorityId === 2"
         style="margin-left: 20px"
         @click="toBanUsers"
         type="primary"
@@ -210,6 +222,7 @@ const changePassword = (formEl) => {
     </div>
     <div class="password">
       <el-button @click="dialogFormVisible = true">修改密码</el-button>
+      <el-button type="danger" @click="dialogVisible = true">注销</el-button>
     </div>
     <el-form
       ref="ruleFormRef"
@@ -294,6 +307,14 @@ const changePassword = (formEl) => {
           <el-button type="primary" @click="changePassword"> 确认 </el-button>
         </div>
       </template> -->
+    </el-dialog>
+    <el-dialog v-model="dialogVisible" title="确认注销？" width="500">
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false"> 取消 </el-button>
+          <el-button type="primary" @click="logout"> 确认 </el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>

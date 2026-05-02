@@ -11,7 +11,7 @@ const router = useRouter();
 const userStore = useUserStore();
 const userInfo = ref({
   id: "",
-  account: "",
+  username: "",
   nickname: "",
   avatar: "",
   bio: "",
@@ -21,7 +21,7 @@ const userInfo = ref({
   count: 0,
   createTime: "",
   gender: 0,
-  authority: "",
+  authorityId: 1,
   enabled: true,
 });
 const loading = ref(true);
@@ -104,7 +104,7 @@ const ban = async () => {
 const setUser = async () => {
   const res = await setUserApi(route.params.id);
   if (res.data.code === 1) {
-    userInfo.value.authority = "USER";
+    userInfo.value.authorityId = 1;
     // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
@@ -115,7 +115,7 @@ const setUser = async () => {
 const setReviewer = async () => {
   const res = await setReviewerApi(route.params.id);
   if (res.data.code === 1) {
-    userInfo.value.authority = "REVIEWER";
+    userInfo.value.authorityId = 3;
     // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
@@ -143,19 +143,19 @@ const setReviewer = async () => {
       <el-button @click="toggleFollow" v-else>已关注</el-button>
     </div>
     <div class="account">
-      <div class="info" v-if="userInfo.authority === 'USER'">
+      <div class="info" v-if="userInfo.authorityId === 1">
         <el-text size="large" type="success"
-          >账号: {{ userInfo.nickname }}</el-text
+          >账号: {{ userInfo.username }}</el-text
         >
       </div>
-      <div class="info" v-if="userInfo.authority === 'ADMIN'">
+      <div class="info" v-if="userInfo.authorityId === 2">
         <el-text size="large" type="danger"
-          >账号: {{ userInfo.nickname }}</el-text
+          >账号: {{ userInfo.username }}</el-text
         >
       </div>
-      <div class="info" v-if="userInfo.authority === 'REVIEWER'">
+      <div class="info" v-if="userInfo.authorityId === 3">
         <el-text size="large" type="primary"
-          >账号: {{ userInfo.nickname }}</el-text
+          >账号: {{ userInfo.username }}</el-text
         >
       </div>
     </div>
@@ -169,7 +169,7 @@ const setReviewer = async () => {
         ><el-icon><Warning /></el-icon>该账号封禁中</el-text
       >
     </div>
-    <AuthorityBox :authority="userInfo.authority" />
+    <AuthorityBox :authorityId="userInfo.authorityId" />
     <div class="createTime">
       <el-text type="primary">注册时间: {{ userInfo.createTime }}</el-text>
     </div>
@@ -205,7 +205,7 @@ const setReviewer = async () => {
     </div>
     <div class="set" v-if="userStore.userInfo.authority === 'ADMIN'">
       <el-popconfirm
-        v-if="userInfo.authority === 'USER'"
+        v-if="userInfo.authorityId === 1"
         class="box-item"
         title="确认将该用户设为审核吗？"
         placement="right-end"
@@ -217,12 +217,12 @@ const setReviewer = async () => {
       </el-popconfirm>
       <el-button
         @click="setUser"
-        v-else-if="userInfo.authority === 'REVIEWER'"
+        v-else-if="userInfo.authorityId === 3"
         type="info"
         >设为普通用户</el-button
       >
     </div>
-    <div class="ban" v-if="userStore.userInfo.authority === 'ADMIN'">
+    <div class="ban" v-if="userStore.userInfo.authorityId === 2">
       <el-popconfirm
         v-if="userInfo.enabled"
         class="box-item"

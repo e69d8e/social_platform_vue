@@ -30,13 +30,13 @@ const handleSuccess = (response, uploadFile) => {
 };
 
 const beforeUpload = (rawFile) => {
-  if (rawFile.type !== "image/jpeg") {
+  if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
     // eslint-disable-next-line no-undef
-    ElMessage.error("上传图片格式应为 jpg!");
+    ElMessage.error("上传图片格式应为 jpg 或 png!");
     return false;
-  } else if (rawFile.size / 1024 / 1024 > 2) {
+  } else if (rawFile.size / 1024 / 1024 > 8) {
     // eslint-disable-next-line no-undef
-    ElMessage.error("图片大小不能超过 2MB!");
+    ElMessage.error("图片大小不能超过 8MB!");
     return false;
   }
   return true;
@@ -102,7 +102,9 @@ editorConfig.MENU_CONF["uploadImage"] = {
       <el-icon size="large"><ArrowLeft /></el-icon>
     </div>
     <div class="img">
-      <div class="please">请上传封面(图片比例为5:3)</div>
+      <div class="please">
+        请上传封面(图片比例为5:3，格式为 jpg/jpeg，大小小于 8MB)
+      </div>
       <!-- <el-upload
         v-model:file-list="fileList"
         action="http://127.0.0.1:8080/api/upload/post"
@@ -235,6 +237,10 @@ editorConfig.MENU_CONF["uploadImage"] = {
       height: 150px;
       text-align: center;
     }
+  }
+  .content {
+    width: 800px;
+    overflow: hidden;
   }
   .editor {
     margin: 20px 0;

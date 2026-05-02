@@ -3,27 +3,17 @@ import { ref, onUnmounted } from "vue";
 import { RouterView } from "vue-router";
 import { Search } from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
-import { layoutApi, signInApi } from "@/api/userApi";
+import { signInApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 import { debounce } from "lodash-es";
-import { disconnect } from "@/utils/websocket.js";
 
 const signStore = useSignStore();
-const dialogVisible = ref(false);
 const router = useRouter();
 const userStore = useUserStore();
 const logoUrl = "http://127.0.0.1:8080/imgs/logo.png";
 const searchContent = ref("");
-const logout = async () => {
-  const res = await layoutApi();
-  await userStore.removeInfo();
-  disconnect();
-  dialogVisible.value = false;
-  // eslint-disable-next-line no-undef
-  ElMessage.success(res.data.message);
-  router.push("/login");
-};
+
 const search = debounce(() => {
   if (searchContent.value.trim() === "") {
     // eslint-disable-next-line no-undef
@@ -157,10 +147,10 @@ const sign = async () => {
                 >我的关注</el-button
               >
               <el-button
-                @click="dialogVisible = true"
+                @click="$router.push('/publicPost')"
                 style="height: 50px; margin-left: 10px"
                 type="warning"
-                >注销</el-button
+                >发布</el-button
               >
             </div>
           </el-col>
@@ -171,14 +161,6 @@ const sign = async () => {
         <router-view />
       </el-main>
     </el-container>
-    <el-dialog v-model="dialogVisible" title="确认注销？" width="500">
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="dialogVisible = false"> 取消 </el-button>
-          <el-button type="primary" @click="logout"> 确认 </el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 

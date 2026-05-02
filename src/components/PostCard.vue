@@ -1,7 +1,6 @@
 <script setup>
 import { likeApi } from "@/api/postApi";
 import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
 import { throttle } from "lodash";
 const props = defineProps({
   id: {
@@ -19,6 +18,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  content: {
+    type: String,
+    default: "",
+  },
   count: {
     type: Number,
     default: 0,
@@ -31,7 +34,6 @@ const props = defineProps({
 const { title, cover, time } = props;
 const count = ref(props.count);
 const liked = ref(props.liked);
-const router = useRouter();
 const handleLike = async () => {
   const oldLiked = liked.value;
   const oldCount = count.value;
@@ -65,11 +67,24 @@ const formattedCount = computed(() => {
 });
 // 节流
 const like = throttle(handleLike, 800);
+const htmlToText = (html) => {
+  // 可选：提前将常见块级标签替换为换行，保留基础排版
+  const formattedHtml = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n");
+
+  // 使用 DOMParser 安全解析（不会执行 script）
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(formattedHtml, "text/html");
+  return doc.body.textContent?.trim() || "";
+};
 </script>
 
 <template>
   <div class="postcard">
-    <el-card class="pointer" @click="router.push(`/post/${props.id}`)">
+    <el-card class="pointer" @click="$router.push(`/post/${props.id}`)">
       <template #header>
         <div>
           <div class="header">
@@ -92,8 +107,19 @@ const like = throttle(handleLike, 800);
           </div>
         </div>
       </template>
-      <div v-if="cover">
-        <img :src="cover" shadow="hover" style="width: 100%; height: 200px" />
+      <div class="bottom">
+        <div v-if="cover">
+          <img :src="cover" shadow="hover" style="width: 100%; height: 200px" />
+        </div>
+        <div class="content" v-else>
+          <el-text
+            style="white-space: pre-wrap; word-wrap: break-word; height: 200px"
+            size="small"
+            type="info"
+          >
+            {{ htmlToText(content) }}
+          </el-text>
+        </div>
       </div>
     </el-card>
   </div>
@@ -124,6 +150,12 @@ const like = throttle(handleLike, 800);
   .time {
     display: flex;
     justify-content: flex-start;
+  }
+  .bottom {
+    height: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 @keyframes grow {

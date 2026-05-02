@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { getPostDetailApi } from "@/api/postApi";
 import { useRoute, useRouter } from "vue-router";
 import { likeApi, deletePostApi } from "@/api/postApi";
@@ -11,6 +11,9 @@ import { throttle } from "lodash";
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
+const srcList = computed(() => {
+  return [post.value.cover];
+});
 const post = ref({
   id: "",
   title: "标题",
@@ -219,7 +222,12 @@ const banPost = async () => {
     </div>
     <div class="other"></div>
     <div class="cover" v-show="post.cover">
-      <el-image :src="post.cover"></el-image>
+      <el-image
+        :preview-src-list="srcList"
+        style="width: 800px; height: 480px"
+        fit="cover"
+        :src="post.cover"
+      ></el-image>
     </div>
     <div class="line"></div>
     <div class="content" v-html="post.content"></div>
@@ -278,6 +286,10 @@ const banPost = async () => {
   .line {
     border-top: 2px solid #dcdfe6;
     margin: 20px 0;
+  }
+  .content {
+    width: 800px;
+    overflow: hidden;
   }
 }
 </style>
