@@ -6,8 +6,9 @@ import { likeApi, deletePostApi } from "@/api/postApi";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
-import CommentBox from "@/components/CommentBox.vue";
 import { throttle } from "lodash";
+import CommentComponent from "@/components/CommentComponent.vue";
+import formattedCount from "@/utils/formattedCount";
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
@@ -157,96 +158,103 @@ const banPost = async () => {
   }
   router.back();
 };
+const likedCount = computed(() => {
+  return formattedCount(post.value.count);
+});
 </script>
 
 <template>
-  <div class="post" v-loading="loading">
-    <div class="pointer" @click="$router.back()">
-      <el-icon size="large"><ArrowLeft /></el-icon>
-    </div>
-    <div class="title">{{ post.title }}</div>
-    <div class="user">
-      <el-avatar
-        class="pointer"
-        @click="$router.push({ path: '/user/' + post.userId })"
-        style="width: 40px; height: 40px"
-        :src="post.avatar"
-        :size="40"
-      ></el-avatar>
-      <el-text
-        @click="$router.push({ path: '/user/' + post.userId })"
-        class="nickname pointer"
-        >{{ post.nickname }}</el-text
-      >
-      <el-button @click="toggleFollow" type="primary" v-if="!post.followed"
-        >关注</el-button
-      >
-      <el-button @click="toggleFollow" v-else>已关注</el-button>
-      <el-icon
-        v-if="userStore.userInfo.id === post.userId"
-        @click="dialogVisible = true"
-        class="icon pointer"
-        ><Delete
-      /></el-icon>
-      <el-popconfirm
-        class="box-item"
-        title="确定封禁/解封该文章吗？"
-        placement="right-start"
-        @confirm="banPost"
-      >
-        <template #reference>
-          <el-icon
-            v-if="userStore.userInfo.authority === 'REVIEWER'"
-            class="icon pointer"
-            ><RemoveFilled
-          /></el-icon>
-        </template>
-      </el-popconfirm>
-    </div>
-    <div class="other">
-      <el-text type="primary" class="time">
-        {{ post.createTime }}
-      </el-text>
-      <div class="like">
-        <el-icon @click="toggleLike" size="large" v-if="!post.liked"
-          ><Star
-        /></el-icon>
-        <el-icon @click="toggleLike" size="large" v-else
-          ><StarFilled
-        /></el-icon>
-        <el-text class="text" type="primary">{{ post.count }} 赞</el-text>
-      </div>
-      <div class="category">
-        <el-tag>{{ post.category }}</el-tag>
-      </div>
-    </div>
-    <div class="other"></div>
-    <div class="cover" v-show="post.cover">
-      <el-image
-        :preview-src-list="srcList"
-        style="width: 800px; height: 480px"
-        fit="cover"
-        :src="post.cover"
-      ></el-image>
-    </div>
-    <div class="line"></div>
-    <div class="content" v-html="post.content"></div>
-    <el-dialog v-model="dialogVisible" title="确认删除?" width="500">
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="deletePost"> 确认 </el-button>
+  <el-row>
+    <el-col :span="2"></el-col>
+    <el-col :span="20">
+      <div class="post" v-loading="loading">
+        <div class="pointer" @click="$router.back()">
+          <el-icon size="large"><ArrowLeft /></el-icon>
         </div>
-      </template>
-    </el-dialog>
-    <CommentBox :post-id="route.params.id" />
-  </div>
+        <div class="title">{{ post.title }}</div>
+        <div class="user">
+          <el-avatar
+            class="pointer"
+            @click="$router.push({ path: '/user/' + post.userId })"
+            style="flex-shrink: 0; width: 50px; height: 50px"
+            :src="post.avatar"
+          ></el-avatar>
+          <el-text
+            @click="$router.push({ path: '/user/' + post.userId })"
+            class="nickname pointer"
+            >{{ post.nickname }}</el-text
+          >
+          <el-button @click="toggleFollow" type="primary" v-if="!post.followed"
+            >关注</el-button
+          >
+          <el-button @click="toggleFollow" v-else>已关注</el-button>
+          <el-icon
+            v-if="userStore.userInfo.id === post.userId"
+            @click="dialogVisible = true"
+            class="icon pointer"
+            ><Delete
+          /></el-icon>
+          <el-popconfirm
+            class="box-item"
+            title="确定封禁/解封该文章吗？"
+            placement="right-start"
+            @confirm="banPost"
+          >
+            <template #reference>
+              <el-icon
+                v-if="userStore.userInfo.authority === 'REVIEWER'"
+                class="icon pointer"
+                ><RemoveFilled
+              /></el-icon>
+            </template>
+          </el-popconfirm>
+        </div>
+        <div class="other">
+          <el-text type="primary" class="time">
+            {{ post.createTime }}
+          </el-text>
+          <div class="like">
+            <el-icon @click="toggleLike" size="large" v-if="!post.liked"
+              ><Star
+            /></el-icon>
+            <el-icon @click="toggleLike" size="large" v-else
+              ><StarFilled
+            /></el-icon>
+            <el-text class="text" type="primary">{{ likedCount }} 赞</el-text>
+          </div>
+          <div class="category">
+            <el-tag>{{ post.category }}</el-tag>
+          </div>
+        </div>
+        <div class="other"></div>
+        <div class="cover" v-show="post.cover">
+          <el-image
+            :preview-src-list="srcList"
+            style="width: 100%; aspect-ratio: 5 / 3"
+            fit="cover"
+            :src="post.cover"
+          ></el-image>
+        </div>
+        <div class="line"></div>
+        <div class="content" v-html="post.content"></div>
+        <el-dialog v-model="dialogVisible" title="确认删除?" width="500">
+          <template #footer>
+            <div class="dialog-footer">
+              <el-button @click="dialogVisible = false">取消</el-button>
+              <el-button type="primary" @click="deletePost"> 确认 </el-button>
+            </div>
+          </template>
+        </el-dialog>
+        <CommentComponent :post-id="route.params.id" />
+      </div>
+    </el-col>
+    <el-col :span="2"></el-col>
+  </el-row>
 </template>
 
 <style scoped>
 .post {
-  margin: 50px auto;
-  width: 800px;
+  margin: 20px auto;
   .pointer {
     cursor: pointer;
   }
@@ -288,7 +296,6 @@ const banPost = async () => {
     margin: 20px 0;
   }
   .content {
-    width: 800px;
     overflow: hidden;
   }
 }

@@ -1,11 +1,13 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { banUserApi, setReviewerApi, setUserApi } from "@/api/adminApi";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { throttle } from "lodash";
+import AuthorityComponent from "@/components/AuthorityComponent.vue";
+import formattedCount from "@/utils/formattedCount";
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
@@ -123,6 +125,9 @@ const setReviewer = async () => {
     });
   }
 };
+const fansCount = computed(() => {
+  return formattedCount(userInfo.value.count);
+});
 </script>
 <template>
   <div class="user" v-loading="loading">
@@ -134,7 +139,7 @@ const setReviewer = async () => {
       style="width: 80px; height: 80px; border-radius: 50%"
     />
     <div class="count" style="margin: 10px 0">
-      <el-text type="primary">{{ userInfo.count }} 粉丝</el-text>
+      <el-text type="primary">{{ fansCount }} 粉</el-text>
     </div>
     <div class="follow">
       <el-button @click="toggleFollow" v-if="!userInfo.followed" type="primary"
@@ -169,7 +174,7 @@ const setReviewer = async () => {
         ><el-icon><Warning /></el-icon>该账号封禁中</el-text
       >
     </div>
-    <AuthorityBox :authorityId="userInfo.authorityId" />
+    <AuthorityComponent :authorityId="userInfo.authorityId" />
     <div class="createTime">
       <el-text type="primary">注册时间: {{ userInfo.createTime }}</el-text>
     </div>
@@ -203,7 +208,7 @@ const setReviewer = async () => {
         >ta的帖子</el-button
       >
     </div>
-    <div class="set" v-if="userStore.userInfo.authority === 'ADMIN'">
+    <div class="set" v-if="userStore.userInfo.authorityId === 2">
       <el-popconfirm
         v-if="userInfo.authorityId === 1"
         class="box-item"

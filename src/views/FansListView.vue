@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { getFollowerListApi, getUserFollowerListApi } from "@/api/followApi";
 import { useRoute } from "vue-router";
 import { useUserStore } from "@/stores/user";
+import UserCard from "@/components/UserCard.vue";
 const route = useRoute();
 const userStore = useUserStore();
 const fansList = ref([]);
@@ -49,10 +50,18 @@ const pageChange = async () => {
     <div class="text">
       <el-text size="large" type="primary">粉丝列表</el-text>
     </div>
-    <el-row>
-      <el-col class="colItem" v-for="user in fansList" :key="user.id" :span="6">
+    <el-row :gutter="10">
+      <el-col
+        class="colItem"
+        v-for="user in fansList"
+        :key="user.id"
+        :xs="14"
+        :sm="12"
+        :md="8"
+        :lg="6"
+        :xl="4"
+      >
         <UserCard
-          class="postCard"
           :id="user.id"
           :avatar="user.avatar"
           :nickname="user.nickname"

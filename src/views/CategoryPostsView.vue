@@ -34,8 +34,17 @@ const pageChange = async () => {
     <div class="text">
       <el-text size="large" type="primary">{{ route.query.category }}</el-text>
     </div>
-    <el-row>
-      <el-col class="colItem" v-for="post in postList" :key="post.id" :span="6">
+    <el-row :gutter="10">
+      <el-col
+        class="colItem"
+        v-for="post in postList"
+        :key="post.id"
+        :xs="14"
+        :sm="12"
+        :md="8"
+        :lg="6"
+        :xl="4"
+      >
         <PostCard
           :id="post.id"
           :img-url="post.imgUrl"

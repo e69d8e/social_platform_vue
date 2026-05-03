@@ -5,6 +5,7 @@ import { searchPostsApi } from "@/api/searchApi";
 import PostCard from "@/components/PostCard.vue";
 import { searchUsersApi } from "@/api/userApi";
 import UserCard from "@/components/UserCard.vue";
+import formattedCount from "@/utils/formattedCount";
 const route = useRoute();
 const pageNum = ref(1);
 const postPageSize = ref(8);
@@ -57,6 +58,12 @@ watch(
     loading.value = false;
   },
 );
+posts.value.map((v) => {
+  v.count = formattedCount(v.count);
+});
+users.value.map((v) => {
+  v.count = formattedCount(v.count);
+});
 </script>
 <template>
   <div class="search" v-loading="loading">
@@ -70,12 +77,16 @@ watch(
             <span>帖子</span>
           </span>
         </template>
-        <el-row>
+        <el-row :gutter="10">
           <el-col
             class="colItem"
             v-for="post in posts"
             :key="post.id"
-            :span="6"
+            :xs="14"
+            :sm="12"
+            :md="8"
+            :lg="6"
+            :xl="4"
           >
             <PostCard
               class="postCard"
@@ -97,15 +108,18 @@ watch(
             <span>用户</span>
           </span>
         </template>
-        <el-row>
+        <el-row :gutter="10">
           <el-col
             class="colItem"
             v-for="user in users"
             :key="user.id"
-            :span="6"
+            :xs="14"
+            :sm="12"
+            :md="8"
+            :lg="6"
+            :xl="4"
           >
             <UserCard
-              class="userCard"
               :id="user.id"
               :avatar="user.avatar"
               :nickname="user.nickname"

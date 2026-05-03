@@ -32,12 +32,16 @@ const pageChange = async () => {
     <div class="text">
       <el-text size="large" type="primary">好友列表</el-text>
     </div>
-    <el-row>
+    <el-row :gutter="10">
       <el-col
         class="colItem"
         v-for="user in friendList"
         :key="user.id"
-        :span="6"
+        :xs="14"
+        :sm="12"
+        :md="8"
+        :lg="6"
+        :xl="4"
       >
         <UserCard
           class="postCard"

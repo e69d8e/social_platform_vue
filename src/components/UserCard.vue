@@ -1,8 +1,9 @@
 <script setup>
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { throttle } from "lodash";
 import { useUserStore } from "@/stores/user";
+import formattedCount from "@/utils/formattedCount";
 const props = defineProps({
   id: {
     type: String,
@@ -84,6 +85,9 @@ const toggleFollow = throttle(async () => {
     followLoading.value = false;
   }
 }, 800);
+const fansCount = computed(() => {
+  return formattedCount(count.value);
+});
 </script>
 
 <template>
@@ -117,7 +121,7 @@ const toggleFollow = throttle(async () => {
           @click="$router.push(`/fans/${props.id}`)"
           size="small"
           type="primary"
-          >{{ count }} 粉丝</el-text
+          >{{ fansCount }} 粉</el-text
         >
       </template>
       <div class="bio pointer" @click="$router.push(`/user/${props.id}`)">
@@ -129,6 +133,8 @@ const toggleFollow = throttle(async () => {
 
 <style lang="scss" scoped>
 .userCard {
+  width: 100%;
+  margin-bottom: 10px;
   .pointer {
     cursor: pointer;
   }
@@ -137,14 +143,12 @@ const toggleFollow = throttle(async () => {
     align-items: center;
     line-height: 50px;
   }
-  width: 280px;
   .content {
     text-align: left;
     // 限制显示一行内容
   }
   .nickname {
     text-align: left;
-
     white-space: 1; /* 强制文本不换行 */
     overflow: hidden; /* 隐藏溢出内容 */
     text-overflow: ellipsis; /* 显示省略号 */

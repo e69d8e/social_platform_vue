@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { getFollowListApi, getUserFollowListApi } from "@/api/followApi";
 import { useRoute } from "vue-router";
 import { useUserStore } from "@/stores/user";
+import UserCard from "@/components/UserCard.vue";
 const route = useRoute();
 const userStore = useUserStore();
 const followList = ref([]);
@@ -48,12 +49,16 @@ const pageChange = async () => {
     <div class="text">
       <el-text size="large" type="primary">关注列表</el-text>
     </div>
-    <el-row>
+    <el-row :gutter="10">
       <el-col
         class="colItem"
         v-for="user in followList"
         :key="user.id"
-        :span="6"
+        :xs="14"
+        :sm="12"
+        :md="8"
+        :lg="6"
+        :xl="4"
       >
         <UserCard
           class="postCard"

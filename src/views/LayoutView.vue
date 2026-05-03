@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onUnmounted } from "vue";
+import { ref, onUnmounted, computed } from "vue";
 import { RouterView } from "vue-router";
 import { Search } from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
@@ -7,6 +7,7 @@ import { signInApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 import { debounce } from "lodash-es";
+import formattedCount from "@/utils/formattedCount";
 
 const signStore = useSignStore();
 const router = useRouter();
@@ -61,14 +62,17 @@ const sign = async () => {
     ElMessage.error(res.data.message);
   }
 };
+const fansCount = computed(() => {
+  return formattedCount(userStore.userInfo.count);
+});
 </script>
 
 <template>
   <div class="layout">
     <el-container>
       <el-header class="header">
-        <el-row :gutter="0">
-          <el-col :span="6">
+        <el-row justify="space-between">
+          <el-col :xs="12" :sm="8" :md="6" :lg="6" :xl="6">
             <!-- logo -->
             <div class="logo" @click="$router.push('/')">
               <el-image
@@ -85,11 +89,10 @@ const sign = async () => {
               <el-tag>本月已经连续签到{{ signStore.signDay }}天</el-tag>
             </div>
           </el-col>
-          <el-col :span="10">
+          <el-col :xs="0" :sm="0" :md="0" :lg="7" :xl="8">
             <!-- search框 -->
             <div class="search">
               <el-input
-                class="input"
                 v-model="searchContent"
                 placeholder="搜索"
                 :prefix-icon="Search"
@@ -97,25 +100,25 @@ const sign = async () => {
               />
               <el-button
                 @click="search"
-                style="
-                  height: 50px;
-                  width: 60px;
-                  margin-left: 10px;
-                  font-size: 24px;
-                  line-height: 50px;
-                "
+                style="margin-left: 4px; font-size: 24px; width: 32px"
                 :icon="Search"
-                type="primary"
               />
             </div>
           </el-col>
-          <el-col :span="8">
+          <!-- 按钮 -->
+          <el-col :push="2" :xs="0" :sm="9" :md="9" :lg="6" :xl="6">
+            <el-button type="success" @click="myPosts">我的帖子</el-button>
+            <el-button type="primary" @click="myFollowPosts"
+              >我的关注</el-button
+            >
+            <el-button @click="$router.push('/publicPost')" type="warning"
+              >发布</el-button
+            >
+          </el-col>
+          <el-col :xs="12" :sm="7" :md="7" :lg="4" :xl="4">
             <!-- 登录按钮 -->
             <div class="login" v-if="!userStore.userInfo.username">
-              <el-button
-                @click="$router.push('/login')"
-                style="height: 50px"
-                type="primary"
+              <el-button @click="$router.push('/login')" type="primary"
                 >去登录</el-button
               >
             </div>
@@ -131,34 +134,20 @@ const sign = async () => {
                   {{ userStore.userInfo.nickname }}
                 </div>
                 <el-text @click="toFans" size="small" type="primary"
-                  >{{ userStore.userInfo.count }} 粉丝</el-text
+                  >{{ fansCount }} 粉</el-text
                 >
               </div>
-              <el-button
-                style="height: 50px; width: 60px; margin-left: 10px"
-                type="success"
-                @click="myPosts"
-                >我的帖子</el-button
-              >
-              <el-button
-                style="height: 50px; width: 60px; margin-left: 10px"
-                type="primary"
-                @click="myFollowPosts"
-                >我的关注</el-button
-              >
-              <el-button
-                @click="$router.push('/publicPost')"
-                style="height: 50px; margin-left: 10px"
-                type="warning"
-                >发布</el-button
-              >
             </div>
           </el-col>
         </el-row>
       </el-header>
 
       <el-main class="main">
-        <router-view />
+        <el-row>
+          <el-col :span="1"></el-col>
+          <el-col :span="22"> <router-view /> </el-col>
+          <el-col :span="1"></el-col>
+        </el-row>
       </el-main>
     </el-container>
   </div>
@@ -166,10 +155,9 @@ const sign = async () => {
 
 <style scoped>
 .layout {
-  padding: 30px 180px;
+  padding: 20px 0;
   .header {
-    /* background-color: orange; */
-    height: 100px;
+    margin-bottom: 16px;
     .logo {
       display: flex;
       align-items: center;
@@ -190,16 +178,13 @@ const sign = async () => {
     }
     .search {
       display: flex;
-      .input {
-        flex: 1;
-      }
     }
     .login {
       justify-content: flex-end;
       display: flex;
     }
     .box {
-      margin: 0px 10px;
+      margin-left: 10px;
       .nickname {
         line-height: 30px;
         white-space: nowrap; /* 强制文本不换行 */

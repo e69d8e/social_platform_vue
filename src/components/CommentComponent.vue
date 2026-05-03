@@ -185,7 +185,10 @@ const deleteComment = async (id) => {
     <!-- 输入框 -->
     <el-card shadow="never" class="comment-input-card">
       <div class="comment-input">
-        <el-avatar :size="40" :src="userStore.userInfo.avatar" />
+        <el-avatar
+          style="flex-shrink: 0; width: 50px; height: 50px"
+          :src="userStore.userInfo.avatar"
+        />
         <el-input
           v-model="content"
           type="textarea"
@@ -276,7 +279,7 @@ const deleteComment = async (id) => {
 
 <style scoped>
 .comment-container {
-  max-width: 800px;
+  max-width: 1300px;
   margin: 30px auto 240px;
 }
 
@@ -291,7 +294,7 @@ const deleteComment = async (id) => {
   padding: 10px;
   border-radius: 8px; /* 可选：圆角 */
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); /* 可选：阴影效果 */
-  width: 50%;
+  width: 60%;
   /* margin-bottom: 20px; */
 }
 

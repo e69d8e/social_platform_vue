@@ -96,16 +96,19 @@ editorConfig.MENU_CONF["uploadImage"] = {
 };
 </script>
 <template>
-  <div class="public" v-loading="loading">
-    <div class="header">发布帖子</div>
-    <div class="pointer back" @click="$router.back()">
-      <el-icon size="large"><ArrowLeft /></el-icon>
-    </div>
-    <div class="img">
-      <div class="please">
-        请上传封面(图片比例为5:3，格式为 jpg/jpeg，大小小于 8MB)
-      </div>
-      <!-- <el-upload
+  <el-row>
+    <el-col :span="2"></el-col>
+    <el-col :span="20" :offset="0">
+      <div class="public" v-loading="loading">
+        <div class="header">发布帖子</div>
+        <div class="pointer back" @click="$router.back()">
+          <el-icon size="large"><ArrowLeft /></el-icon>
+        </div>
+        <div class="img">
+          <div class="please">
+            请上传封面(图片比例为5:3，格式为 jpg/jpeg，大小小于 8MB)
+          </div>
+          <!-- <el-upload
         v-model:file-list="fileList"
         action="http://127.0.0.1:8080/api/upload/post"
         list-type="picture-card"
@@ -114,26 +117,26 @@ editorConfig.MENU_CONF["uploadImage"] = {
       >
         <el-icon><Plus /></el-icon>
       </el-upload> -->
-      <el-upload
-        class="uploader"
-        action="http://127.0.0.1:8080/api/upload/post"
-        :show-file-list="false"
-        :on-success="handleSuccess"
-        :before-upload="beforeUpload"
-      >
-        <img v-if="img" :src="img" class="cover" />
-        <el-icon v-else class="uploader-icon"><Plus /></el-icon>
-      </el-upload>
-    </div>
-    <div class="title">
-      <el-input
-        v-model="title"
-        autosize
-        type="textarea"
-        placeholder="请输入标题"
-      />
-    </div>
-    <!-- <div class="content">
+          <el-upload
+            class="uploader"
+            action="http://127.0.0.1:8080/api/upload/post"
+            :show-file-list="false"
+            :on-success="handleSuccess"
+            :before-upload="beforeUpload"
+          >
+            <img v-if="img" :src="img" class="cover" />
+            <el-icon v-else class="uploader-icon"><Plus /></el-icon>
+          </el-upload>
+        </div>
+        <div class="title">
+          <el-input
+            v-model="title"
+            autosize
+            type="textarea"
+            placeholder="请输入标题"
+          />
+        </div>
+        <!-- <div class="content">
       <el-input
         v-model="content"
         style="width: 500px"
@@ -142,62 +145,64 @@ editorConfig.MENU_CONF["uploadImage"] = {
         placeholder="请输入内容"
       />
     </div> -->
-    <div class="content" v-html="valueHtml"></div>
-    <div class="editor" style="border: 1px solid #ccc">
-      <Toolbar
-        style="border-bottom: 1px solid #ccc"
-        :editor="editorRef"
-        :defaultConfig="toolbarConfig"
-        :mode="mode"
-      />
-      <Editor
-        style="height: 500px; overflow-y: hidden"
-        v-model="valueHtml"
-        :defaultConfig="editorConfig"
-        :mode="mode"
-        @onCreated="handleCreated"
-      />
-    </div>
-    <div class="category">
-      <el-select
-        v-model="categoryId"
-        placeholder="请选择分类"
-        style="width: 240px"
-      >
-        <el-option
-          v-for="item in categoryList"
-          :key="item.id"
-          :label="item.name"
-          :value="item.id"
-        />
-      </el-select>
-    </div>
-    <div class="btn">
-      <el-button
-        style="width: 500px"
-        @click="dialogConfirmVisible = true"
-        type="primary"
-        >发布</el-button
-      >
-    </div>
-    <el-dialog v-model="dialogVisible">
-      <img w-full :src="dialogImageUrl" alt="Preview Image" />
-    </el-dialog>
-
-    <el-dialog v-model="dialogConfirmVisible" title="确认发布?" width="500">
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="dialogConfirmVisible = false">取消</el-button>
-          <el-button type="primary" @click="publicPost"> 确认 </el-button>
+        <div class="content" v-html="valueHtml"></div>
+        <div class="editor" style="border: 1px solid #ccc">
+          <Toolbar
+            style="border-bottom: 1px solid #ccc"
+            :editor="editorRef"
+            :defaultConfig="toolbarConfig"
+            :mode="mode"
+          />
+          <Editor
+            style="height: 500px; overflow-y: hidden"
+            v-model="valueHtml"
+            :defaultConfig="editorConfig"
+            :mode="mode"
+            @onCreated="handleCreated"
+          />
         </div>
-      </template>
-    </el-dialog>
-  </div>
+        <div class="category">
+          <el-select
+            v-model="categoryId"
+            placeholder="请选择分类"
+            style="width: 240px"
+          >
+            <el-option
+              v-for="item in categoryList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </div>
+        <div class="btn">
+          <el-button
+            style="width: 500px"
+            @click="dialogConfirmVisible = true"
+            type="primary"
+            >发布</el-button
+          >
+        </div>
+        <el-dialog v-model="dialogVisible">
+          <img w-full :src="dialogImageUrl" alt="Preview Image" />
+        </el-dialog>
+
+        <el-dialog v-model="dialogConfirmVisible" title="确认发布?" width="500">
+          <template #footer>
+            <div class="dialog-footer">
+              <el-button @click="dialogConfirmVisible = false">取消</el-button>
+              <el-button type="primary" @click="publicPost"> 确认 </el-button>
+            </div>
+          </template>
+        </el-dialog>
+      </div>
+    </el-col>
+    <el-col :span="2"></el-col>
+  </el-row>
 </template>
 <style lang="scss" scoped>
 .public {
-  width: 800px;
-  margin: 100px auto;
+  margin: 20px auto;
   .header {
     font-size: 20px;
     font-weight: bold;

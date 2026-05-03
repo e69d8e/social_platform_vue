@@ -1,14 +1,14 @@
 <script setup>
 import { useUserStore } from "@/stores/user";
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, computed } from "vue";
 import { updateUserInfoApi, updatePasswordApi } from "@/api/userApi";
 import { disconnect } from "@/utils/websocket.js";
 import { layoutApi } from "@/api/userApi";
-
-import AuthorityBox from "@/components/AuthorityBox.vue";
+import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import { ElText } from "element-plus";
 import { getUserInfoApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
+import formattedCount from "@/utils/formattedCount";
 const router = useRouter();
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
@@ -169,6 +169,9 @@ const changePassword = (formEl) => {
     }
   });
 };
+const fansCount = computed(() => {
+  return formattedCount(userInfo.count);
+});
 </script>
 <template>
   <div class="my" v-loading="loading">
@@ -194,11 +197,9 @@ const changePassword = (formEl) => {
     <div class="info" v-if="userInfo.authorityId === 3">
       <el-text type="primary">账号: {{ userInfo.username }}</el-text>
     </div>
-    <AuthorityBox :authority="userInfo.authorityId" />
+    <AuthorityComponent :authority="userInfo.authorityId" />
     <div style="margin: 10px 0">
-      <el-button @click="toFans()" type="primary"
-        >{{ userInfo.count }} 粉丝</el-button
-      >
+      <el-button @click="toFans()" type="primary">{{ fansCount }} 粉</el-button>
       <el-button style="margin-left: 20px" @click="toFollow()" type="primary"
         >我的关注</el-button
       >
@@ -320,8 +321,8 @@ const changePassword = (formEl) => {
 </template>
 <style lang="scss" scoped>
 .my {
-  margin: 140px auto;
-  width: 400px;
+  margin:20px auto;
+  width: 480px;
   text-align: center;
   .pointer {
     cursor: pointer;

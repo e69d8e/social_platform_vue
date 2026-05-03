@@ -2,6 +2,7 @@
 import { likeApi } from "@/api/postApi";
 import { ref, computed } from "vue";
 import { throttle } from "lodash";
+import formattedCount from "@/utils/formattedCount";
 const props = defineProps({
   id: {
     type: String,
@@ -53,17 +54,8 @@ const handleLike = async () => {
     ElMessage.error("操作失败");
   }
 };
-const formattedCount = computed(() => {
-  if (count.value >= 1000 && count.value < 1000000) {
-    const qian = count.value / 1000;
-    // 保留两位小数，避免过多小数位
-    return `${qian.toFixed(1)} k`;
-  } else if (count.value >= 1000000) {
-    const wan = count.value / 1000000;
-    // 保留两位小数，避免过多小数位
-    return `${wan.toFixed(1)} w`;
-  }
-  return count.value.toString();
+const likedCount = computed(() => {
+  return formattedCount(count.value);
 });
 // 节流
 const like = throttle(handleLike, 800);
@@ -84,10 +76,15 @@ const htmlToText = (html) => {
 
 <template>
   <div class="postcard">
-    <el-card class="pointer" @click="$router.push(`/post/${props.id}`)">
+    <el-card
+      header-class="card-header"
+      body-class="card-body"
+      class="pointer"
+      @click="$router.push(`/post/${props.id}`)"
+    >
       <template #header>
         <div>
-          <div class="header">
+          <div class="title">
             <h4>{{ title }}</h4>
             <div class="like">
               <el-icon
@@ -98,7 +95,7 @@ const htmlToText = (html) => {
                 ><Star
               /></el-icon>
               <el-text style="margin-left: 3px" size="small" type="primary">{{
-                formattedCount
+                likedCount
               }}</el-text>
             </div>
           </div>
@@ -107,9 +104,14 @@ const htmlToText = (html) => {
           </div>
         </div>
       </template>
-      <div class="bottom">
+      <div class="img">
         <div v-if="cover">
-          <img :src="cover" shadow="hover" style="width: 100%; height: 200px" />
+          <img
+            :src="cover"
+            shadow="hover"
+            style="width: 100%; aspect-ratio: 5 / 3"
+          />
+          <!-- <el-image style="width: 100px; height: 100px" :src="url" :fit="fit" /> -->
         </div>
         <div class="content" v-else>
           <el-text
@@ -127,11 +129,13 @@ const htmlToText = (html) => {
 
 <style lang="scss" scoped>
 .postcard {
-  width: 260px;
+  width: 100%;
+  margin-bottom: 10px;
   .pointer {
     cursor: pointer;
   }
-  .header {
+
+  .title {
     height: 30px;
     display: flex;
     justify-content: space-between;
@@ -151,7 +155,7 @@ const htmlToText = (html) => {
     display: flex;
     justify-content: flex-start;
   }
-  .bottom {
+  .img {
     height: 200px;
     white-space: nowrap;
     overflow: hidden;
@@ -181,5 +185,14 @@ const htmlToText = (html) => {
 .postcard:not(:hover) {
   animation: shrink 0.5s ease-in-out;
   animation-fill-mode: forwards; /* 保持最后状态 */
+}
+</style>
+
+<style>
+.card-body {
+  padding: 10px;
+}
+.card-header {
+  padding: 10px;
 }
 </style>

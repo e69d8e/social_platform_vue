@@ -70,10 +70,18 @@ onUnmounted(() => {
     <div class="text">
       <el-text size="large" type="primary">我的关注</el-text>
     </div>
-    <el-row>
-      <el-col class="colItem" v-for="post in posts" :key="post.id" :span="6">
+    <el-row :gutter="10">
+      <el-col
+        class="colItem"
+        v-for="post in posts"
+        :key="post.id"
+        :xs="14"
+        :sm="12"
+        :md="8"
+        :lg="6"
+        :xl="4"
+      >
         <PostCard
-          class="postCard"
           :id="post.id"
           :img-url="post.imgUrl"
           :title="post.title"

@@ -12,7 +12,7 @@ onMounted(async () => {
 </script>
 <template>
   <div class="category">
-    <el-row :gutter="60">
+    <el-row :gutter="20">
       <el-col
         @click="
           $router.push({
@@ -20,7 +20,12 @@ onMounted(async () => {
             query: { category: category.name },
           })
         "
-        :span="4"
+        :xs="3"
+        :sm="3"
+        :md="2"
+        :lg="2"
+        :xl="1"
+        justify="space-between"
         v-for="category in categoryList"
         :key="category.id"
       >

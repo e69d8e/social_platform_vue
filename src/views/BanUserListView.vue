@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { getBanUsersApi } from "@/api/adminApi";
+import UserCard from "@/components/UserCard.vue";
 const usersList = ref([]);
 const pageNum = ref(1);
 const pageSize = ref(12);
@@ -25,48 +26,57 @@ const pageChange = async () => {
 };
 </script>
 <template>
-  <div class="ban" v-loading="loading">
-    <div class="back" @click="$router.back()">
-      <el-icon size="large"><ArrowLeft /></el-icon>
-    </div>
-    <div class="text">
-      <el-text size="large" type="primary">已经封禁用户</el-text>
-    </div>
-    <el-row>
-      <el-col
-        class="colItem"
-        v-for="user in usersList"
-        :key="user.id"
-        :span="6"
-      >
-        <UserCard
-          class="postCard"
-          :id="user.id"
-          :avatar="user.avatar"
-          :nickname="user.nickname"
-          :bio="user.bio"
-          :followed="user.followed"
-          :count="user.count"
-        />
-      </el-col>
-    </el-row>
+  <el-row :gutter="10">
+    <el-col :span="1"></el-col>
+    <el-col :span="22" :offset="0">
+      <div class="ban" v-loading="loading">
+        <div class="back" @click="$router.back()">
+          <el-icon size="large"><ArrowLeft /></el-icon>
+        </div>
+        <div class="text">
+          <el-text size="large" type="primary">已经封禁用户</el-text>
+        </div>
+        <el-row :gutter="10">
+          <el-col
+            class="colItem"
+            v-for="user in usersList"
+            :key="user.id"
+            :xs="18"
+            :sm="12"
+            :md="8"
+            :lg="6"
+            :xl="4"
+          >
+            <UserCard
+              :id="user.id"
+              :avatar="user.avatar"
+              :nickname="user.nickname"
+              :bio="user.bio"
+              :followed="user.followed"
+              :count="user.count"
+            />
+          </el-col>
+        </el-row>
 
-    <div class="pagination">
-      <el-pagination
-        @current-change="pageChange"
-        :total="total"
-        v-model:current-page="pageNum"
-        v-model:page-size="pageSize"
-        size="large"
-        background
-        layout="prev, pager, next"
-      />
-    </div>
-  </div>
+        <div class="pagination">
+          <el-pagination
+            @current-change="pageChange"
+            :total="total"
+            v-model:current-page="pageNum"
+            v-model:page-size="pageSize"
+            size="large"
+            background
+            layout="prev, pager, next"
+          />
+        </div>
+      </div>
+    </el-col>
+    <el-col :span="1"></el-col>
+  </el-row>
 </template>
 <style lang="scss" scoped>
 .ban {
-  padding: 30px 180px;
+  margin-top: 20px;
   .colItem {
     margin-bottom: 10px;
   }
