@@ -9,6 +9,7 @@ import { ElText } from "element-plus";
 import { getUserInfoApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
 import formattedCount from "@/utils/formattedCount";
+import { ElMessage } from "element-plus";
 const router = useRouter();
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
@@ -37,11 +38,9 @@ const handleAvatarSuccess = (response, uploadFile) => {
 
 const beforeAvatarUpload = (rawFile) => {
   if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
-    // eslint-disable-next-line no-undef
     ElMessage.error("图像格式应为 jepg/png");
     return false;
   } else if (rawFile.size / 1024 / 1024 > 2) {
-    // eslint-disable-next-line no-undef
     ElMessage.error("头像大小不能超过 2MB");
     return false;
   }
@@ -68,10 +67,8 @@ const submitForm = async (ref) => {
         ...ruleForm,
       });
       // await getUserInfo();
-      // eslint-disable-next-line no-undef
       ElMessage.success(res.data.message);
     } else {
-      // eslint-disable-next-line no-undef
       ElMessage.error("请填写正确的信息");
     }
     loading.value = false;
@@ -134,7 +131,6 @@ const logout = async () => {
   await userStore.removeInfo();
   disconnect();
   dialogVisible.value = false;
-  // eslint-disable-next-line no-undef
   ElMessage.success(res.data.message);
   router.push("/login");
 };
@@ -151,11 +147,9 @@ const changePassword = (formEl) => {
         };
         if (res.data.code !== 1) {
           loading.value = false;
-          // eslint-disable-next-line no-undef
           ElMessage.error(res.data.message);
           return;
         }
-        // eslint-disable-next-line no-undef
         ElMessage.success(res.data.message);
       } catch (error) {
         console.log(error);
@@ -164,7 +158,6 @@ const changePassword = (formEl) => {
         dialogFormVisible.value = false;
       }
     } else {
-      // eslint-disable-next-line no-undef
       ElMessage.error("请检查输入");
     }
   });

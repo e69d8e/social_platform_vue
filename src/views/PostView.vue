@@ -9,6 +9,7 @@ import { banPostApi } from "@/api/reviewerApi";
 import { throttle } from "lodash";
 import CommentComponent from "@/components/CommentComponent.vue";
 import formattedCount from "@/utils/formattedCount";
+import { ElMessage } from "element-plus";
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
@@ -66,7 +67,6 @@ const toggleLike = throttle(async () => {
     if (res.data.code !== 1) {
       throw new Error("操作失败");
     }
-    // eslint-disable-next-line no-undef
     ElMessage.success(res.data.message);
   } catch (e) {
     // 失败回滚
@@ -74,7 +74,6 @@ const toggleLike = throttle(async () => {
     post.value.count = oldCount;
     console.log(e);
 
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: "操作失败，请重试",
       type: "error",
@@ -88,7 +87,6 @@ const followLoading = ref(false);
 const toggleFollow = throttle(async () => {
   // 不能关注自己
   if (userStore.userInfo.id === post.value.userId) {
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: "不能关注自己",
       type: "warning",
@@ -116,7 +114,6 @@ const toggleFollow = throttle(async () => {
       throw new Error("操作失败");
     }
 
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
       type: "success",
@@ -126,7 +123,6 @@ const toggleFollow = throttle(async () => {
     post.value.followed = oldFollowed;
     console.log(e);
 
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: "操作失败，请重试",
       type: "error",
@@ -138,7 +134,6 @@ const toggleFollow = throttle(async () => {
 const deletePost = async () => {
   const res = await deletePostApi(post.value.id);
   if (res.data.code === 1) {
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
       type: "success",
@@ -150,7 +145,6 @@ const deletePost = async () => {
 const banPost = async () => {
   const res = await banPostApi(post.value.id);
   if (res.data.code === 1) {
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
       type: "success",

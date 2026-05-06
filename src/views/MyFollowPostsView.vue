@@ -2,6 +2,7 @@
 import PostCard from "@/components/PostCard.vue";
 import { ref, onMounted, onUnmounted } from "vue";
 import { getFollowPostsApi } from "@/api/postApi";
+import { debounce } from "lodash";
 // 获取当前时间时间戳
 const timestamp = Date.parse(new Date());
 const params = ref({
@@ -21,22 +22,24 @@ const getPosts = async () => {
   params.value.offset = postList.data.data.offset;
   console.log(postList.data.data.minTime);
 };
-const handleWindowScroll = () => {
+// 原滚动逻辑（无防抖）
+const checkAndLoad = () => {
   if (loading.value) return;
 
-  // 窗口滚动到底部的判断
   const scrollTop =
     document.documentElement.scrollTop || document.body.scrollTop;
   const clientHeight = document.documentElement.clientHeight;
   const scrollHeight =
     document.documentElement.scrollHeight || document.body.scrollHeight;
-
-  const threshold = 50; // 距离底部100px时触发
+  const threshold = 50;
 
   if (scrollTop + clientHeight >= scrollHeight - threshold) {
     loadMore();
   }
 };
+
+// 创建防抖包装，延迟 200ms
+const handleWindowScroll = debounce(checkAndLoad, 200);
 
 const loadMore = async () => {
   if (loading.value) return;
@@ -54,8 +57,9 @@ const loadMore = async () => {
 onMounted(() => {
   window.addEventListener("scroll", handleWindowScroll);
 });
-
+// 组件卸载时取消防抖并移除监听
 onUnmounted(() => {
+  handleWindowScroll.cancel();
   window.removeEventListener("scroll", handleWindowScroll);
 });
 </script>

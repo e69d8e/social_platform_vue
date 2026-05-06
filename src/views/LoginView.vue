@@ -10,6 +10,7 @@ import { useUserStore } from "@/stores/user";
 import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
+import { ElMessage } from "element-plus";
 const router = useRouter();
 const signStore = useSignStore();
 const ruleFormRef = ref();
@@ -54,7 +55,6 @@ const submitForm = (formEl) => {
   formEl.validate(async (valid) => {
     if (valid) {
       if (!isCheck.value) {
-        // eslint-disable-next-line no-undef
         ElMessage.error("请勾选用户协议");
         return;
       }
@@ -71,11 +71,9 @@ const submitForm = (formEl) => {
           );
           if (res.data.code !== 1) {
             loading.value = false;
-            // eslint-disable-next-line no-undef
             ElMessage.error(res.data.message);
             return;
           }
-          // eslint-disable-next-line no-undef
           ElMessage.success(res.data.message);
           // 获取用户信息
           const userInfo = await getUserInfoApi();
@@ -88,7 +86,6 @@ const submitForm = (formEl) => {
         } else {
           // 注册
           const res = await registerApi(ruleForm.value);
-          // eslint-disable-next-line no-undef
           ElMessage.success(res.data.message);
           isLogin.value = true;
         }
@@ -99,7 +96,6 @@ const submitForm = (formEl) => {
       }
     } else {
       console.log("请检查输入");
-      // eslint-disable-next-line no-undef
       ElMessage.error("请检查输入");
     }
   });

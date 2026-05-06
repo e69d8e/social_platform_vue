@@ -8,6 +8,7 @@ import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { throttle } from "lodash";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import formattedCount from "@/utils/formattedCount";
+import { ElMessage } from "element-plus";
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
@@ -54,7 +55,6 @@ const followLoading = ref(false);
 const toggleFollow = throttle(async () => {
   // 不能关注自己
   if (userStore.userInfo.id === userInfo.value.id) {
-    // eslint-disable-next-line no-undef
     ElMessage.warning("不能关注自己");
     return;
   }
@@ -79,14 +79,12 @@ const toggleFollow = throttle(async () => {
       throw new Error(res.data.message || "操作失败");
     }
 
-    // eslint-disable-next-line no-undef
     ElMessage.success(res.data.message);
   } catch (e) {
     // 回滚
     userInfo.value.followed = oldFollowed;
 
     console.error(e);
-    // eslint-disable-next-line no-undef
     ElMessage.error(e.message || "操作失败，请重试");
   } finally {
     followLoading.value = false;
@@ -96,7 +94,6 @@ const ban = async () => {
   const res = await banUserApi(route.params.id);
   if (res.data.code === 1) {
     userInfo.value.enabled = !userInfo.value.enabled;
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
       type: "success",
@@ -107,7 +104,6 @@ const setUser = async () => {
   const res = await setUserApi(route.params.id);
   if (res.data.code === 1) {
     userInfo.value.authorityId = 1;
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
       type: "success",
@@ -118,7 +114,6 @@ const setReviewer = async () => {
   const res = await setReviewerApi(route.params.id);
   if (res.data.code === 1) {
     userInfo.value.authorityId = 3;
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
       type: "success",

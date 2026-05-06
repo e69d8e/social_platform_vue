@@ -8,6 +8,7 @@ import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 import { debounce } from "lodash-es";
 import formattedCount from "@/utils/formattedCount";
+import { ElMessage } from "element-plus";
 
 const signStore = useSignStore();
 const router = useRouter();
@@ -17,7 +18,6 @@ const searchContent = ref("");
 
 const search = debounce(() => {
   if (searchContent.value.trim() === "") {
-    // eslint-disable-next-line no-undef
     ElMessage.warning("请输入搜索内容");
     return;
   }
@@ -50,15 +50,12 @@ const sign = async () => {
   const res = await signInApi();
   if (res.data.code === 1) {
     if (signStore.signDay < res.data.data) {
-      // eslint-disable-next-line no-undef
       ElMessage.success("签到成功");
     } else {
-      // eslint-disable-next-line no-undef
       ElMessage.info("今天已经签到过了");
     }
     signStore.signDay = res.data.data;
   } else {
-    // eslint-disable-next-line no-undef
     ElMessage.error(res.data.message);
   }
 };

@@ -5,6 +5,7 @@ import { addCommentApi, getCommentApi } from "@/api/commentApi";
 import { useUserStore } from "@/stores/user";
 import { Delete } from "@element-plus/icons-vue";
 import { deleteCommentApi } from "@/api/reviewerApi";
+import { debounce } from "lodash";
 const userStore = useUserStore();
 const content = ref("");
 // 帖子id
@@ -79,28 +80,26 @@ const loadMore = async () => {
     loading.value = false;
   }
 };
-const handleWindowScroll = () => {
+const debouncedScrollHandler = debounce(() => {
   if (loading.value) return;
 
-  // 窗口滚动到底部的判断
   const scrollTop =
     document.documentElement.scrollTop || document.body.scrollTop;
   const clientHeight = document.documentElement.clientHeight;
   const scrollHeight =
     document.documentElement.scrollHeight || document.body.scrollHeight;
-
-  const threshold = 50; // 距离底部100px时触发
+  const threshold = 50;
 
   if (scrollTop + clientHeight >= scrollHeight - threshold) {
     loadMore();
   }
-};
+}, 200);
 onMounted(() => {
-  window.addEventListener("scroll", handleWindowScroll);
+  window.addEventListener("scroll", debouncedScrollHandler);
 });
-
 onUnmounted(() => {
-  window.removeEventListener("scroll", handleWindowScroll);
+  debouncedScrollHandler.cancel(); // 取消未执行的防抖调用
+  window.removeEventListener("scroll", debouncedScrollHandler);
 });
 /**
  * 当前回复上下文

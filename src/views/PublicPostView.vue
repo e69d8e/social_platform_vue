@@ -5,6 +5,7 @@ import { uploadPostImgApi } from "@/api/uploadApi";
 import { useRouter } from "vue-router";
 import "@wangeditor/editor/dist/css/style.css"; // 引入 css
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
+import { ElMessage } from "element-plus";
 
 const router = useRouter();
 const dialogImageUrl = ref("");
@@ -31,11 +32,9 @@ const handleSuccess = (response, uploadFile) => {
 
 const beforeUpload = (rawFile) => {
   if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
-    // eslint-disable-next-line no-undef
     ElMessage.error("上传图片格式应为 jpg 或 png!");
     return false;
   } else if (rawFile.size / 1024 / 1024 > 8) {
-    // eslint-disable-next-line no-undef
     ElMessage.error("图片大小不能超过 8MB!");
     return false;
   }
@@ -55,7 +54,6 @@ const publicPost = async () => {
   });
   dialogConfirmVisible.value = false;
   loading.value = false;
-  // eslint-disable-next-line no-undef
   ElMessage({
     message: res.data.message,
     type: "success",
