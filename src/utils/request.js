@@ -48,3 +48,4 @@ request.interceptors.response.use(
 );
 export default request;
 export const baseURL = "http://127.0.0.1:8080/api";
+export const logoUrl = "http://127.0.0.1:8080/imgs/logo.png";

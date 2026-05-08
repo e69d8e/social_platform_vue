@@ -4,6 +4,7 @@ export const useUserStore = defineStore(
   "social-platform-user",
   () => {
     const userInfo = ref({
+      id: 0,
       username: "",
       avatar: "",
       bio: "",
@@ -20,6 +21,7 @@ export const useUserStore = defineStore(
     };
     const removeInfo = async () => {
       userInfo.value = {
+        id: 0,
         username: "",
         avatar: "",
         bio: "",

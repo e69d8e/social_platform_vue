@@ -9,11 +9,11 @@ import { useSignStore } from "@/stores/sign";
 import { debounce } from "lodash-es";
 import formattedCount from "@/utils/formattedCount";
 import { ElMessage } from "element-plus";
+import { logoUrl } from "@/utils/request";
 
 const signStore = useSignStore();
 const router = useRouter();
 const userStore = useUserStore();
-const logoUrl = "http://127.0.0.1:8080/imgs/logo.png";
 const searchContent = ref("");
 
 const search = debounce(() => {
@@ -76,7 +76,7 @@ const fansCount = computed(() => {
                 style="width: 50px; height: 50px; border-radius: 20%"
                 :src="logoUrl"
               />
-              <div class="text">声迹</div>
+              <div class="text">Y社区</div>
               <el-icon style="margin-left: 10px; width: 20px"
                 ><HomeFilled
               /></el-icon>
@@ -103,7 +103,14 @@ const fansCount = computed(() => {
             </div>
           </el-col>
           <!-- 按钮 -->
-          <el-col :push="2" :xs="0" :sm="9" :md="9" :lg="6" :xl="6">
+          <el-col :push="1" :xs="0" :sm="9" :md="9" :lg="6" :xl="6">
+            <el-button
+              v-if="userStore.userInfo.username"
+              style="margin-left: 4px"
+              type="primary"
+              @click="$router.push('/aiChat')"
+              >AI 助手</el-button
+            >
             <el-button type="success" @click="myPosts">我的帖子</el-button>
             <el-button type="primary" @click="myFollowPosts"
               >我的关注</el-button

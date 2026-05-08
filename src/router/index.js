@@ -86,6 +86,11 @@ const router = createRouter({
       name: "banUsers",
       component: () => import("@/views/BanUserListView.vue"),
     },
+    {
+      path: "/aiChat",
+      name: "AIChat",
+      component: () => import("@/views/AIChatView.vue"),
+    },
   ],
 });
 

@@ -115,7 +115,5 @@ onUnmounted(() => {
   .category {
     padding: 0 20px;
   }
-  .colItem {
-  }
 }
 </style>
