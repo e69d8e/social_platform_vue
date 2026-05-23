@@ -1,6 +1,7 @@
 import axios from "axios";
 import { router } from "@/main.js";
 import { useUserStore } from "@/stores/user";
+import { ElMessage } from "element-plus";
 
 // 创建axios实例
 const request = axios.create({
@@ -63,7 +64,6 @@ request.interceptors.response.use(
     // 2xx 范围内的状态码都会触发该函数。
     // 对响应数据做点什么
     if (response.data.code !== 1) {
-      // eslint-disable-next-line no-undef
       ElMessage.error(response.data.message);
       return;
     }
@@ -71,11 +71,6 @@ request.interceptors.response.use(
   },
   async function (error) {
     const originalRequest = error.config;
-    if (error.response?.status === 500) {
-      console.log(error.response.data.message);
-      // eslint-disable-next-line no-undef
-      ElMessage.error(error.response.data.message);
-    }
     // 判断是否是 401 且尚未重试过
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
@@ -106,12 +101,17 @@ request.interceptors.response.use(
         userStore.removeToken();
         userStore.removeInfo();
         processQueue(refreshError, null);
+        ElMessage.error("用户未登录");
         // 跳转登录页
         router.push("/login");
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
+    } else {
+      // 响应错误，处理错误信息
+      console.log(error.response.data.message);
+      ElMessage.error(error.response.data.message);
     }
     return Promise.reject(error);
   },

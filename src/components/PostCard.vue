@@ -1,6 +1,6 @@
 <script setup>
 import { likeApi } from "@/api/postApi";
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import { throttle } from "lodash";
 import formattedCount from "@/utils/formattedCount";
 const props = defineProps({
@@ -23,7 +23,7 @@ const props = defineProps({
     type: String,
     default: "",
   },
-  count: {
+  likeCount: {
     type: Number,
     default: 0,
   },
@@ -31,16 +31,20 @@ const props = defineProps({
     type: String,
     default: "2023-05-05 00:00:00",
   },
+  viewCount: {
+    type: Number,
+    default: 0,
+  },
 });
 const { title, cover, time } = props;
-const count = ref(props.count);
+const likeCount = ref(props.likeCount);
 const liked = ref(props.liked);
 const handleLike = async () => {
   const oldLiked = liked.value;
-  const oldCount = count.value;
+  const oldCount = likeCount.value;
 
   liked.value = !liked.value;
-  count.value += liked.value ? 1 : -1;
+  likeCount.value += liked.value ? 1 : -1;
 
   try {
     const res = await likeApi(props.id);
@@ -48,13 +52,10 @@ const handleLike = async () => {
     ElMessage.success(res.data.message);
   } catch (e) {
     liked.value = oldLiked;
-    count.value = oldCount;
+    likeCount.value = oldCount;
     console.log(e);
   }
 };
-const likedCount = computed(() => {
-  return formattedCount(count.value);
-});
 // 节流
 const like = throttle(handleLike, 800);
 const htmlToText = (html) => {
@@ -93,12 +94,18 @@ const htmlToText = (html) => {
                 ><Star
               /></el-icon>
               <el-text style="margin-left: 3px" size="small" type="primary">{{
-                likedCount
+                formattedCount(likeCount)
               }}</el-text>
             </div>
           </div>
           <div class="time">
             <el-text size="small" type="primary">{{ time }}</el-text>
+            <div class="view">
+              <el-icon size="large"><View /></el-icon>
+              <el-text style="margin-left: 3px" size="small" type="primary">{{
+                formattedCount(props.viewCount)
+              }}</el-text>
+            </div>
           </div>
         </div>
       </template>
@@ -151,7 +158,11 @@ const htmlToText = (html) => {
   }
   .time {
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between;
+    .view {
+      display: flex;
+      align-items: center;
+    }
   }
   .img {
     height: 200px;

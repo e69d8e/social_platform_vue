@@ -50,8 +50,9 @@ const pageChange = async () => {
           :title="post.title"
           :content="post.content"
           :liked="post.liked"
-          :count="post.count"
+          :like-count="post.likeCount"
           :time="post.createTime"
+          :view-count="post.viewCount"
         />
       </el-col>
     </el-row>

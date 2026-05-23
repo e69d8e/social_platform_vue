@@ -8,5 +8,5 @@ export default (count) => {
     // 保留两位小数，避免过多小数位
     return `${wan.toFixed(1)} w`;
   }
-  return count.toString();
+  return count ? count.toString() : "0";
 };

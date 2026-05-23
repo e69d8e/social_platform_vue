@@ -57,18 +57,25 @@ const submitForm = async (ref) => {
   await ref.validate(async (valid) => {
     loading.value = true;
     if (valid) {
-      const newAvatar = await uploadAvatar(file.value);
-      if (newAvatar.data.code === 0) {
-        ElMessage.error(newAvatar.data.message);
-        return;
-      }
-      console.log(newAvatar);
+      if (file.value) {
+        const newAvatar = await uploadAvatar(file.value);
+        if (newAvatar.data.code === 0) {
+          ElMessage.error(newAvatar.data.message);
+          return;
+        }
+        console.log(newAvatar);
 
-      ruleForm.avatar = newAvatar.data.data;
+        ruleForm.avatar = newAvatar.data.data;
+      }
       console.log(ruleForm);
       const res = await updateUserInfoApi({
         ...ruleForm,
       });
+      if (!res || res.data.code === 0) {
+        loading.value = false;
+        return;
+      }
+
       // await getUserInfo();
       ElMessage.success(res.data.message);
     } else {

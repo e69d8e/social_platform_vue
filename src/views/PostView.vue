@@ -24,11 +24,12 @@ const post = ref({
   createTime: "",
   cover: "",
   liked: false,
-  count: 0,
+  likeCount: 0,
   userId: "",
   nickname: "",
   avatar: "",
   followed: false,
+  viewCount: 0,
 });
 const dialogVisible = ref(false);
 const loading = ref(false);
@@ -49,15 +50,15 @@ const toggleLike = throttle(async () => {
 
   // 记录旧状态（用于回滚）
   const oldLiked = post.value.liked;
-  const oldCount = post.value.count;
+  const oldCount = post.value.likeCount;
 
   // 乐观更新（UI 先变）
   if (post.value.liked) {
     post.value.liked = false;
-    post.value.count--;
+    post.value.likeCount--;
   } else {
     post.value.liked = true;
-    post.value.count++;
+    post.value.likeCount++;
   }
 
   try {
@@ -71,7 +72,7 @@ const toggleLike = throttle(async () => {
   } catch (e) {
     // 失败回滚
     post.value.liked = oldLiked;
-    post.value.count = oldCount;
+    post.value.likeCount = oldCount;
     console.log(e);
 
     ElMessage({
@@ -152,8 +153,11 @@ const banPost = async () => {
   }
   router.back();
 };
-const likedCount = computed(() => {
-  return formattedCount(post.value.count);
+const likeCount = computed(() => {
+  return formattedCount(post.value.likeCount);
+});
+const viewCount = computed(() => {
+  return formattedCount(post.value.viewCount);
 });
 </script>
 
@@ -214,7 +218,9 @@ const likedCount = computed(() => {
             <el-icon @click="toggleLike" size="large" v-else
               ><StarFilled
             /></el-icon>
-            <el-text class="text" type="primary">{{ likedCount }} 赞</el-text>
+            <el-text class="text" type="primary">{{ likeCount }} 赞</el-text>
+            <el-icon size="large"><View /></el-icon>
+            <el-text class="text" type="primary">{{ viewCount }} 浏览</el-text>
           </div>
           <div class="category">
             <el-tag>{{ post.category }}</el-tag>

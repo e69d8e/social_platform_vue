@@ -274,7 +274,7 @@ const sendMessage = async () => {
       },
       credentials: "include",
       body: JSON.stringify({
-        userId: userStore.userInfo.id, // TODO: 从登录信息中获取
+        userId: userStore.userInfo.id,
         memoryId: currentSessionId.value,
         content: userMessageContent,
       }),

@@ -61,7 +61,7 @@ const pageChange = async () => {
         :xl="4"
       >
         <UserCard
-          class="postCard"
+          class="userCard"
           :id="user.id"
           :avatar="user.avatar"
           :nickname="user.nickname"

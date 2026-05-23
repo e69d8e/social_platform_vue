@@ -88,10 +88,11 @@ onUnmounted(() => {
           :img-url="post.imgUrl"
           :title="post.title"
           :content="post.content"
-          :count="post.count"
+          :like-count="post.likeCount"
           :liked="post.liked"
           :time="post.createTime"
           :cover="post.cover"
+          :view-count="post.viewCount"
         />
       </el-col>
     </el-row>

@@ -48,13 +48,16 @@ const beforeUpload = (rawFile) => {
 };
 
 const publicPost = async () => {
-  const url = await uploadPostImgApi(file.value, id.value.data.data);
+  let url = null;
+  if (file.value) {
+    url = await uploadPostImgApi(file.value, id.value);
+  }
 
   loading.value = true;
 
   const res = await publicPostApi({
     id: id.value,
-    cover: url.data.data,
+    cover: url ? url.data.data : null,
     title: title.value,
     content: valueHtml.value,
     categoryId: categoryId.value,

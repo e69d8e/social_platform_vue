@@ -96,8 +96,9 @@ users.value.map((v) => {
               :content="post.content"
               :cover="post.cover"
               :liked="post.liked"
-              :count="post.count"
+              :like-count="post.likeCount"
               :time="post.createTime"
+              :view-count="post.viewCount"
             />
           </el-col>
         </el-row>

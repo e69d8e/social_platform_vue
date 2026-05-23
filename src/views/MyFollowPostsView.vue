@@ -91,9 +91,10 @@ onUnmounted(() => {
           :title="post.title"
           :cover="post.cover"
           :content="post.content"
-          :count="post.count"
+          :like-count="post.likeCount"
           :liked="post.liked"
           :time="post.createTime"
+          :view-count="post.viewCount"
         />
       </el-col>
     </el-row>
