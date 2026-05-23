@@ -2,7 +2,6 @@
 import { useUserStore } from "@/stores/user";
 import { ref, reactive, onMounted, computed } from "vue";
 import { updateUserInfoApi, updatePasswordApi } from "@/api/userApi";
-import { disconnect } from "@/utils/websocket.js";
 import { layoutApi } from "@/api/userApi";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import { ElText } from "element-plus";
@@ -10,6 +9,7 @@ import { getUserInfoApi } from "@/api/userApi";
 import { useRouter } from "vue-router";
 import formattedCount from "@/utils/formattedCount";
 import { ElMessage } from "element-plus";
+import { uploadAvatar } from "@/api/uploadApi";
 const router = useRouter();
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
@@ -17,6 +17,7 @@ const imageUrl = ref(userInfo.avatar);
 const dialogFormVisible = ref(false);
 const ruleFormRef = ref();
 const ruleForm = reactive({
+  oldAvatar: userInfo.avatar,
   ...userInfo,
 });
 const getUserInfo = async () => {
@@ -31,11 +32,6 @@ onMounted(async () => {
 });
 const newImgUrl = ref("");
 newImgUrl.value = userInfo.avatar;
-const handleAvatarSuccess = (response, uploadFile) => {
-  newImgUrl.value = response.data;
-  imageUrl.value = URL.createObjectURL(uploadFile.raw);
-};
-
 const beforeAvatarUpload = (rawFile) => {
   if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
     ElMessage.error("图像格式应为 jepg/png");
@@ -61,7 +57,14 @@ const submitForm = async (ref) => {
   await ref.validate(async (valid) => {
     loading.value = true;
     if (valid) {
-      ruleForm.avatar = newImgUrl.value;
+      const newAvatar = await uploadAvatar(file.value);
+      if (newAvatar.data.code === 0) {
+        ElMessage.error(newAvatar.data.message);
+        return;
+      }
+      console.log(newAvatar);
+
+      ruleForm.avatar = newAvatar.data.data;
       console.log(ruleForm);
       const res = await updateUserInfoApi({
         ...ruleForm,
@@ -128,8 +131,7 @@ const toBanUsers = () => {
 const dialogVisible = ref(false);
 const logout = async () => {
   const res = await layoutApi();
-  await userStore.removeInfo();
-  disconnect();
+  userStore.removeInfo();
   dialogVisible.value = false;
   ElMessage.success(res.data.message);
   router.push("/login");
@@ -147,7 +149,6 @@ const changePassword = (formEl) => {
         };
         if (res.data.code !== 1) {
           loading.value = false;
-          ElMessage.error(res.data.message);
           return;
         }
         ElMessage.success(res.data.message);
@@ -165,6 +166,13 @@ const changePassword = (formEl) => {
 const fansCount = computed(() => {
   return formattedCount(userInfo.count);
 });
+const uploadRef = ref();
+const file = ref();
+const handleAvatarChange = (uploadFile) => {
+  // 生成本地 Blob URL 用于即时预览
+  imageUrl.value = URL.createObjectURL(uploadFile.raw);
+  file.value = uploadFile.raw;
+};
 </script>
 <template>
   <div class="my" v-loading="loading">
@@ -173,9 +181,11 @@ const fansCount = computed(() => {
     </div>
     <el-upload
       class="avatar-uploader"
-      action="http://127.0.0.1:8080/api/upload/avatar"
+      ref="uploadRef"
+      action="#"
+      :auto-upload="false"
       :show-file-list="false"
-      :on-success="handleAvatarSuccess"
+      :on-change="handleAvatarChange"
       :before-upload="beforeAvatarUpload"
     >
       <img v-if="imageUrl" :src="imageUrl" class="avatar" />
@@ -314,7 +324,7 @@ const fansCount = computed(() => {
 </template>
 <style lang="scss" scoped>
 .my {
-  margin:20px auto;
+  margin: 20px auto;
   width: 480px;
   text-align: center;
   .pointer {

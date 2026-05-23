@@ -50,8 +50,6 @@ const handleLike = async () => {
     liked.value = oldLiked;
     count.value = oldCount;
     console.log(e);
-    // eslint-disable-next-line no-undef
-    ElMessage.error("操作失败");
   }
 };
 const likedCount = computed(() => {

@@ -4,6 +4,7 @@ import { ref, computed } from "vue";
 import { throttle } from "lodash";
 import { useUserStore } from "@/stores/user";
 import formattedCount from "@/utils/formattedCount";
+import { ElMessage } from "element-plus";
 const props = defineProps({
   id: {
     type: String,
@@ -38,7 +39,6 @@ const followLoading = ref(false);
 const toggleFollow = throttle(async () => {
   // 不能关注自己
   if (userStore.userInfo.id === props.id) {
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: "不能关注自己",
       type: "warning",
@@ -63,10 +63,8 @@ const toggleFollow = throttle(async () => {
       : await unfollowUserApi(props.id);
 
     if (res.data.code !== 1) {
-      throw new Error("操作失败");
+      return;
     }
-
-    // eslint-disable-next-line no-undef
     ElMessage({
       message: res.data.message,
       type: "success",
@@ -75,12 +73,6 @@ const toggleFollow = throttle(async () => {
     // 失败回滚
     followed.value = oldFollowed;
     console.log(e);
-
-    // eslint-disable-next-line no-undef
-    ElMessage({
-      message: "操作失败，请重试",
-      type: "error",
-    });
   } finally {
     followLoading.value = false;
   }

@@ -60,3 +60,9 @@ export const deletePostApi = async (id) => {
   const res = await request.delete("/post/" + id);
   return res;
 };
+
+// 获取帖子id
+export const getPostIdApi = async () => {
+  const res = await request.get("/post");
+  return res;
+};

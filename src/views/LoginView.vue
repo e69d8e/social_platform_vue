@@ -71,9 +71,9 @@ const submitForm = (formEl) => {
           );
           if (res.data.code !== 1) {
             loading.value = false;
-            ElMessage.error(res.data.message);
             return;
           }
+          userStore.setToken(res.data.data);
           ElMessage.success(res.data.message);
           // 获取用户信息
           const userInfo = await getUserInfoApi();

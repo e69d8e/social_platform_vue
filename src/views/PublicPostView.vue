@@ -1,11 +1,11 @@
 <script setup>
 import { ref, onMounted, shallowRef, onBeforeUnmount } from "vue";
-import { getPostCategoryApi, publicPostApi } from "@/api/postApi";
-import { uploadPostImgApi } from "@/api/uploadApi";
+import { getPostCategoryApi, getPostIdApi, publicPostApi } from "@/api/postApi";
+import { deletePostImgApi, uploadPostImgApi } from "@/api/uploadApi";
 import { useRouter } from "vue-router";
 import "@wangeditor/editor/dist/css/style.css"; // 引入 css
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 
 const router = useRouter();
 const dialogImageUrl = ref("");
@@ -20,15 +20,21 @@ const getCategoryList = async () => {
   const res = await getPostCategoryApi();
   categoryList.value = res.data.data;
 };
+const id = ref("");
 onMounted(async () => {
   await getCategoryList();
+  // 获取帖子id
+  const res = await getPostIdApi();
+  id.value = res.data.data;
+  if (id.value === null) {
+    ElMessage.error("网络错误");
+  }
+  console.log(id.value);
+
+  // 监听浏览器刷新/关闭事件
+  window.addEventListener("beforeunload", handleBeforeUnload);
 });
-const img = ref("");
-const handleSuccess = (response, uploadFile) => {
-  console.log(response);
-  cover.value = response.data;
-  img.value = URL.createObjectURL(uploadFile.raw);
-};
+const imageUrl = ref("");
 
 const beforeUpload = (rawFile) => {
   if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
@@ -40,14 +46,15 @@ const beforeUpload = (rawFile) => {
   }
   return true;
 };
-const cover = ref("");
 
 const publicPost = async () => {
+  const url = await uploadPostImgApi(file.value, id.value.data.data);
+
   loading.value = true;
-  console.log(cover.value);
 
   const res = await publicPostApi({
-    cover: cover.value,
+    id: id.value,
+    cover: url.data.data,
     title: title.value,
     content: valueHtml.value,
     categoryId: categoryId.value,
@@ -58,6 +65,7 @@ const publicPost = async () => {
     message: res.data.message,
     type: "success",
   });
+  isPublished.value = true;
   router.back();
 };
 
@@ -78,19 +86,125 @@ onBeforeUnmount(() => {
 const handleCreated = (editor) => {
   editorRef.value = editor; // 记录 editor 实例
 };
+
 editorConfig.MENU_CONF = {};
 editorConfig.MENU_CONF["uploadImage"] = {
+  // 最多可上传1个文件
+  maxNumberOfFiles: 1,
+
   // 自定义上传
   async customUpload(file, insertFn) {
     // file 即选中的文件
     // 自己实现上传，并得到图片 url alt href
-    const res = await uploadPostImgApi(file);
+    const res = await uploadPostImgApi(file, id.value);
     const url = res.data.data;
     const alt = "图片描述";
     const href = url;
     // 最后插入图片
     insertFn(url, alt, href);
   },
+};
+
+const file = ref();
+let oldObjectUrl = null;
+const handleAvatarChange = (uploadFile) => {
+  // 1. 释放之前的 URL 对象
+  if (oldObjectUrl) {
+    URL.revokeObjectURL(oldObjectUrl);
+  }
+  // 生成本地 Blob URL 用于即时预览
+  imageUrl.value = URL.createObjectURL(uploadFile.raw);
+  oldObjectUrl = imageUrl.value;
+  file.value = uploadFile.raw;
+};
+
+// 处理浏览器刷新/关闭
+const handleBeforeUnload = (e) => {
+  if (!isPublished.value && id.value) {
+    // 注意：现代浏览器在 beforeunload 中通常不执行异步请求，
+    // 但我们可以尝试发送一个同步信标(navigator.sendBeacon)或者仅仅依赖后端GC。
+    // 如果必须确保删除，最好是在用户点击“返回”或“取消”时处理。
+    // 这里仅做标记，实际删除主要依赖 onBeforeUnmount 和手动返回按钮
+
+    // 某些浏览器允许这样提示用户
+    e.preventDefault();
+    e.returnValue = "";
+  }
+};
+
+// 组件卸载清理
+onBeforeUnmount(() => {
+  if (oldObjectUrl) {
+    URL.revokeObjectURL(oldObjectUrl);
+  }
+  // 原有的编辑器销毁逻辑
+  const editor = editorRef.value;
+  if (editor == null) return;
+  editor.destroy();
+});
+
+const isPublished = ref(false);
+// 统一的清理函数
+const cleanupResources = async () => {
+  // 如果已经发布，不需要清理
+  if (isPublished.value) {
+    return;
+  }
+
+  // 如果有 ID，尝试删除服务器上的临时文件
+  if (id.value) {
+    try {
+      console.log("正在清理未发布的临时资源，ID:", id.value);
+      await deletePostImgApi(id.value);
+    } catch (error) {
+      console.error("清理临时文件失败:", error);
+    }
+  }
+
+  // 清理本地 Blob URL
+  if (oldObjectUrl) {
+    URL.revokeObjectURL(oldObjectUrl);
+    oldObjectUrl = null;
+  }
+};
+
+// 组件销毁时（路由切换、后退等）
+onBeforeUnmount(() => {
+  // 移除监听器
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+
+  // 执行清理
+  cleanupResources();
+
+  // 销毁编辑器
+  const editor = editorRef.value;
+  if (editor != null) {
+    editor.destroy();
+  }
+});
+
+// 处理手动点击返回按钮
+const handleBackClick = async () => {
+  // 可选：添加确认框，防止用户误触导致辛苦编辑的内容丢失
+  if (title.value || valueHtml.value || file.value) {
+    try {
+      await ElMessageBox.confirm(
+        "当前内容未发布，退出将删除已上传的临时图片并丢失编辑内容，是否继续？",
+        "提示",
+        {
+          confirmButtonText: "确定退出",
+          cancelButtonText: "取消",
+          type: "warning",
+        },
+      );
+      // 用户确认后，router.back() 会触发 onBeforeUnmount，从而执行 cleanupResources
+      router.back();
+    } catch {
+      // 用户取消，什么都不做
+    }
+  } else {
+    router.back();
+  }
 };
 </script>
 <template>
@@ -99,7 +213,7 @@ editorConfig.MENU_CONF["uploadImage"] = {
     <el-col :span="20" :offset="0">
       <div class="public" v-loading="loading">
         <div class="header">发布帖子</div>
-        <div class="pointer back" @click="$router.back()">
+        <div class="pointer back" @click="handleBackClick">
           <el-icon size="large"><ArrowLeft /></el-icon>
         </div>
         <div class="img">
@@ -117,12 +231,13 @@ editorConfig.MENU_CONF["uploadImage"] = {
       </el-upload> -->
           <el-upload
             class="uploader"
-            action="http://127.0.0.1:8080/api/upload/post"
+            action="#"
+            :auto-upload="false"
             :show-file-list="false"
-            :on-success="handleSuccess"
+            :on-change="handleAvatarChange"
             :before-upload="beforeUpload"
           >
-            <img v-if="img" :src="img" class="cover" />
+            <img v-if="imageUrl" :src="imageUrl" class="cover" />
             <el-icon v-else class="uploader-icon"><Plus /></el-icon>
           </el-upload>
         </div>
@@ -242,7 +357,6 @@ editorConfig.MENU_CONF["uploadImage"] = {
     }
   }
   .content {
-    width: 800px;
     overflow: hidden;
   }
   .editor {

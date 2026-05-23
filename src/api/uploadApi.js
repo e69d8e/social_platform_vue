@@ -12,13 +12,20 @@ export const uploadAvatar = async (file) => {
 };
 
 // 上传帖子图片
-export const uploadPostImgApi = async (file) => {
+export const uploadPostImgApi = async (file, id) => {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("postId", id);
   const res = await request.post("/upload/post", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
   });
+  return res;
+};
+
+// 删除帖子图片
+export const deletePostImgApi = async (id) => {
+  const res = await request.delete("/upload/delete/" + id);
   return res;
 };

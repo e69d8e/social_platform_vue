@@ -3,7 +3,6 @@ import PostCard from "@/components/PostCard.vue";
 import { ref, onMounted, onUnmounted } from "vue";
 import { getIndexPostsApi } from "@/api/postApi";
 import CategoryComponent from "@/components/CategoryComponent.vue";
-import { connect } from "@/utils/websocket.js";
 import { debounce } from "lodash";
 // 获取当前时间时间戳
 const timestamp = Date.parse(new Date());
@@ -15,17 +14,6 @@ const loading = ref(true);
 const posts = ref([]);
 onMounted(async () => {
   await getPosts();
-  connect((msg) => {
-    console.log("收到消息:", msg);
-    const data = JSON.parse(msg);
-    // eslint-disable-next-line no-undef
-    ElNotification.success({
-      title: data.content,
-      message: "帖子标题: " + data.title,
-      dangerouslyUseHTMLString: true,
-      offset: 100,
-    });
-  });
   loading.value = false;
 });
 const getPosts = async () => {

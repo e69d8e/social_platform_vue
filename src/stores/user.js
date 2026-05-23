@@ -16,10 +16,10 @@ export const useUserStore = defineStore(
       fansPrivate: false,
       count: 0,
     });
-    const setInfo = async (newUserInfo) => {
+    const setInfo = (newUserInfo) => {
       userInfo.value = newUserInfo;
     };
-    const removeInfo = async () => {
+    const removeInfo = () => {
       userInfo.value = {
         id: 0,
         username: "",
@@ -31,7 +31,20 @@ export const useUserStore = defineStore(
         nickname: "",
       };
     };
-    return { userInfo, setInfo, removeInfo };
+    const token = ref({
+      accessToken: "",
+      refreshToken: "",
+    });
+    const setToken = (newToken) => {
+      token.value = newToken;
+    };
+    const removeToken = () => {
+      token.value = {
+        accessToken: "",
+        refreshToken: "",
+      };
+    };
+    return { userInfo, setInfo, removeInfo, token, setToken, removeToken };
   },
   {
     persist: true,

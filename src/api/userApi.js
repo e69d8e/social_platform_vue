@@ -1,7 +1,11 @@
 import request from "@/utils/request";
 export const loginApi = (username, password) => {
   return request({
-    url: "/user/login?username=" + username + "&password=" + password,
+    url: "/user/login",
+    data: {
+      username,
+      password,
+    },
     method: "POST",
   });
 };
