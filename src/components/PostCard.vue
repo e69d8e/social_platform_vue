@@ -3,70 +3,45 @@ import { likeApi } from "@/api/postApi";
 import { ref } from "vue";
 import { throttle } from "lodash";
 import formattedCount from "@/utils/formattedCount";
+import { Star, View } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+
 const props = defineProps({
-  id: {
-    type: String,
-    default: "",
-  },
-  title: {
-    type: String,
-    default: "title",
-  },
-  cover: {
-    type: String,
-  },
-  liked: {
-    type: Boolean,
-    default: false,
-  },
-  content: {
-    type: String,
-    default: "",
-  },
-  likeCount: {
-    type: Number,
-    default: 0,
-  },
-  time: {
-    type: String,
-    default: "2023-05-05 00:00:00",
-  },
-  viewCount: {
-    type: Number,
-    default: 0,
-  },
+  id: { type: String, default: "" },
+  title: { type: String, default: "title" },
+  cover: { type: String },
+  liked: { type: Boolean, default: false },
+  content: { type: String, default: "" },
+  likeCount: { type: Number, default: 0 },
+  time: { type: String, default: "2023-05-05 00:00:00" },
+  viewCount: { type: Number, default: 0 },
 });
-const { title, cover, time } = props;
+
 const likeCount = ref(props.likeCount);
 const liked = ref(props.liked);
+
 const handleLike = async () => {
   const oldLiked = liked.value;
   const oldCount = likeCount.value;
-
   liked.value = !liked.value;
   likeCount.value += liked.value ? 1 : -1;
-
   try {
     const res = await likeApi(props.id);
-    // eslint-disable-next-line no-undef
     ElMessage.success(res.data.message);
-  } catch (e) {
+  } catch {
     liked.value = oldLiked;
     likeCount.value = oldCount;
-    console.log(e);
   }
 };
-// 节流
+
 const like = throttle(handleLike, 800);
+
 const htmlToText = (html) => {
-  // 可选：提前将常见块级标签替换为换行，保留基础排版
   const formattedHtml = html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<\/div>/gi, "\n")
     .replace(/<\/li>/gi, "\n");
-
-  // 使用 DOMParser 安全解析（不会执行 script）
   const parser = new DOMParser();
   const doc = parser.parseFromString(formattedHtml, "text/html");
   return doc.body.textContent?.trim() || "";
@@ -74,59 +49,30 @@ const htmlToText = (html) => {
 </script>
 
 <template>
-  <div class="postcard">
-    <el-card
-      header-class="card-header"
-      body-class="card-body"
-      class="pointer"
-      @click="$router.push(`/post/${props.id}`)"
-    >
+  <div class="postcard" @click="$router.push(`/post/${props.id}`)">
+    <el-card shadow="hover" class="card">
       <template #header>
-        <div>
-          <div class="title">
-            <h4>{{ title }}</h4>
-            <div class="like">
-              <el-icon
-                @click.stop="like"
-                class="star"
-                size="large"
-                :color="liked ? 'red' : ''"
-                ><Star
-              /></el-icon>
-              <el-text style="margin-left: 3px" size="small" type="primary">{{
-                formattedCount(likeCount)
-              }}</el-text>
-            </div>
+        <div class="card-header">
+          <h4 class="card-title">{{ props.title }}</h4>
+          <div class="like" @click.stop="like">
+            <el-icon size="18" :color="liked ? 'var(--el-color-danger, #f56c6c)' : ''"><Star /></el-icon>
+            <span class="count">{{ formattedCount(likeCount) }}</span>
           </div>
-          <div class="time">
-            <el-text size="small" type="primary">{{ time }}</el-text>
-            <div class="view">
-              <el-icon size="large"><View /></el-icon>
-              <el-text style="margin-left: 3px" size="small" type="primary">{{
-                formattedCount(props.viewCount)
-              }}</el-text>
-            </div>
+        </div>
+        <div class="card-meta">
+          <span class="time">{{ props.time }}</span>
+          <div class="view">
+            <el-icon size="16"><View /></el-icon>
+            <span class="count">{{ formattedCount(props.viewCount) }}</span>
           </div>
         </div>
       </template>
-      <div class="img">
-        <div v-if="cover">
-          <img
-            :src="cover"
-            shadow="hover"
-            style="width: 100%; aspect-ratio: 5 / 3"
-          />
-          <!-- <el-image style="width: 100px; height: 100px" :src="url" :fit="fit" /> -->
-        </div>
-        <div class="content" v-else>
-          <el-text
-            style="white-space: pre-wrap; word-wrap: break-word; height: 200px"
-            size="small"
-            type="info"
-          >
-            {{ htmlToText(content) }}
-          </el-text>
-        </div>
+
+      <div v-if="props.cover" class="cover">
+        <img :src="props.cover" />
+      </div>
+      <div v-else class="text-content">
+        {{ htmlToText(props.content) }}
       </div>
     </el-card>
   </div>
@@ -134,74 +80,93 @@ const htmlToText = (html) => {
 
 <style lang="scss" scoped>
 .postcard {
-  width: 100%;
-  margin-bottom: 10px;
-  .pointer {
-    cursor: pointer;
+  cursor: pointer;
+  transition: transform 0.25s ease;
+
+  &:hover {
+    transform: translateY(-3px);
   }
 
-  .title {
-    height: 30px;
+  .card {
+    border-radius: 10px;
+    overflow: hidden;
+    border-color: var(--el-border-color-light, #e4e7ed);
+
+    :deep(.el-card__header) {
+      padding: 12px 14px 8px;
+      border-bottom: none;
+    }
+
+    :deep(.el-card__body) {
+      padding: 0 14px 14px;
+    }
+  }
+
+  .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    h4 {
-      white-space: nowrap; /* 强制文本不换行 */
-      overflow: hidden; /* 隐藏溢出内容 */
-      text-overflow: ellipsis; /* 显示省略号 */
-      width: 75%; /* 需要指定宽度 */
-    }
-    .like {
-      display: flex;
-      align-items: center;
-    }
   }
-  .time {
-    display: flex;
-    justify-content: space-between;
-    .view {
-      display: flex;
-      align-items: center;
-    }
-  }
-  .img {
-    height: 200px;
+
+  .card-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
+    margin-right: 8px;
+    color: var(--el-text-color-primary, #303133);
   }
-}
-@keyframes grow {
-  0% {
-    transform: scale(1);
-  }
-  100% {
-    transform: scale(1.03);
-  }
-}
-@keyframes shrink {
-  0% {
-    transform: scale(1.03);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-.postcard:hover {
-  animation: grow 0.5s ease-in-out;
-  animation-fill-mode: forwards; /* 保持最后状态 */
-}
-.postcard:not(:hover) {
-  animation: shrink 0.5s ease-in-out;
-  animation-fill-mode: forwards; /* 保持最后状态 */
-}
-</style>
 
-<style>
-.card-body {
-  padding: 10px;
-}
-.card-header {
-  padding: 10px;
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+
+    .time {
+      font-size: 12px;
+      color: var(--el-text-color-placeholder, #c0c4cc);
+    }
+  }
+
+  .like, .view {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .count {
+    font-size: 13px;
+    color: var(--el-text-color-secondary, #909399);
+  }
+
+  .cover {
+    border-radius: 6px;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      aspect-ratio: 5 / 3;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  .text-content {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--el-text-color-regular, #606266);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 8;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 180px;
+  }
 }
 </style>

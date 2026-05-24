@@ -12,3 +12,15 @@ export function searchPostsApi(params) {
     params,
   });
 }
+
+export function getSearchHistoryApi(params) {
+  return request.get("/user/search-history", { params });
+}
+
+export function deleteSearchHistoryApi(id) {
+  return request.delete(`/user/search-history/${id}`);
+}
+
+export function clearSearchHistoryApi() {
+  return request.delete("/user/search-history");
+}

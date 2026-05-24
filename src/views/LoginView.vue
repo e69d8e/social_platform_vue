@@ -1,16 +1,12 @@
 <script setup>
 const logoUrl = "http://localhost:8080/imgs/logo.png";
-import {
-  loginApi,
-  registerApi,
-  getUserInfoApi,
-  getSignInDaysApi,
-} from "@/api/userApi";
+import { loginApi, registerApi, getUserInfoApi, getSignInDaysApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
-import { ElMessage } from "element-plus";
+// import { ElMessage } from "element-plus";
+
 const router = useRouter();
 const signStore = useSignStore();
 const ruleFormRef = ref();
@@ -21,6 +17,9 @@ const ruleForm = ref({
 });
 const loading = ref(false);
 const userStore = useUserStore();
+const isCheck = ref(false);
+const isLogin = ref(true);
+
 const validateUsername = (rule, value, callback) => {
   if (value === "") return callback(new Error("用户名不能为空"));
   if (!isLogin.value && (value.length > 16 || value.length < 4)) {
@@ -50,6 +49,7 @@ const rules = reactive({
   password: [{ validator: validatePassword, trigger: "blur" }],
   confirmPassword: [{ validator: validateConfirmPassword, trigger: "blur" }],
 });
+
 const submitForm = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -59,32 +59,20 @@ const submitForm = (formEl) => {
         return;
       }
       try {
-        // 去掉前后空格
         ruleForm.value.username = ruleForm.value.username.trim();
         ruleForm.value.password = ruleForm.value.password.trim();
+        loading.value = true;
         if (isLogin.value) {
-          loading.value = true;
-          // 登录
-          const res = await loginApi(
-            ruleForm.value.username,
-            ruleForm.value.password,
-          );
-          if (res.data.code !== 1) {
-            loading.value = false;
-            return;
-          }
+          const res = await loginApi(ruleForm.value.username, ruleForm.value.password);
+          if (res.data.code !== 1) { loading.value = false; return; }
           userStore.setToken(res.data.data);
           ElMessage.success(res.data.message);
-          // 获取用户信息
           const userInfo = await getUserInfoApi();
           userStore.setInfo(userInfo.data.data);
-          // 获取签到天数
           const data = await getSignInDaysApi();
           signStore.setSignDay(data.data.data);
-          // 跳转
           router.push("/");
         } else {
-          // 注册
           const res = await registerApi(ruleForm.value);
           ElMessage.success(res.data.message);
           isLogin.value = true;
@@ -95,100 +83,71 @@ const submitForm = (formEl) => {
         loading.value = false;
       }
     } else {
-      console.log("请检查输入");
       ElMessage.error("请检查输入");
     }
   });
 };
+
 const toLogin = () => {
   isLogin.value = true;
-  ruleForm.value = {
-    username: "",
-    password: "",
-    confirmPassword: "",
-  };
+  ruleForm.value = { username: "", password: "", confirmPassword: "" };
 };
 const toRegister = () => {
   isLogin.value = false;
-  ruleForm.value = {
-    username: "",
-    password: "",
-    confirmPassword: "",
-  };
+  ruleForm.value = { username: "", password: "", confirmPassword: "" };
 };
 const resetForm = (formEl) => {
   if (!formEl) return;
   formEl.resetFields();
 };
-const isCheck = ref(false);
-const isLogin = ref(true);
 </script>
 
 <template>
-  <div class="login" v-loading="loading">
-    <div class="logo">
-      <el-image
-        style="width: 80px; height: 80px; border-radius: 50%"
-        :src="logoUrl"
-      />
-    </div>
-    <div class="title">{{ isLogin ? "登录" : "注册" }}</div>
-    <div class="form">
+  <div class="login-page" v-loading="loading">
+    <div class="login-card">
+      <div class="logo">
+        <el-image class="logo-img" :src="logoUrl" />
+      </div>
+      <div class="title">{{ isLogin ? "欢迎登录" : "创建账号" }}</div>
+      <div class="subtitle">{{ isLogin ? "登录您的 Y社区 账号" : "注册一个新账号加入社区" }}</div>
+
       <el-form
         ref="ruleFormRef"
-        style="max-width: 600px"
         :model="ruleForm"
         status-icon
         :rules="rules"
         label-width="70px"
-        class="demo-ruleForm"
+        class="form"
       >
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="ruleForm.username" autocomplete="off" />
+          <el-input v-model="ruleForm.username" autocomplete="off" placeholder="请输入用户名" />
         </el-form-item>
-        <div class="box"></div>
         <el-form-item label="密码" prop="password">
-          <el-input
-            v-model="ruleForm.password"
-            type="password"
-            autocomplete="off"
-          />
+          <el-input v-model="ruleForm.password" type="password" autocomplete="off" placeholder="请输入密码" show-password />
         </el-form-item>
         <el-form-item label="确认密码" prop="confirmPassword" v-if="!isLogin">
-          <el-input
-            v-model="ruleForm.confirmPassword"
-            type="password"
-            autocomplete="off"
-          />
+          <el-input v-model="ruleForm.confirmPassword" type="password" autocomplete="off" placeholder="请再次输入密码" show-password />
         </el-form-item>
-        <div class="switch" v-if="isLogin">
-          <span>还没有账号？</span>
-          <el-link style="font-size: 14px" @click="toRegister" underline="never"
-            >去注册</el-link
-          >
+
+        <div class="switch-link">
+          <template v-if="isLogin">
+            <span>还没有账号？</span>
+            <el-link @click="toRegister" :underline="false" type="primary">去注册</el-link>
+          </template>
+          <template v-else>
+            <span>已有账号？</span>
+            <el-link @click="toLogin" :underline="false" type="primary">去登录</el-link>
+          </template>
         </div>
-        <div class="switch" v-else>
-          <span>已有账号？</span>
-          <el-link style="font-size: 14px" @click="toLogin" underline="never"
-            >去登录</el-link
-          >
+
+        <div class="agreement">
+          <el-checkbox v-model="isCheck" />
+          <span class="agree-text" @click="isCheck = !isCheck">我已阅读并同意</span>
+          <el-link :underline="false" href="http://localhost:8080/userAgreement.html" type="primary">《用户协议》</el-link>
         </div>
-        <!-- 用户协议 -->
-        <div class="check">
-          <el-checkbox v-model="isCheck" label="" size="large" />
-          <span class="text" style="cursor: pointer" @click="isCheck = !isCheck"
-            >我已阅读并同意</span
-          >
-          <el-link
-            underline="never"
-            href="http://localhost:8080/userAgreement.html"
-            >《用户协议》</el-link
-          >
-        </div>
-        <div class="box"></div>
 
         <el-form-item>
-          <el-button type="primary" @click="submitForm(ruleFormRef)">
+          <el-button type="primary" @click="submitForm(ruleFormRef)" class="submit-btn">
             {{ isLogin ? "登录" : "注册" }}
           </el-button>
           <el-button @click="resetForm(ruleFormRef)">清空</el-button>
@@ -199,33 +158,79 @@ const isLogin = ref(true);
 </template>
 
 <style lang="scss" scoped>
-.login {
-  padding: 120px;
-  .title {
-    text-align: center;
-    font-size: 20px;
-    margin-bottom: 40px;
-  }
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, var(--el-bg-color-page, #f2f3f5) 0%, var(--el-color-primary-light-9, #ecf5ff) 100%);
+}
+
+.login-card {
+  width: 440px;
+  max-width: 100%;
+  padding: 40px 36px;
+  background: var(--el-bg-color, #ffffff);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+
   .logo {
     text-align: center;
-    margin-bottom: 40px;
-  }
-  .form {
-    width: 400px;
-    margin: 0 auto;
-    .box {
-      height: 10px;
+    margin-bottom: 20px;
+
+    .logo-img {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
     }
-    .switch {
+  }
+
+  .title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--el-text-color-primary, #303133);
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: var(--el-text-color-secondary, #909399);
+    margin-bottom: 32px;
+  }
+
+  .form {
+    .switch-link {
       text-align: right;
       font-size: 14px;
+      color: var(--el-text-color-secondary, #909399);
+      margin-bottom: 16px;
     }
-    .check {
+
+    .agreement {
       display: flex;
-      .text {
-        line-height: 40px;
+      align-items: center;
+      margin-bottom: 20px;
+
+      .agree-text {
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--el-text-color-secondary, #909399);
+        margin: 0 4px;
       }
     }
+
+    .submit-btn {
+      min-width: 100px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 28px 20px;
   }
 }
 </style>

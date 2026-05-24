@@ -6,56 +6,36 @@ import { useUserStore } from "@/stores/user";
 import { Delete } from "@element-plus/icons-vue";
 import { deleteCommentApi } from "@/api/reviewerApi";
 import { debounce } from "lodash";
+
 const userStore = useUserStore();
 const content = ref("");
-// 帖子id
+
 const props = defineProps({
-  postId: {
-    type: String,
-    default: "",
-  },
+  postId: { type: String, default: "" },
 });
-// const comments = ref([
-//   {
-//     id: 1,
-//     content: "讲得很好",
-//     createTime: "2023-05-01 12:00:00",
-//     user: { id: 1, nickname: "Tom" },
-//     children: [
-//       {
-//         id: 11,
-//         content: "确实如此",
-//         user: { id: 2, nickname: "Jerry" },
-//         replyUser: { id: 1, nickname: "Tom" },
-//       },
-//     ],
-//   },
-// ]);
+
 const comments = ref([]);
 const lastId = ref("");
 const offset = ref(0);
-// 获取当前帖子的评论
+const noMore = ref(false);
+
 const getComments = async () => {
+  if (noMore.value) return;
   const timestamp = lastId.value || Date.now();
-  const res = await getCommentApi(props.postId, {
-    lastId: timestamp,
-    offset: offset.value,
-  });
-  console.log("获取的评论", res.data.data.list);
-  // comments.value = [...comments.value, ...res.data.data.list];
+  const res = await getCommentApi(props.postId, { lastId: timestamp, offset: offset.value });
   const list = res.data.data.list;
+
+  if (list.length === 0) {
+    noMore.value = true;
+    return;
+  }
+
   const temp = ref([]);
   for (let i = 0; i < list.length; i++) {
     const item = list[i];
-    const children = item.children;
-    if (
-      comments.value.some((comment) => {
-        if (comment.id === item.id) {
-          comment.children = children;
-          return true;
-        }
-      })
-    ) {
+    if (comments.value.some((comment) => {
+      if (comment.id === item.id) { comment.children = item.children; return true; }
+    })) {
       continue;
     }
     temp.value.push(item);
@@ -65,92 +45,50 @@ const getComments = async () => {
   lastId.value = res.data.data.minTime;
   offset.value = res.data.data.offset;
 };
+
 onMounted(async () => {
   await getComments();
 });
+
 const loading = ref(false);
+
 const loadMore = async () => {
-  if (loading.value) return;
-  try {
-    loading.value = true;
-    console.log("加载更多...");
-    // 数据加载逻辑
-    await getComments();
-  } finally {
-    loading.value = false;
-  }
+  if (loading.value || noMore.value) return;
+  loading.value = true;
+  try { await getComments(); } finally { loading.value = false; }
 };
+
 const debouncedScrollHandler = debounce(() => {
-  if (loading.value) return;
-
-  const scrollTop =
-    document.documentElement.scrollTop || document.body.scrollTop;
+  if (loading.value || noMore.value) return;
+  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
   const clientHeight = document.documentElement.clientHeight;
-  const scrollHeight =
-    document.documentElement.scrollHeight || document.body.scrollHeight;
-  const threshold = 50;
-
-  if (scrollTop + clientHeight >= scrollHeight - threshold) {
-    loadMore();
-  }
+  const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+  if (scrollTop + clientHeight >= scrollHeight - 100) loadMore();
 }, 200);
+
 onMounted(() => {
   window.addEventListener("scroll", debouncedScrollHandler);
 });
+
 onUnmounted(() => {
-  debouncedScrollHandler.cancel(); // 取消未执行的防抖调用
+  debouncedScrollHandler.cancel();
   window.removeEventListener("scroll", debouncedScrollHandler);
 });
-/**
- * 当前回复上下文
- */
-const replyContext = ref({
-  parentId: 0,
-  replyUserId: null,
-  replyUserName: "",
-});
 
-/**
- * 选择回复对象
- * parent = 一级评论
- * child = 被回复的评论（可为空）
- */
+const replyContext = ref({ parentId: 0, replyUserId: null, replyUserName: "" });
+
 const reply = (parent, child) => {
   replyContext.value.parentId = parent.id;
   replyContext.value.replyUserId = child ? child.user.id : parent.user.id;
-
-  replyContext.value.replyUserName = child
-    ? child.user.nickname
-    : parent.user.nickname;
+  replyContext.value.replyUserName = child ? child.user.nickname : parent.user.nickname;
 };
 
-/**
- * 清空回复状态
- */
 const clearReply = () => {
-  replyContext.value = {
-    parentId: 0,
-    replyUserId: null,
-    replyUserName: "",
-  };
+  replyContext.value = { parentId: 0, replyUserId: null, replyUserName: "" };
 };
 
-/**
- * 提交评论
- */
 const submitComment = async () => {
-  if (!content.value.trim()) {
-    ElMessage.warning("评论不能为空");
-    return;
-  }
-
-  const data = {
-    postId: props.postId,
-    content: content.value,
-    parentId: replyContext.value.parentId,
-    replyTo: replyContext.value.replyUserId,
-  };
-  console.log("提交参数", data);
+  if (!content.value.trim()) { ElMessage.warning("评论不能为空"); return; }
   const res = await addCommentApi({
     postId: props.postId,
     content: content.value,
@@ -161,81 +99,70 @@ const submitComment = async () => {
     ElMessage.success("评论成功");
     lastId.value = null;
     offset.value = 0;
+    noMore.value = false;
+    comments.value = [];
     await getComments();
   }
   content.value = "";
   clearReply();
 };
-const deleteComment = async (id) => {
-  console.log("删除评论", id);
 
+const deleteComment = async (id) => {
   const res = await deleteCommentApi(props.postId, id);
   if (res.data.code === 1) {
     ElMessage.success("删除成功");
     lastId.value = null;
     offset.value = 0;
+    noMore.value = false;
+    comments.value = [];
     await getComments();
   }
 };
 </script>
 
 <template>
-  <div class="comment-container" v-loading="loading">
-    <!-- 输入框 -->
-    <el-card shadow="never" class="comment-input-card">
-      <div class="comment-input">
-        <el-avatar
-          style="flex-shrink: 0; width: 50px; height: 50px"
-          :src="userStore.userInfo.avatar"
-        />
+  <div class="comment-section" v-loading="loading">
+    <h3 class="comment-title">评论 ({{ comments.length }})</h3>
+
+    <!-- 输入区域 -->
+    <div class="comment-input-card">
+      <div class="comment-input-row">
+        <el-avatar :size="40" :src="userStore.userInfo.avatar" class="input-avatar" />
         <el-input
           v-model="content"
           type="textarea"
-          :rows="3"
-          :placeholder="
-            replyContext.replyUserName
-              ? `回复 @${replyContext.replyUserName}`
-              : '写下你的评论...'
-          "
+          :rows="2"
+          :placeholder="replyContext.replyUserName ? `回复 @${replyContext.replyUserName}` : '写下你的评论...'"
+          class="input-field"
         />
       </div>
-
       <div class="submit-bar">
-        <div>
-          <el-tag
-            v-if="replyContext.replyUserName"
-            closable
-            @close="clearReply"
-            size="small"
-            style="cursor: pointer"
-          >
-            回复 @{{ replyContext.replyUserName }}
-          </el-tag>
-        </div>
-
-        <el-button type="primary" @click="submitComment"> 发表评论 </el-button>
+        <el-tag v-if="replyContext.replyUserName" closable @close="clearReply" size="small">
+          回复 @{{ replyContext.replyUserName }}
+        </el-tag>
+        <span v-else></span>
+        <el-button type="primary" size="small" @click="submitComment">发表评论</el-button>
       </div>
-    </el-card>
+    </div>
 
     <!-- 评论列表 -->
-    <div class="comment-item" v-for="item in comments" :key="item.id">
-      <el-avatar :size="40" :src="item.user.avatar" />
+    <div v-if="comments.length === 0 && !loading" class="empty-comments">
+      <span>暂无评论，来说点什么吧</span>
+    </div>
 
+    <div class="comment-item" v-for="item in comments" :key="item.id">
+      <el-avatar :size="40" :src="item.user.avatar" class="comment-avatar" />
       <div class="comment-main">
         <div class="comment-header">
           <span class="username">{{ item.user.nickname }}</span>
           <span class="time">{{ item.createTime }}</span>
         </div>
-
         <div class="comment-content">{{ item.content }}</div>
-
         <div class="comment-actions">
-          <span @click="reply(item, null)">回复</span>
+          <span class="reply-btn" @click="reply(item, null)">回复</span>
           <el-popconfirm
             v-if="userStore.userInfo.authority === 'REVIEWER'"
-            class="box-item"
             title="确认删除该评论?"
-            placement="right"
             @confirm="deleteComment(item.id)"
           >
             <template #reference>
@@ -244,25 +171,16 @@ const deleteComment = async (id) => {
           </el-popconfirm>
         </div>
 
-        <!-- 二级评论 -->
-        <div class="child-comments">
-          <div
-            class="child-item"
-            v-for="child in item.children"
-            :key="child.id"
-          >
+        <!-- 子评论 -->
+        <div class="child-comments" v-if="item.children && item.children.length">
+          <div class="child-item" v-for="child in item.children" :key="child.id">
             <span class="username">{{ child.user.nickname }}</span>
-            <span class="reply-text">
-              回复 @{{ child.replyUser.nickname }}：
-            </span>
+            <span class="reply-text">回复 @{{ child.replyUser.nickname }}：</span>
             <span>{{ child.content }}</span>
-
-            <span class="reply-btn" @click="reply(item, child)"> 回复 </span>
+            <span class="reply-btn" @click="reply(item, child)">回复</span>
             <el-popconfirm
               v-if="userStore.userInfo.authority === 'REVIEWER'"
-              class="box-item"
               title="确认删除该评论?"
-              placement="right"
               @confirm="deleteComment(child.id)"
             >
               <template #reference>
@@ -276,110 +194,138 @@ const deleteComment = async (id) => {
   </div>
 </template>
 
-<style scoped>
-.comment-container {
-  max-width: 1300px;
-  margin: 30px auto 240px;
+<style lang="scss" scoped>
+.comment-section {
+  margin-top: 32px;
+
+  .comment-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #303133);
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--el-border-color-light, #e4e7ed);
+  }
 }
 
 .comment-input-card {
-  /* 悬浮效果 */
-  position: fixed;
-  bottom: 20px; /* 距离底部的距离 */
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000; /* 确保在最上层 */
-  background: white; /* 可选：添加背景色 */
-  padding: 10px;
-  border-radius: 8px; /* 可选：圆角 */
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); /* 可选：阴影效果 */
-  width: 60%;
-  /* margin-bottom: 20px; */
+  background: var(--el-bg-color, #ffffff);
+  border: 1px solid var(--el-border-color-light, #e4e7ed);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+
+  .comment-input-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .input-avatar {
+    flex-shrink: 0;
+  }
+
+  .input-field {
+    flex: 1;
+  }
+
+  .submit-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+  }
 }
 
-.comment-input {
-  display: flex;
-  gap: 12px;
-}
-
-.submit-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-  font-size: 13px;
-  color: #666;
-}
-
-/* 评论列表 */
 .comment-item {
   display: flex;
-  padding: 20px 0;
-  border-bottom: 1px solid #eee;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+
+  .comment-avatar {
+    flex-shrink: 0;
+  }
 }
 
 .comment-main {
   flex: 1;
-  margin-left: 12px;
+  min-width: 0;
 }
 
 .comment-header {
   display: flex;
   align-items: center;
-}
+  gap: 10px;
+  margin-bottom: 6px;
 
-.username {
-  font-weight: 600;
-  margin-right: 10px;
-}
+  .username {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #303133);
+  }
 
-.time {
-  font-size: 12px;
-  color: #999;
+  .time {
+    font-size: 12px;
+    color: var(--el-text-color-placeholder, #c0c4cc);
+  }
 }
 
 .comment-content {
-  margin: 8px 0;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--el-text-color-regular, #606266);
+  margin-bottom: 8px;
 }
 
 .comment-actions {
-  cursor: pointer;
   font-size: 13px;
-  color: #666;
+  color: var(--el-text-color-secondary, #909399);
+
+  .reply-btn {
+    cursor: pointer;
+    margin-right: 12px;
+    &:hover { color: var(--el-color-primary, #409eff); }
+  }
 }
 
-.comment-actions span {
-  margin-right: 16px;
-  cursor: pointer;
-}
-
-.comment-actions span:hover {
-  color: #409eff;
-}
-
-/* 二级评论 */
 .child-comments {
   margin-top: 10px;
-  padding: 10px;
-  background: #f7f8fa;
-  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--el-bg-color-page, #f2f3f5);
+  border-radius: 8px;
+
+  .child-item {
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 8px;
+    color: var(--el-text-color-regular, #606266);
+
+    &:last-child { margin-bottom: 0; }
+
+    .username {
+      font-weight: 600;
+      color: var(--el-text-color-primary, #303133);
+    }
+
+    .reply-text {
+      color: var(--el-text-color-secondary, #909399);
+      margin: 0 4px;
+    }
+
+    .reply-btn {
+      cursor: pointer;
+      color: var(--el-text-color-secondary, #909399);
+      margin-left: 8px;
+      font-size: 12px;
+      &:hover { color: var(--el-color-primary, #409eff); }
+    }
+  }
 }
 
-.child-item {
-  font-size: 13px;
-  margin-bottom: 6px;
-}
-
-.child-item:last-child {
-  margin-bottom: 0;
-}
-
-.reply-text {
-  color: #999;
-  margin: 0 4px;
-}
-.reply-btn {
-  cursor: pointer;
+.empty-comments {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--el-text-color-placeholder, #c0c4cc);
+  font-size: 14px;
 }
 </style>

@@ -1,84 +1,54 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { getPostDetailApi } from "@/api/postApi";
+import { getPostDetailApi, likeApi, deletePostApi } from "@/api/postApi";
 import { useRoute, useRouter } from "vue-router";
-import { likeApi, deletePostApi } from "@/api/postApi";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
 import { throttle } from "lodash";
 import CommentComponent from "@/components/CommentComponent.vue";
 import formattedCount from "@/utils/formattedCount";
-import { ElMessage } from "element-plus";
+import { ArrowLeft, Star, StarFilled, View, Delete, RemoveFilled } from "@element-plus/icons-vue";
+// import { ElMessage } from "element-plus";
+
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
-const srcList = computed(() => {
-  return [post.value.cover];
-});
+const srcList = computed(() => [post.value.cover]);
 const post = ref({
-  id: "",
-  title: "标题",
-  content: "内容",
-  category: "分类",
-  createTime: "",
-  cover: "",
-  liked: false,
-  likeCount: 0,
-  userId: "",
-  nickname: "",
-  avatar: "",
-  followed: false,
-  viewCount: 0,
+  id: "", title: "", content: "", category: "", createTime: "",
+  cover: "", liked: false, likeCount: 0, userId: "", nickname: "",
+  avatar: "", followed: false, viewCount: 0,
 });
 const dialogVisible = ref(false);
-const loading = ref(false);
+const loading = ref(true);
+
 const getPost = async (id) => {
   const res = await getPostDetailApi(id);
   post.value = res.data.data;
 };
+
 onMounted(async () => {
   await getPost(route.params.id);
   loading.value = false;
 });
-const likeLoading = ref(false);
 
+const likeLoading = ref(false);
 const toggleLike = throttle(async () => {
   if (likeLoading.value) return;
-
   likeLoading.value = true;
-
-  // 记录旧状态（用于回滚）
   const oldLiked = post.value.liked;
   const oldCount = post.value.likeCount;
-
-  // 乐观更新（UI 先变）
-  if (post.value.liked) {
-    post.value.liked = false;
-    post.value.likeCount--;
-  } else {
-    post.value.liked = true;
-    post.value.likeCount++;
-  }
-
+  post.value.liked = !post.value.liked;
+  post.value.likeCount += post.value.liked ? 1 : -1;
   try {
-    //（点赞 / 取消点赞）
     const res = await likeApi(post.value.id);
-
-    if (res.data.code !== 1) {
-      throw new Error("操作失败");
-    }
+    if (res.data.code !== 1) throw new Error("操作失败");
     ElMessage.success(res.data.message);
-  } catch (e) {
-    // 失败回滚
+  } catch {
     post.value.liked = oldLiked;
     post.value.likeCount = oldCount;
-    console.log(e);
-
-    ElMessage({
-      message: "操作失败，请重试",
-      type: "error",
-    });
+    ElMessage.error("操作失败，请重试");
   } finally {
     likeLoading.value = false;
   }
@@ -86,217 +56,201 @@ const toggleLike = throttle(async () => {
 
 const followLoading = ref(false);
 const toggleFollow = throttle(async () => {
-  // 不能关注自己
-  if (userStore.userInfo.id === post.value.userId) {
-    ElMessage({
-      message: "不能关注自己",
-      type: "warning",
-    });
-    return;
-  }
-
-  // 防并发
+  if (userStore.userInfo.id === post.value.userId) { ElMessage.warning("不能关注自己"); return; }
   if (followLoading.value) return;
   followLoading.value = true;
-
-  // 记录旧状态（用于回滚）
   const oldFollowed = post.value.followed;
-
-  // 乐观更新（UI先变）
   post.value.followed = !post.value.followed;
-
   try {
-    // 根据状态调用不同接口
-    const res = post.value.followed
-      ? await followUserApi(post.value.userId)
-      : await unfollowUserApi(post.value.userId);
-
-    if (res.data.code !== 1) {
-      throw new Error("操作失败");
-    }
-
-    ElMessage({
-      message: res.data.message,
-      type: "success",
-    });
-  } catch (e) {
-    // 失败回滚
+    const res = post.value.followed ? await followUserApi(post.value.userId) : await unfollowUserApi(post.value.userId);
+    if (res.data.code !== 1) throw new Error("操作失败");
+    ElMessage.success(res.data.message);
+  } catch {
     post.value.followed = oldFollowed;
-    console.log(e);
-
-    ElMessage({
-      message: "操作失败，请重试",
-      type: "error",
-    });
+    ElMessage.error("操作失败，请重试");
   } finally {
     followLoading.value = false;
   }
 }, 800);
+
 const deletePost = async () => {
   const res = await deletePostApi(post.value.id);
-  if (res.data.code === 1) {
-    ElMessage({
-      message: res.data.message,
-      type: "success",
-    });
-  }
+  if (res.data.code === 1) ElMessage.success(res.data.message);
   dialogVisible.value = false;
   router.back();
 };
+
 const banPost = async () => {
   const res = await banPostApi(post.value.id);
-  if (res.data.code === 1) {
-    ElMessage({
-      message: res.data.message,
-      type: "success",
-    });
-  }
+  if (res.data.code === 1) ElMessage.success(res.data.message);
   router.back();
 };
-const likeCount = computed(() => {
-  return formattedCount(post.value.likeCount);
-});
-const viewCount = computed(() => {
-  return formattedCount(post.value.viewCount);
-});
+
+const likeCount = computed(() => formattedCount(post.value.likeCount));
+const viewCount = computed(() => formattedCount(post.value.viewCount));
 </script>
 
 <template>
-  <el-row>
-    <el-col :span="2"></el-col>
-    <el-col :span="20">
-      <div class="post" v-loading="loading">
-        <div class="pointer" @click="$router.back()">
-          <el-icon size="large"><ArrowLeft /></el-icon>
-        </div>
-        <div class="title">{{ post.title }}</div>
-        <div class="user">
-          <el-avatar
-            class="pointer"
-            @click="$router.push({ path: '/user/' + post.userId })"
-            style="flex-shrink: 0; width: 50px; height: 50px"
-            :src="post.avatar"
-          ></el-avatar>
-          <el-text
-            @click="$router.push({ path: '/user/' + post.userId })"
-            class="nickname pointer"
-            >{{ post.nickname }}</el-text
-          >
-          <el-button @click="toggleFollow" type="primary" v-if="!post.followed"
-            >关注</el-button
-          >
-          <el-button @click="toggleFollow" v-else>已关注</el-button>
-          <el-icon
-            v-if="userStore.userInfo.id === post.userId"
-            @click="dialogVisible = true"
-            class="icon pointer"
-            ><Delete
-          /></el-icon>
-          <el-popconfirm
-            class="box-item"
-            title="确定封禁/解封该文章吗？"
-            placement="right-start"
-            @confirm="banPost"
-          >
-            <template #reference>
-              <el-icon
-                v-if="userStore.userInfo.authority === 'REVIEWER'"
-                class="icon pointer"
-                ><RemoveFilled
-              /></el-icon>
-            </template>
-          </el-popconfirm>
-        </div>
-        <div class="other">
-          <el-text type="primary" class="time">
-            {{ post.createTime }}
-          </el-text>
-          <div class="like">
-            <el-icon @click="toggleLike" size="large" v-if="!post.liked"
-              ><Star
-            /></el-icon>
-            <el-icon @click="toggleLike" size="large" v-else
-              ><StarFilled
-            /></el-icon>
-            <el-text class="text" type="primary">{{ likeCount }} 赞</el-text>
-            <el-icon size="large"><View /></el-icon>
-            <el-text class="text" type="primary">{{ viewCount }} 浏览</el-text>
-          </div>
-          <div class="category">
-            <el-tag>{{ post.category }}</el-tag>
-          </div>
-        </div>
-        <div class="other"></div>
-        <div class="cover" v-show="post.cover">
-          <el-image
-            :preview-src-list="srcList"
-            style="width: 100%; aspect-ratio: 5 / 3"
-            fit="cover"
-            :src="post.cover"
-          ></el-image>
-        </div>
-        <div class="line"></div>
-        <div class="content" v-html="post.content"></div>
-        <el-dialog v-model="dialogVisible" title="确认删除?" width="500">
-          <template #footer>
-            <div class="dialog-footer">
-              <el-button @click="dialogVisible = false">取消</el-button>
-              <el-button type="primary" @click="deletePost"> 确认 </el-button>
-            </div>
+  <div class="post-detail" v-loading="loading">
+    <div class="back" @click="$router.back()">
+      <el-icon size="18"><ArrowLeft /></el-icon>
+      <span>返回</span>
+    </div>
+
+    <h1 class="title">{{ post.title }}</h1>
+
+    <div class="meta">
+      <div class="author">
+        <el-avatar :size="44" :src="post.avatar" @click="$router.push('/user/' + post.userId)" class="pointer" />
+        <span class="nickname" @click="$router.push('/user/' + post.userId)">{{ post.nickname }}</span>
+        <el-button @click="toggleFollow" :type="post.followed ? 'default' : 'primary'" size="small">
+          {{ post.followed ? '已关注' : '关注' }}
+        </el-button>
+        <el-icon v-if="userStore.userInfo.id === post.userId" @click="dialogVisible = true" class="action-icon danger"><Delete /></el-icon>
+        <el-popconfirm v-if="userStore.userInfo.authority === 'REVIEWER'" title="确定封禁/解封该文章吗？" @confirm="banPost">
+          <template #reference>
+            <el-icon class="action-icon danger"><RemoveFilled /></el-icon>
           </template>
-        </el-dialog>
-        <CommentComponent :post-id="route.params.id" />
+        </el-popconfirm>
       </div>
-    </el-col>
-    <el-col :span="2"></el-col>
-  </el-row>
+
+      <div class="stats">
+        <span class="time">{{ post.createTime }}</span>
+        <span class="divider">|</span>
+        <el-icon @click="toggleLike" size="18" class="pointer">
+          <StarFilled v-if="post.liked" style="color: var(--el-color-warning, #e6a23c)" />
+          <Star v-else />
+        </el-icon>
+        <span>{{ likeCount }} 赞</span>
+        <span class="divider">|</span>
+        <el-icon size="18"><View /></el-icon>
+        <span>{{ viewCount }} 浏览</span>
+        <el-tag size="small" class="category-tag">{{ post.category }}</el-tag>
+      </div>
+    </div>
+
+    <div v-if="post.cover" class="cover">
+      <el-image :preview-src-list="srcList" :src="post.cover" fit="cover" class="cover-img" />
+    </div>
+
+    <div class="line"></div>
+    <div class="content" v-html="post.content"></div>
+
+    <el-dialog v-model="dialogVisible" title="确认删除?" width="400" center>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="deletePost">确认</el-button>
+      </template>
+    </el-dialog>
+
+    <CommentComponent :post-id="route.params.id" />
+  </div>
 </template>
 
-<style scoped>
-.post {
-  margin: 20px auto;
-  .pointer {
+<style lang="scss" scoped>
+.post-detail {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     cursor: pointer;
+    color: var(--el-text-color-regular, #606266);
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    margin-bottom: 20px;
+    &:hover {
+      color: var(--el-color-primary, #409eff);
+      background: var(--el-color-primary-light-9, #ecf5ff);
+    }
   }
+
   .title {
-    font-size: 28px;
-    font-weight: bold;
-    margin: 30px 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--el-text-color-primary, #303133);
+    margin: 0 0 24px;
+    line-height: 1.4;
   }
-  .user {
+
+  .meta {
+    margin-bottom: 20px;
+  }
+
+  .author {
     display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+
     .nickname {
-      margin: 0 20px 10px;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--el-text-color-primary, #303133);
     }
-    .icon {
-      margin-left: 20px;
-      font-size: 32px;
-      color: red;
-    }
-    .icon:hover {
-      color: #ff9999;
+
+    .action-icon {
+      font-size: 22px;
+      cursor: pointer;
+      &.danger { color: var(--el-color-danger, #f56c6c); }
+      &:hover { opacity: 0.7; }
     }
   }
-  .other {
+
+  .stats {
     display: flex;
-    margin: 20px 0;
-    .time {
-      margin-right: 20px;
-    }
-    .like {
-      display: flex;
-      align-items: center;
-      .text {
-        margin: 0 10px;
-      }
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary, #909399);
+
+    .time { color: var(--el-text-color-placeholder, #c0c4cc); }
+    .divider { color: var(--el-border-color, #dcdfe6); }
+
+    .category-tag { margin-left: 10px; }
+  }
+
+  .pointer { cursor: pointer; }
+
+  .cover {
+    margin-bottom: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+
+    .cover-img {
+      width: 100%;
+      aspect-ratio: 5 / 3;
     }
   }
+
   .line {
-    border-top: 2px solid #dcdfe6;
-    margin: 20px 0;
+    border-top: 1px solid var(--el-border-color-light, #e4e7ed);
+    margin: 24px 0;
   }
+
   .content {
     overflow: hidden;
+    line-height: 1.8;
+    font-size: 15px;
+    color: var(--el-text-color-regular, #606266);
+    padding-bottom: 20px;
+
+    :deep(img) {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .post-detail {
+    padding: 12px 12px 32px;
+    .title { font-size: 22px; }
   }
 }
 </style>

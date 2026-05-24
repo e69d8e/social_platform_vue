@@ -3,38 +3,35 @@ import { ref, onMounted, shallowRef, onBeforeUnmount } from "vue";
 import { getPostCategoryApi, getPostIdApi, publicPostApi } from "@/api/postApi";
 import { deletePostImgApi, uploadPostImgApi } from "@/api/uploadApi";
 import { useRouter } from "vue-router";
-import "@wangeditor/editor/dist/css/style.css"; // 引入 css
+import "@wangeditor/editor/dist/css/style.css";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+// import { ElMessage, ElMessageBox } from "element-plus";
+import { ArrowLeft, Plus } from "@element-plus/icons-vue";
 
 const router = useRouter();
-const dialogImageUrl = ref("");
-const dialogVisible = ref(false);
 const dialogConfirmVisible = ref(false);
 const categoryId = ref("");
 const title = ref("");
 const loading = ref(false);
-
 const categoryList = ref([]);
+
 const getCategoryList = async () => {
   const res = await getPostCategoryApi();
   categoryList.value = res.data.data;
 };
+
 const id = ref("");
 onMounted(async () => {
   await getCategoryList();
-  // 获取帖子id
   const res = await getPostIdApi();
   id.value = res.data.data;
-  if (id.value === null) {
-    ElMessage.error("网络错误");
-  }
-  console.log(id.value);
-
-  // 监听浏览器刷新/关闭事件
+  if (id.value === null) ElMessage.error("网络错误");
   window.addEventListener("beforeunload", handleBeforeUnload);
 });
+
 const imageUrl = ref("");
+const file = ref();
+let oldObjectUrl = null;
 
 const beforeUpload = (rawFile) => {
   if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
@@ -52,9 +49,7 @@ const publicPost = async () => {
   if (file.value) {
     url = await uploadPostImgApi(file.value, id.value);
   }
-
   loading.value = true;
-
   const res = await publicPostApi({
     id: id.value,
     cover: url ? url.data.data : null,
@@ -64,10 +59,7 @@ const publicPost = async () => {
   });
   dialogConfirmVisible.value = false;
   loading.value = false;
-  ElMessage({
-    message: res.data.message,
-    type: "success",
-  });
+  ElMessage.success(res.data.message);
   isPublished.value = true;
   router.back();
 };
@@ -75,120 +67,69 @@ const publicPost = async () => {
 const editorRef = shallowRef();
 const valueHtml = ref("");
 const mode = "simple";
+const toolbarConfig = { excludeKeys: ["insertVideo"] };
+const editorConfig = { placeholder: "请输入内容..." };
 
-const toolbarConfig = {};
-// 移除插入视频功能
-toolbarConfig.excludeKeys = ["insertVideo"];
-const editorConfig = { placeholder: "请输入内容" };
-// 组件销毁时，也及时销毁编辑器
-onBeforeUnmount(() => {
-  const editor = editorRef.value;
-  if (editor == null) return;
-  editor.destroy();
-});
 const handleCreated = (editor) => {
-  editorRef.value = editor; // 记录 editor 实例
+  editorRef.value = editor;
 };
 
 editorConfig.MENU_CONF = {};
 editorConfig.MENU_CONF["uploadImage"] = {
-  // 最多可上传1个文件
   maxNumberOfFiles: 1,
-
-  // 自定义上传
   async customUpload(file, insertFn) {
-    // file 即选中的文件
-    // 自己实现上传，并得到图片 url alt href
     const res = await uploadPostImgApi(file, id.value);
     const url = res.data.data;
-    const alt = "图片描述";
-    const href = url;
-    // 最后插入图片
-    insertFn(url, alt, href);
+    insertFn(url, "图片描述", url);
   },
 };
 
-const file = ref();
-let oldObjectUrl = null;
-const handleAvatarChange = (uploadFile) => {
-  // 1. 释放之前的 URL 对象
-  if (oldObjectUrl) {
-    URL.revokeObjectURL(oldObjectUrl);
-  }
-  // 生成本地 Blob URL 用于即时预览
+const handleCoverChange = (uploadFile) => {
+  if (oldObjectUrl) URL.revokeObjectURL(oldObjectUrl);
   imageUrl.value = URL.createObjectURL(uploadFile.raw);
   oldObjectUrl = imageUrl.value;
   file.value = uploadFile.raw;
 };
 
-// 处理浏览器刷新/关闭
+const handleRemoveCover = () => {
+  if (oldObjectUrl) {
+    URL.revokeObjectURL(oldObjectUrl);
+    oldObjectUrl = null;
+  }
+  imageUrl.value = "";
+  file.value = null;
+};
+
 const handleBeforeUnload = (e) => {
   if (!isPublished.value && id.value) {
-    // 注意：现代浏览器在 beforeunload 中通常不执行异步请求，
-    // 但我们可以尝试发送一个同步信标(navigator.sendBeacon)或者仅仅依赖后端GC。
-    // 如果必须确保删除，最好是在用户点击“返回”或“取消”时处理。
-    // 这里仅做标记，实际删除主要依赖 onBeforeUnmount 和手动返回按钮
-
-    // 某些浏览器允许这样提示用户
     e.preventDefault();
     e.returnValue = "";
   }
 };
 
-// 组件卸载清理
-onBeforeUnmount(() => {
-  if (oldObjectUrl) {
-    URL.revokeObjectURL(oldObjectUrl);
-  }
-  // 原有的编辑器销毁逻辑
-  const editor = editorRef.value;
-  if (editor == null) return;
-  editor.destroy();
-});
-
 const isPublished = ref(false);
-// 统一的清理函数
-const cleanupResources = async () => {
-  // 如果已经发布，不需要清理
-  if (isPublished.value) {
-    return;
-  }
 
-  // 如果有 ID，尝试删除服务器上的临时文件
+const cleanupResources = async () => {
+  if (isPublished.value) return;
   if (id.value) {
     try {
-      console.log("正在清理未发布的临时资源，ID:", id.value);
       await deletePostImgApi(id.value);
-    } catch (error) {
-      console.error("清理临时文件失败:", error);
-    }
+    } catch {}
   }
-
-  // 清理本地 Blob URL
   if (oldObjectUrl) {
     URL.revokeObjectURL(oldObjectUrl);
     oldObjectUrl = null;
   }
 };
 
-// 组件销毁时（路由切换、后退等）
 onBeforeUnmount(() => {
-  // 移除监听器
   window.removeEventListener("beforeunload", handleBeforeUnload);
-
-  // 执行清理
   cleanupResources();
-
-  // 销毁编辑器
   const editor = editorRef.value;
-  if (editor != null) {
-    editor.destroy();
-  }
+  if (editor != null) editor.destroy();
 });
 
-// 处理手动点击返回按钮
 const handleBackClick = async () => {
-  // 可选：添加确认框，防止用户误触导致辛苦编辑的内容丢失
   if (title.value || valueHtml.value || file.value) {
     try {
       await ElMessageBox.confirm(
@@ -200,175 +141,286 @@ const handleBackClick = async () => {
           type: "warning",
         },
       );
-      // 用户确认后，router.back() 会触发 onBeforeUnmount，从而执行 cleanupResources
       router.back();
-    } catch {
-      // 用户取消，什么都不做
-    }
+    } catch {}
   } else {
     router.back();
   }
 };
 </script>
+
 <template>
-  <el-row>
-    <el-col :span="2"></el-col>
-    <el-col :span="20" :offset="0">
-      <div class="public" v-loading="loading">
-        <div class="header">发布帖子</div>
-        <div class="pointer back" @click="handleBackClick">
-          <el-icon size="large"><ArrowLeft /></el-icon>
+  <div class="public-page" v-loading="loading">
+    <div class="page-header">
+      <div class="back" @click="handleBackClick">
+        <el-icon size="18"><ArrowLeft /></el-icon>
+        <span>返回</span>
+      </div>
+      <span class="page-title">发布帖子</span>
+    </div>
+
+    <div class="form-card">
+      <div class="section">
+        <div class="section-label">上传封面</div>
+        <div class="section-hint">
+          图片比例为 5:3，格式为 jpg/png，大小小于 8MB
         </div>
-        <div class="img">
-          <div class="please">
-            请上传封面(图片比例为5:3，格式为 jpg/jpeg，大小小于 8MB)
+        <div class="cover-area">
+          <div class="cover-preview-box" :class="{ 'has-image': imageUrl }">
+            <img v-if="imageUrl" :src="imageUrl" class="cover-preview" />
+            <div v-if="imageUrl" class="cover-mask" @click="handleRemoveCover">
+              <span>点击移除</span>
+            </div>
+            <span v-if="!imageUrl" class="cover-empty-text">未选择图片</span>
           </div>
-          <!-- <el-upload
-        v-model:file-list="fileList"
-        action="http://127.0.0.1:8080/api/upload/post"
-        list-type="picture-card"
-        :on-preview="handlePictureCardPreview"
-        :on-remove="handleRemove"
-      >
-        <el-icon><Plus /></el-icon>
-      </el-upload> -->
           <el-upload
-            class="uploader"
+            class="cover-uploader"
             action="#"
             :auto-upload="false"
             :show-file-list="false"
-            :on-change="handleAvatarChange"
+            :on-change="handleCoverChange"
             :before-upload="beforeUpload"
           >
-            <img v-if="imageUrl" :src="imageUrl" class="cover" />
-            <el-icon v-else class="uploader-icon"><Plus /></el-icon>
+            <div class="upload-trigger">
+              <el-icon size="20"><Plus /></el-icon>
+              <span>选择图片</span>
+            </div>
           </el-upload>
         </div>
-        <div class="title">
-          <el-input
-            v-model="title"
-            autosize
-            type="textarea"
-            placeholder="请输入标题"
-          />
-        </div>
-        <!-- <div class="content">
-      <el-input
-        v-model="content"
-        style="width: 500px"
-        :autosize="{ minRows: 2, maxRows: 4 }"
-        type="textarea"
-        placeholder="请输入内容"
-      />
-    </div> -->
-        <div class="content" v-html="valueHtml"></div>
-        <div class="editor" style="border: 1px solid #ccc">
+      </div>
+
+      <div class="section">
+        <div class="section-label">标题</div>
+        <el-input v-model="title" placeholder="请输入标题" size="large" />
+      </div>
+
+      <div class="section">
+        <div class="section-label">内容</div>
+        <div class="editor-wrapper">
           <Toolbar
-            style="border-bottom: 1px solid #ccc"
             :editor="editorRef"
             :defaultConfig="toolbarConfig"
             :mode="mode"
           />
           <Editor
-            style="height: 500px; overflow-y: hidden"
             v-model="valueHtml"
             :defaultConfig="editorConfig"
             :mode="mode"
             @onCreated="handleCreated"
           />
         </div>
-        <div class="category">
-          <el-select
-            v-model="categoryId"
-            placeholder="请选择分类"
-            style="width: 240px"
-          >
-            <el-option
-              v-for="item in categoryList"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </el-select>
-        </div>
-        <div class="btn">
-          <el-button
-            style="width: 500px"
-            @click="dialogConfirmVisible = true"
-            type="primary"
-            >发布</el-button
-          >
-        </div>
-        <el-dialog v-model="dialogVisible">
-          <img w-full :src="dialogImageUrl" alt="Preview Image" />
-        </el-dialog>
-
-        <el-dialog v-model="dialogConfirmVisible" title="确认发布?" width="500">
-          <template #footer>
-            <div class="dialog-footer">
-              <el-button @click="dialogConfirmVisible = false">取消</el-button>
-              <el-button type="primary" @click="publicPost"> 确认 </el-button>
-            </div>
-          </template>
-        </el-dialog>
       </div>
-    </el-col>
-    <el-col :span="2"></el-col>
-  </el-row>
+
+      <div class="section">
+        <div class="section-label">分类</div>
+        <el-select
+          v-model="categoryId"
+          placeholder="请选择分类"
+          style="width: 240px"
+        >
+          <el-option
+            v-for="item in categoryList"
+            :key="item.id"
+            :label="item.name"
+            :value="item.id"
+          />
+        </el-select>
+      </div>
+
+      <div class="submit-area">
+        <el-button
+          type="primary"
+          size="large"
+          class="submit-btn"
+          @click="dialogConfirmVisible = true"
+          >发布</el-button
+        >
+      </div>
+    </div>
+
+    <el-dialog
+      v-model="dialogConfirmVisible"
+      title="确认发布?"
+      width="400"
+      center
+    >
+      <template #footer>
+        <el-button @click="dialogConfirmVisible = false">取消</el-button>
+        <el-button type="primary" @click="publicPost">确认</el-button>
+      </template>
+    </el-dialog>
+  </div>
 </template>
+
 <style lang="scss" scoped>
-.public {
-  margin: 20px auto;
-  .header {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 20px;
-  }
-  .pointer {
-    cursor: pointer;
-  }
-  .back {
-    margin: 20px 0;
-  }
-  .img {
-    margin-bottom: 20px;
-    .please {
-      font-size: 16px;
-      color: #999;
-      height: 30px;
-    }
-    .uploader {
-      width: 250px;
-      height: 150px;
-      border: 1px dashed var(--el-border-color);
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-      transition: var(--el-transition-duration-fast);
-      display: block;
-    }
-    .cover {
-      width: 250px;
-      height: 150px;
-    }
-    .uploader-icon {
-      font-size: 28px;
-      color: #8c939d;
-      width: 250px;
-      height: 150px;
-      text-align: center;
-    }
-  }
-  .content {
-    overflow: hidden;
-  }
-  .editor {
-    margin: 20px 0;
-  }
-  .category {
+.public-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+
+  .page-header {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 50px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px 16px;
+
+    .back {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      color: var(--el-text-color-regular, #606266);
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      &:hover {
+        color: var(--el-color-primary, #409eff);
+        background: var(--el-color-primary-light-9, #ecf5ff);
+      }
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--el-text-color-primary, #303133);
+    }
+  }
+}
+
+.form-card {
+  background: var(--el-bg-color, #ffffff);
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+
+  .section {
+    margin-bottom: 24px;
+
+    .section-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--el-text-color-primary, #303133);
+      margin-bottom: 8px;
+    }
+
+    .section-hint {
+      font-size: 13px;
+      color: var(--el-text-color-secondary, #909399);
+      margin-bottom: 10px;
+    }
+  }
+}
+
+.cover-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.cover-preview-box {
+  width: 250px;
+  height: 150px;
+  border: 1px dashed var(--el-border-color, #dcdfe6);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.has-image {
+    border-style: solid;
+    border-color: var(--el-border-color-light, #e4e7ed);
+
+    &:hover .cover-mask {
+      opacity: 1;
+    }
+  }
+}
+
+.cover-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  cursor: pointer;
+
+  span {
+    color: #fff;
+    font-size: 13px;
+  }
+}
+
+.cover-empty-text {
+  font-size: 13px;
+  color: var(--el-text-color-placeholder, #c0c4cc);
+}
+
+.cover-uploader {
+  flex-shrink: 0;
+
+  .upload-trigger {
+    width: 100px;
+    height: 150px;
+    border: 1px dashed var(--el-border-color, #dcdfe6);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--el-text-color-secondary, #909399);
+    font-size: 13px;
+    transition: all 0.2s;
+
+    &:hover {
+      color: var(--el-color-primary, #409eff);
+      border-color: var(--el-color-primary, #409eff);
+    }
+  }
+}
+
+.editor-wrapper {
+  border: 1px solid var(--el-border-color, #dcdfe6);
+  border-radius: 8px;
+  overflow: hidden;
+
+  :deep(.w-e-toolbar) {
+    border-bottom: 1px solid var(--el-border-color-light, #e4e7ed);
+  }
+
+  :deep(.w-e-text-container) {
+    height: 400px;
+  }
+}
+
+.submit-area {
+  padding-top: 24px;
+  border-top: 1px solid var(--el-border-color-light, #e4e7ed);
+
+  .submit-btn {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-card {
+    padding: 20px 16px;
   }
 }
 </style>

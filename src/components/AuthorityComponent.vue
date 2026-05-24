@@ -1,22 +1,37 @@
 <script setup>
-const props = defineProps({
+import { Cpu, Avatar, Notebook } from "@element-plus/icons-vue";
+
+defineProps({
   authorityId: {
     type: Number,
     default: 1,
   },
 });
 </script>
+
 <template>
   <div class="authority">
-    <el-text v-if="props.authorityId === 2" type="danger">
-      <el-icon><Cpu /></el-icon>管理员
+    <el-text v-if="authorityId === 2" type="danger" class="badge">
+      <el-icon><Cpu /></el-icon> 管理员
     </el-text>
-    <el-text v-if="props.authorityId === 1" type="success">
-      <el-icon><Avatar /></el-icon>用户
+    <el-text v-if="authorityId === 1" type="success" class="badge">
+      <el-icon><Avatar /></el-icon> 用户
     </el-text>
-    <el-text v-if="props.authorityId === 3" type="primary">
-      <el-icon><Notebook /></el-icon>审核
+    <el-text v-if="authorityId === 3" type="primary" class="badge">
+      <el-icon><Notebook /></el-icon> 审核
     </el-text>
   </div>
 </template>
-<style lang="scss" scoped></style>
+
+<style lang="scss" scoped>
+.authority {
+  display: inline-flex;
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+  }
+}
+</style>
