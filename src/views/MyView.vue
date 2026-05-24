@@ -418,7 +418,7 @@ const fansCount = computed(() => formattedCount(userInfo.count));
 
   .avatar-uploader-icon {
     font-size: 28px;
-    color: #8c939d;
+    color: var(--el-text-color-placeholder, #8c939d);
     width: 96px;
     height: 96px;
     border-radius: 50%;

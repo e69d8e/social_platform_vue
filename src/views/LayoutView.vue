@@ -1,8 +1,9 @@
 <script setup>
 import { ref, onUnmounted, computed } from "vue";
 import { RouterView } from "vue-router";
-import { Search, HomeFilled, Close, Delete } from "@element-plus/icons-vue";
+import { Search, HomeFilled, Close, Delete, Sunny, Moon } from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
+import { useThemeStore } from "@/stores/theme";
 import { signInApi } from "@/api/userApi";
 import { getSearchHistoryApi, deleteSearchHistoryApi, clearSearchHistoryApi } from "@/api/searchApi";
 import { useRouter } from "vue-router";
@@ -15,6 +16,7 @@ import { logoUrl } from "@/utils/request";
 const signStore = useSignStore();
 const router = useRouter();
 const userStore = useUserStore();
+const themeStore = useThemeStore();
 const searchContent = ref("");
 const historyVisible = ref(false);
 const historyList = ref([]);
@@ -160,10 +162,23 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.count));
             </div>
           </div>
 
+          <!-- 左侧工具：暗色模式 + AI助手 -->
+          <div class="header-left-tools">
+            <el-button
+              class="theme-toggle"
+              :icon="themeStore.isDark ? Sunny : Moon"
+              circle
+              @click="themeStore.toggle"
+            />
+            <el-button v-if="userStore.userInfo.username" type="primary" plain size="small" @click="$router.push('/aiChat')">AI 助手</el-button>
+          </div>
+
+          <!-- 占位，将右侧内容推到右边 -->
+          <div class="header-spacer" />
+
           <!-- 右侧按钮 -->
           <div class="header-actions">
             <template v-if="userStore.userInfo.username">
-              <el-button type="primary" plain size="small" @click="$router.push('/aiChat')">AI 助手</el-button>
               <el-button type="success" plain size="small" @click="myPosts">我的帖子</el-button>
               <el-button type="primary" plain size="small" @click="myFollowPosts">我的关注</el-button>
               <el-button type="warning" plain size="small" @click="$router.push('/publicPost')">发布</el-button>
@@ -192,6 +207,7 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.count));
               </div>
             </template>
           </div>
+
         </div>
       </el-header>
 
@@ -230,6 +246,7 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.count));
     max-width: 1400px;
     margin: 0 auto;
     padding: 14px 20px;
+    position: relative;
   }
 
   /* ---- 左侧 ---- */
@@ -279,13 +296,25 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.count));
     white-space: nowrap;
   }
 
-  /* ---- 中间搜索 ---- */
-  .header-center {
+  .header-left-tools {
     display: flex;
     align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .header-spacer {
     flex: 1;
+    min-width: 0;
+  }
+
+  /* ---- 中间搜索 ---- */
+  .header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     max-width: 420px;
-    gap: 0;
+    width: 100%;
   }
 
   .search-wrapper {
@@ -371,6 +400,11 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.count));
     }
   }
 
+  /* ---- 主题切换 ---- */
+  .theme-toggle {
+    flex-shrink: 0;
+  }
+
   /* ---- 操作按钮 ---- */
   .header-actions {
     display: flex;
@@ -379,12 +413,13 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.count));
     justify-content: flex-end;
   }
 
-  /* ---- 用户 ---- */
+  /* ---- 右侧用户 ---- */
   .header-user {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .user-avatar {

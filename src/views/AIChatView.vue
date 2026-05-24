@@ -345,8 +345,8 @@ onMounted(() => {
   --chat-border: var(--el-border-color-light, #e4e7ed);
   --chat-text: var(--el-text-color-primary, #303133);
   --chat-text-secondary: var(--el-text-color-secondary, #909399);
-  --chat-white: #ffffff;
-  --chat-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --chat-white: var(--el-bg-color, #ffffff);
+  --chat-shadow: var(--el-box-shadow-light, 0 2px 12px rgba(0, 0, 0, 0.06));
   --chat-radius: 8px;
 
   display: flex;

@@ -55,7 +55,11 @@ const htmlToText = (html) => {
         <div class="card-header">
           <h4 class="card-title">{{ props.title }}</h4>
           <div class="like" @click.stop="like">
-            <el-icon size="18" :color="liked ? 'var(--el-color-danger, #f56c6c)' : ''"><Star /></el-icon>
+            <el-icon
+              size="18"
+              :color="liked ? 'var(--el-color-danger, #f56c6c)' : ''"
+              ><Star
+            /></el-icon>
             <span class="count">{{ formattedCount(likeCount) }}</span>
           </div>
         </div>
@@ -132,7 +136,8 @@ const htmlToText = (html) => {
     }
   }
 
-  .like, .view {
+  .like,
+  .view {
     display: flex;
     align-items: center;
     gap: 2px;
@@ -164,6 +169,7 @@ const htmlToText = (html) => {
     word-wrap: break-word;
     display: -webkit-box;
     -webkit-line-clamp: 8;
+    line-clamp: 8;
     -webkit-box-orient: vertical;
     overflow: hidden;
     min-height: 180px;
