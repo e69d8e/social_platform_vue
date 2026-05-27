@@ -131,6 +131,7 @@ onUnmounted(() => {
   .load-status {
     display: flex;
     justify-content: center;
+    align-items: center;
     padding: 16px 0 32px;
     .loading-more {
       display: flex;

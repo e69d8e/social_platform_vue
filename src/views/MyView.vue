@@ -152,7 +152,7 @@ const handleAvatarChange = (uploadFile) => {
   file.value = uploadFile.raw;
 };
 
-const fansCount = computed(() => formattedCount(userInfo.count));
+const fansCount = computed(() => formattedCount(userInfo.fansCount));
 </script>
 
 <template>

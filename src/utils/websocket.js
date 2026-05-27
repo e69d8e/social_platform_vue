@@ -1,34 +1,35 @@
-import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+import Stomp from "stompjs";
+import { useUserStore } from "@/stores/user";
 
-let client = null;
+let stompClient = null;
 
 export function connect(onMessage) {
-  client = new Client({
-    brokerURL: "ws://127.0.0.1:8081/ws",
-    reconnectDelay: 5000,
-    // 👇 加这个
-    connectHeaders: {},
+  if (stompClient) return;
 
-    // 👇 关键（让浏览器带 cookie）
-    webSocketFactory: () => {
-      return new WebSocket("ws://127.0.0.1:8081/ws");
+  const userStore = useUserStore();
+  const socket = new SockJS("http://127.0.0.1:8081/ws");
+  stompClient = Stomp.over(socket);
+  stompClient.debug = null; // 禁用 STOMP 调试日志
+
+  stompClient.connect(
+    { token: userStore.token.accessToken },
+    () => {
+      console.log("WebSocket连接成功");
+      stompClient.subscribe("/user/queue/messages", (message) => {
+        onMessage(message.body);
+      });
     },
-  });
-
-  client.onConnect = () => {
-    console.log("WebSocket连接成功");
-    client.subscribe("/user/queue/msg", (message) => {
-      onMessage(message.body);
-    });
-  };
-
-  client.activate();
+    () => {
+      // 连接失败时清理，不再重试
+      stompClient = null;
+    },
+  );
 }
 
 export function disconnect() {
-  if (client) {
-    client.deactivate();
-    client = null;
-    console.log("WebSocket已断开");
+  if (stompClient) {
+    stompClient.disconnect(() => {});
+    stompClient = null;
   }
 }

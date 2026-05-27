@@ -1,11 +1,12 @@
 <script setup>
-import { ref, onUnmounted, computed } from "vue";
-import { RouterView } from "vue-router";
+import { ref, onUnmounted, onMounted, computed, watch } from "vue";
+import { RouterView, useRoute } from "vue-router";
 import { Search, HomeFilled, Close, Delete, Sunny, Moon } from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
 import { useThemeStore } from "@/stores/theme";
 import { signInApi } from "@/api/userApi";
 import { getSearchHistoryApi, deleteSearchHistoryApi, clearSearchHistoryApi } from "@/api/searchApi";
+import { getUnreadCountApi } from "@/api/messageApi";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 import { debounce } from "lodash-es";
@@ -15,6 +16,7 @@ import { logoUrl } from "@/utils/request";
 
 const signStore = useSignStore();
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 const themeStore = useThemeStore();
 const searchContent = ref("");
@@ -104,6 +106,43 @@ const sign = async () => {
 };
 
 const fansCount = computed(() => formattedCount(userStore.userInfo.count));
+
+const unreadCount = ref(0);
+
+const fetchUnreadCount = async () => {
+  try {
+    const res = await getUnreadCountApi();
+    if (res.data.code === 1) {
+      unreadCount.value = res.data.data || 0;
+    }
+  } catch {
+    // silently fail
+  }
+};
+
+let unreadTimer = null;
+
+onMounted(() => {
+  if (userStore.userInfo.username) {
+    fetchUnreadCount();
+    unreadTimer = setInterval(fetchUnreadCount, 30000);
+  }
+});
+
+onUnmounted(() => {
+  if (unreadTimer) {
+    clearInterval(unreadTimer);
+  }
+});
+
+watch(
+  () => route.path,
+  () => {
+    if (userStore.userInfo.username) {
+      fetchUnreadCount();
+    }
+  },
+);
 </script>
 
 <template>
@@ -179,6 +218,10 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.count));
           <!-- 右侧按钮 -->
           <div class="header-actions">
             <template v-if="userStore.userInfo.username">
+              <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="msg-badge">
+                <el-button type="info" plain size="small" @click="$router.push('/conversations')">私信</el-button>
+              </el-badge>
+              <el-button v-else type="info" plain size="small" @click="$router.push('/conversations')">私信</el-button>
               <el-button type="success" plain size="small" @click="myPosts">我的帖子</el-button>
               <el-button type="primary" plain size="small" @click="myFollowPosts">我的关注</el-button>
               <el-button type="warning" plain size="small" @click="$router.push('/publicPost')">发布</el-button>

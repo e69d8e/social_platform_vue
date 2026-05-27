@@ -91,6 +91,16 @@ const router = createRouter({
       name: "AIChat",
       component: () => import("@/views/AIChatView.vue"),
     },
+    {
+      path: "/conversations",
+      name: "conversations",
+      component: () => import("@/views/ConversationsView.vue"),
+    },
+    {
+      path: "/chat/:conversationId",
+      name: "chat",
+      component: () => import("@/views/ChatView.vue"),
+    },
   ],
 });
 

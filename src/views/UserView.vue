@@ -22,7 +22,7 @@ const userInfo = ref({
   followed: false,
   fansPrivate: false,
   followPrivate: false,
-  count: 0,
+  fansCount: 0,
   createTime: "",
   gender: 0,
   authorityId: 1,
@@ -88,7 +88,7 @@ const setReviewer = async () => {
   }
 };
 
-const fansCount = computed(() => formattedCount(userInfo.value.count));
+const fansCount = computed(() => formattedCount(userInfo.value.fansCount));
 
 const authorityType = computed(() => {
   const map = { 1: "success", 2: "danger", 3: "primary" };
@@ -119,7 +119,9 @@ const genderLabel = computed(() => {
         </div>
         <div class="meta-item">
           <span class="meta-label">账号</span>
-          <el-text :type="authorityType" size="small">@{{ userInfo.username }}</el-text>
+          <el-text :type="authorityType" size="small"
+            >@{{ userInfo.username }}</el-text
+          >
         </div>
         <div class="meta-item">
           <span class="meta-label">角色</span>
@@ -166,6 +168,14 @@ const genderLabel = computed(() => {
       </div>
 
       <div class="actions">
+        <el-button
+          v-if="userStore.userInfo.id && userStore.userInfo.id !== userInfo.id"
+          type="primary"
+          plain
+          size="small"
+          @click="$router.push('/chat/new?receiverId=' + route.params.id)"
+          >发私信</el-button
+        >
         <el-button
           v-if="!userInfo.followPrivate"
           type="success"
