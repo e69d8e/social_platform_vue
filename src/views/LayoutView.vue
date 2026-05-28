@@ -1,11 +1,22 @@
 <script setup>
 import { ref, onUnmounted, onMounted, computed, watch } from "vue";
 import { RouterView, useRoute } from "vue-router";
-import { Search, HomeFilled, Close, Delete, Sunny, Moon } from "@element-plus/icons-vue";
+import {
+  Search,
+  HomeFilled,
+  Close,
+  Delete,
+  Sunny,
+  Moon,
+} from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
 import { useThemeStore } from "@/stores/theme";
 import { signInApi } from "@/api/userApi";
-import { getSearchHistoryApi, deleteSearchHistoryApi, clearSearchHistoryApi } from "@/api/searchApi";
+import {
+  getSearchHistoryApi,
+  deleteSearchHistoryApi,
+  clearSearchHistoryApi,
+} from "@/api/searchApi";
 import { getUnreadCountApi } from "@/api/messageApi";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
@@ -88,7 +99,8 @@ onUnmounted(() => {
 });
 
 const myFollowPosts = () => router.push({ path: "/followPosts" });
-const myPosts = () => router.push({ path: "/postList/" + userStore.userInfo.id });
+const myPosts = () =>
+  router.push({ path: "/postList/" + userStore.userInfo.id });
 const toFans = () => router.push({ path: "/fans/" + userStore.userInfo.id });
 
 const sign = async () => {
@@ -105,7 +117,7 @@ const sign = async () => {
   }
 };
 
-const fansCount = computed(() => formattedCount(userStore.userInfo.count));
+const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
 
 const unreadCount = ref(0);
 
@@ -158,8 +170,12 @@ watch(
               <el-icon class="logo-icon"><HomeFilled /></el-icon>
             </div>
             <div v-if="userStore.userInfo.username" class="sign" @click="sign">
-              <el-tag size="small" effect="plain" type="warning">点击签到</el-tag>
-              <span class="sign-text">本月已连续签到 {{ signStore.signDay }} 天</span>
+              <el-tag size="small" effect="plain" type="warning"
+                >点击签到</el-tag
+              >
+              <span class="sign-text"
+                >本月已连续签到 {{ signStore.signDay }} 天</span
+              >
             </div>
           </div>
 
@@ -177,12 +193,26 @@ watch(
                   class="search-input"
                   clearable
                 />
-                <el-button type="primary" :icon="Search" @click="search" class="search-btn" />
+                <el-button
+                  type="primary"
+                  :icon="Search"
+                  @click="search"
+                  class="search-btn"
+                />
               </div>
-              <div v-show="historyVisible && historyList.length" class="search-dropdown" v-loading="historyLoading">
+              <div
+                v-show="historyVisible && historyList.length"
+                class="search-dropdown"
+                v-loading="historyLoading"
+              >
                 <div class="dropdown-header">
                   <span>搜索历史</span>
-                  <el-button size="small" text type="danger" @click="clearAllHistory">
+                  <el-button
+                    size="small"
+                    text
+                    type="danger"
+                    @click="clearAllHistory"
+                  >
                     <el-icon><Delete /></el-icon>
                     清空
                   </el-button>
@@ -194,8 +224,14 @@ watch(
                   @mousedown.prevent="historySearch(item)"
                 >
                   <span class="item-keyword">{{ item.keyword }}</span>
-                  <span class="item-type">{{ item.type === 0 ? '帖子' : '用户' }}</span>
-                  <el-icon class="item-close" @mousedown.stop="deleteHistoryItem(item.id)"><Close /></el-icon>
+                  <span class="item-type">{{
+                    item.type === 0 ? "帖子" : "用户"
+                  }}</span>
+                  <el-icon
+                    class="item-close"
+                    @mousedown.stop="deleteHistoryItem(item.id)"
+                    ><Close
+                  /></el-icon>
                 </div>
               </div>
             </div>
@@ -209,7 +245,14 @@ watch(
               circle
               @click="themeStore.toggle"
             />
-            <el-button v-if="userStore.userInfo.username" type="primary" plain size="small" @click="$router.push('/aiChat')">AI 助手</el-button>
+            <el-button
+              v-if="userStore.userInfo.username"
+              type="primary"
+              plain
+              size="small"
+              @click="$router.push('/aiChat')"
+              >AI 助手</el-button
+            >
           </div>
 
           <!-- 占位，将右侧内容推到右边 -->
@@ -218,20 +261,54 @@ watch(
           <!-- 右侧按钮 -->
           <div class="header-actions">
             <template v-if="userStore.userInfo.username">
-              <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="msg-badge">
-                <el-button type="info" plain size="small" @click="$router.push('/conversations')">私信</el-button>
+              <el-badge
+                v-if="unreadCount > 0"
+                :value="unreadCount"
+                :max="99"
+                class="msg-badge"
+              >
+                <el-button
+                  type="info"
+                  plain
+                  size="small"
+                  @click="$router.push('/conversations')"
+                  >私信</el-button
+                >
               </el-badge>
-              <el-button v-else type="info" plain size="small" @click="$router.push('/conversations')">私信</el-button>
-              <el-button type="success" plain size="small" @click="myPosts">我的帖子</el-button>
-              <el-button type="primary" plain size="small" @click="myFollowPosts">我的关注</el-button>
-              <el-button type="warning" plain size="small" @click="$router.push('/publicPost')">发布</el-button>
+              <el-button
+                v-else
+                type="info"
+                plain
+                size="small"
+                @click="$router.push('/conversations')"
+                >私信</el-button
+              >
+              <el-button type="success" plain size="small" @click="myPosts"
+                >我的帖子</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="myFollowPosts"
+                >我的关注</el-button
+              >
+              <el-button
+                type="warning"
+                plain
+                size="small"
+                @click="$router.push('/publicPost')"
+                >发布</el-button
+              >
             </template>
           </div>
 
           <!-- 右侧用户 -->
           <div class="header-user">
             <template v-if="!userStore.userInfo.username">
-              <el-button type="primary" @click="$router.push('/login')">去登录</el-button>
+              <el-button type="primary" @click="$router.push('/login')"
+                >去登录</el-button
+              >
             </template>
             <template v-else>
               <el-avatar
@@ -244,13 +321,17 @@ watch(
                 <span class="user-nickname" @click="$router.push('/my')">
                   {{ userStore.userInfo.nickname }}
                 </span>
-                <el-text size="small" type="primary" class="user-fans" @click="toFans">
+                <el-text
+                  size="small"
+                  type="primary"
+                  class="user-fans"
+                  @click="toFans"
+                >
                   {{ fansCount }} 粉
                 </el-text>
               </div>
             </template>
           </div>
-
         </div>
       </el-header>
 

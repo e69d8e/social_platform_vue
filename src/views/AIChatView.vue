@@ -3,7 +3,10 @@
     <!-- 侧边栏 - 会话列表 -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <h2>小Y AI助手</h2>
+        <el-button text class="home-btn" @click="$router.replace('/')">
+          <el-icon :size="18"><ArrowLeft /></el-icon>
+          首页
+        </el-button>
         <button @click="createNewSession" class="new-chat-btn">+ 新对话</button>
       </div>
       <div class="session-list">
@@ -18,12 +21,6 @@
             ×
           </button>
         </div>
-      </div>
-      <div class="sidebar-footer">
-        <el-button text @click="$router.replace('/')" class="back-btn">
-          <el-icon><ArrowLeft /></el-icon>
-          回到首页
-        </el-button>
       </div>
     </div>
 
@@ -108,12 +105,57 @@ import {
   getSessionContentApi,
 } from "@/api/aiApi";
 // import { ElMessage } from "element-plus";
-import { ref, computed, nextTick, onMounted, watch } from "vue";
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from "vue";
 import { ArrowLeft } from "@element-plus/icons-vue";
 import { baseURL, logoUrl } from "@/utils/request";
 import { useUserStore } from "@/stores/user";
+import { router } from "@/main.js";
 
 const userStore = useUserStore();
+
+// 刷新 token（复用 request.js 的逻辑）
+async function refreshToken() {
+  const token = userStore.token?.refreshToken;
+  if (!token) throw new Error("No refresh token");
+
+  const res = await fetch(baseURL + "/user/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ refreshToken: token }),
+  });
+
+  const data = await res.json();
+  if (data.code !== 1) throw new Error("刷新令牌失败");
+
+  const { accessToken, refreshToken: newRefreshToken } = data.data;
+  userStore.setToken({ accessToken, refreshToken: newRefreshToken });
+  return accessToken;
+}
+
+function redirectLogin() {
+  userStore.removeToken();
+  userStore.removeInfo();
+  router.push("/login");
+}
+
+// 带 401 重试的 fetch
+async function fetchWithRetry(url, options, retry = true) {
+  const response = await fetch(url, options);
+
+  if (response.status === 401 && retry) {
+    try {
+      const newToken = await refreshToken();
+      options.headers.authorization = "Bearer " + newToken;
+      return fetchWithRetry(url, options, false);
+    } catch {
+      redirectLogin();
+      throw new Error("Unauthorized");
+    }
+  }
+
+  return response;
+}
 
 // 响应式数据
 const sessions = ref([]);
@@ -265,10 +307,11 @@ const sendMessage = async () => {
   isLoading.value = true;
 
   try {
-    const response = await fetch(baseURL + "/chat", {
+    const response = await fetchWithRetry(baseURL + "/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        authorization: "Bearer " + userStore.token.accessToken,
       },
       credentials: "include",
       body: JSON.stringify({
@@ -307,16 +350,21 @@ const sendMessage = async () => {
       rawMessages.value = [...rawMessages.value];
     }
   } catch (error) {
-    console.error("发送消息失败:", error);
-    rawMessages.value.push({
-      type: "AI",
-      text: "消息发送失败，请重试",
-      toolExecutionRequests: [],
-      attributes: {},
-      timestamp: new Date(),
-    });
+    if (error.message !== "Unauthorized") {
+      console.error("发送消息失败:", error);
+      rawMessages.value.push({
+        type: "AI",
+        text: "消息发送失败，请重试",
+        toolExecutionRequests: [],
+        attributes: {},
+        timestamp: new Date(),
+      });
+    }
   } finally {
     isLoading.value = false;
+    setTimeout(() => {
+      loadSessions();
+    }, 1000);
   }
 };
 
@@ -330,7 +378,14 @@ const handleKeyPress = (e) => {
 
 // 组件挂载时加载会话列表
 onMounted(() => {
+  document.body.style.overflow = "hidden";
+  document.documentElement.style.overflow = "hidden";
   loadSessions();
+});
+
+onUnmounted(() => {
+  document.body.style.overflow = "";
+  document.documentElement.style.overflow = "";
 });
 </script>
 
@@ -351,6 +406,7 @@ onMounted(() => {
 
   display: flex;
   height: 100vh;
+  overflow: hidden;
   background: var(--chat-bg);
   color: var(--chat-text);
   font-family:
@@ -370,25 +426,25 @@ onMounted(() => {
 }
 
 .sidebar-header {
-  padding: 20px 16px;
+  padding: 16px;
   border-bottom: 1px solid var(--chat-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.sidebar-header h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  background: linear-gradient(
-    135deg,
-    var(--chat-primary) 0%,
-    var(--chat-primary-light) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.home-btn {
+  color: var(--chat-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: var(--chat-radius);
+  transition: all 0.2s;
+}
+
+.home-btn:hover {
+  color: var(--chat-primary);
+  background: var(--chat-primary-lighter);
 }
 
 .new-chat-btn {
@@ -565,6 +621,7 @@ onMounted(() => {
   margin: 0 auto;
   background: var(--chat-white);
   min-height: 0;
+  overflow: hidden;
 }
 
 .chat-header {
@@ -801,24 +858,6 @@ onMounted(() => {
 .session-list::-webkit-scrollbar-thumb:hover,
 .messages-container::-webkit-scrollbar-thumb:hover {
   background: var(--el-border-color-darker, #c0c4cc);
-}
-
-/* ========== 侧边栏底部 ========== */
-.sidebar-footer {
-  padding: 10px 12px;
-  border-top: 1px solid var(--chat-border);
-}
-
-.back-btn {
-  width: 100%;
-  justify-content: center;
-  color: var(--chat-text-secondary);
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.back-btn:hover {
-  color: var(--chat-primary);
 }
 
 /* ========== 响应式 ========== */
