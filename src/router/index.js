@@ -92,6 +92,11 @@ const router = createRouter({
       component: () => import("@/views/AIChatView.vue"),
     },
     {
+      path: "/userAgreement",
+      name: "userAgreement",
+      component: () => import("@/views/UserAgreementView.vue"),
+    },
+    {
       path: "/conversations",
       name: "conversations",
       component: () => import("@/views/ConversationsView.vue"),

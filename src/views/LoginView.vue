@@ -1,13 +1,15 @@
 <script setup>
+import { useRoute } from "vue-router";
 const logoUrl = "http://localhost:8080/imgs/logo.png";
 import { loginApi, registerApi, getUserInfoApi, getSignInDaysApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
-import { ref, reactive } from "vue";
+import { ref, reactive, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 // import { ElMessage } from "element-plus";
 
 const router = useRouter();
+const route = useRoute();
 const signStore = useSignStore();
 const ruleFormRef = ref();
 const ruleForm = ref({
@@ -19,6 +21,14 @@ const loading = ref(false);
 const userStore = useUserStore();
 const isCheck = ref(false);
 const isLogin = ref(true);
+
+watch(
+  () => route.query.checked,
+  (val) => {
+    isCheck.value = val === "true";
+  },
+  { immediate: true },
+);
 
 const validateUsername = (rule, value, callback) => {
   if (value === "") return callback(new Error("用户名不能为空"));
@@ -90,10 +100,12 @@ const submitForm = (formEl) => {
 
 const toLogin = () => {
   isLogin.value = true;
+  isCheck.value = false;
   ruleForm.value = { username: "", password: "", confirmPassword: "" };
 };
 const toRegister = () => {
   isLogin.value = false;
+  isCheck.value = false;
   ruleForm.value = { username: "", password: "", confirmPassword: "" };
 };
 const resetForm = (formEl) => {
@@ -143,7 +155,7 @@ const resetForm = (formEl) => {
         <div class="agreement">
           <el-checkbox v-model="isCheck" />
           <span class="agree-text" @click="isCheck = !isCheck">我已阅读并同意</span>
-          <el-link :underline="false" href="http://localhost:8080/userAgreement.html" type="primary">《用户协议》</el-link>
+          <el-link @click="router.push('/userAgreement')" :underline="false" type="primary">《用户协议》</el-link>
         </div>
 
         <el-form-item>
