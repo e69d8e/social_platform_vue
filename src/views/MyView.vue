@@ -55,7 +55,7 @@ const rules = reactive({
     {
       validator: (rule, value, callback) => {
         if (value.length < 2 || value.length > 16)
-          callback(new Error("用户名长度不能小于 2"));
+          callback(new Error("用户名长度不能小于 2 或大于 16 "));
         else callback();
       },
       trigger: "blur",
@@ -226,7 +226,7 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
         <el-button
           v-if="userInfo.authorityId === 3"
           size="small"
-          @click="$router.push('/banPosts')"
+          @click="$router.push('/posts/banned')"
           type="primary"
           plain
           >我的封禁</el-button
@@ -234,10 +234,18 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
         <el-button
           v-if="userInfo.authorityId === 2"
           size="small"
-          @click="$router.push('/banUsers')"
+          @click="$router.push('/users/banned')"
           type="primary"
           plain
           >我的封禁</el-button
+        >
+        <el-button
+          v-if="userInfo.authorityId === 2"
+          size="small"
+          @click="$router.push('/admin/dashboard')"
+          type="primary"
+          plain
+          >数据面板</el-button
         >
       </div>
 

@@ -43,7 +43,7 @@ Three Pinia stores, all persisted to localStorage via `pinia-plugin-persistedsta
 
 ### Routing (`src/router/index.js`)
 
-Layout-wrapped routes are children of `/` using `LayoutView`. Standalone routes (no layout): `/login`, `/my`, `/publicPost`, `/post/:id`, `/banPosts`, `/banUsers`, `/aiChat`. All routes lazy-loaded via dynamic `import()`.
+Layout-wrapped routes are children of `/` using `LayoutView`. Standalone routes (no layout): `/login`, `/my`, `/publicPost`, `/post/:id`, `/posts/banned`, `/users/banned`, `/aiChat`. All routes lazy-loaded via dynamic `import()`.
 
 ### API Modules (`src/api/`)
 

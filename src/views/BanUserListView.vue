@@ -1,30 +1,42 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { getBanUsersApi } from "@/api/adminApi";
+import { getBanUsersApi, searchBanUsersApi } from "@/api/adminApi";
 import UserCard from "@/components/UserCard.vue";
-import { ArrowLeft } from "@element-plus/icons-vue";
+import { ArrowLeft, Search } from "@element-plus/icons-vue";
+import { debounce } from "lodash";
 
 const usersList = ref([]);
 const pageNum = ref(1);
 const pageSize = ref(12);
 const total = ref(0);
 const loading = ref(true);
+const keyword = ref("");
 
-const getUsersList = async () => {
-  const res = await getBanUsersApi({ pageNum: pageNum.value, pageSize: pageSize.value });
+const fetchData = async () => {
+  const params = { pageNum: pageNum.value, pageSize: pageSize.value };
+  const res = keyword.value.trim()
+    ? await searchBanUsersApi({ ...params, keyword: keyword.value.trim() })
+    : await getBanUsersApi(params);
   usersList.value = res.data.data;
   total.value = res.data.total;
 };
 
 onMounted(async () => {
-  await getUsersList();
+  await fetchData();
   loading.value = false;
 });
+
+const handleSearch = debounce(async () => {
+  pageNum.value = 1;
+  loading.value = true;
+  await fetchData();
+  loading.value = false;
+}, 300);
 
 const pageChange = async (newPage) => {
   pageNum.value = newPage;
   loading.value = true;
-  await getUsersList();
+  await fetchData();
   loading.value = false;
 };
 </script>
@@ -38,6 +50,10 @@ const pageChange = async (newPage) => {
       </div>
       <span class="page-title">已封禁用户</span>
       <span class="total-count">共 {{ total }} 人</span>
+    </div>
+
+    <div class="search-bar">
+      <el-input v-model="keyword" :prefix-icon="Search" placeholder="搜索封禁用户..." clearable @input="handleSearch" @clear="handleSearch" />
     </div>
 
     <el-empty v-if="usersList.length === 0 && !loading" description="暂无封禁用户" />
@@ -90,6 +106,11 @@ const pageChange = async (newPage) => {
       font-size: 13px;
       color: var(--el-text-color-secondary, #909399);
     }
+  }
+
+  .search-bar {
+    padding: 0 4px 16px;
+    max-width: 400px;
   }
 
   .result-grid {

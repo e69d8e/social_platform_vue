@@ -8,7 +8,14 @@ import { banPostApi } from "@/api/reviewerApi";
 import { throttle } from "lodash";
 import CommentComponent from "@/components/CommentComponent.vue";
 import formattedCount from "@/utils/formattedCount";
-import { ArrowLeft, Star, StarFilled, View, Delete, RemoveFilled } from "@element-plus/icons-vue";
+import {
+  ArrowLeft,
+  Star,
+  StarFilled,
+  View,
+  Delete,
+  RemoveFilled,
+} from "@element-plus/icons-vue";
 // import { ElMessage } from "element-plus";
 
 const userStore = useUserStore();
@@ -16,9 +23,19 @@ const route = useRoute();
 const router = useRouter();
 const srcList = computed(() => [post.value.cover]);
 const post = ref({
-  id: "", title: "", content: "", category: "", createTime: "",
-  cover: "", liked: false, likeCount: 0, userId: "", nickname: "",
-  avatar: "", followed: false, viewCount: 0,
+  id: "",
+  title: "",
+  content: "",
+  category: "",
+  createTime: "",
+  cover: "",
+  liked: false,
+  likeCount: 0,
+  userId: "",
+  nickname: "",
+  avatar: "",
+  followed: false,
+  viewCount: 0,
 });
 const dialogVisible = ref(false);
 const loading = ref(true);
@@ -56,13 +73,18 @@ const toggleLike = throttle(async () => {
 
 const followLoading = ref(false);
 const toggleFollow = throttle(async () => {
-  if (userStore.userInfo.id === post.value.userId) { ElMessage.warning("不能关注自己"); return; }
+  if (userStore.userInfo.id === post.value.userId) {
+    ElMessage.warning("不能关注自己");
+    return;
+  }
   if (followLoading.value) return;
   followLoading.value = true;
   const oldFollowed = post.value.followed;
   post.value.followed = !post.value.followed;
   try {
-    const res = post.value.followed ? await followUserApi(post.value.userId) : await unfollowUserApi(post.value.userId);
+    const res = post.value.followed
+      ? await followUserApi(post.value.userId)
+      : await unfollowUserApi(post.value.userId);
     if (res.data.code !== 1) throw new Error("操作失败");
     ElMessage.success(res.data.message);
   } catch {
@@ -101,13 +123,33 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
 
     <div class="meta">
       <div class="author">
-        <el-avatar :size="44" :src="post.avatar" @click="$router.push('/user/' + post.userId)" class="pointer" />
-        <span class="nickname" @click="$router.push('/user/' + post.userId)">{{ post.nickname }}</span>
-        <el-button @click="toggleFollow" :type="post.followed ? 'default' : 'primary'" size="small">
-          {{ post.followed ? '已关注' : '关注' }}
+        <el-avatar
+          :size="44"
+          :src="post.avatar"
+          @click="$router.push('/user/' + post.userId)"
+          class="pointer"
+        />
+        <span class="nickname" @click="$router.push('/user/' + post.userId)">{{
+          post.nickname
+        }}</span>
+        <el-button
+          @click="toggleFollow"
+          :type="post.followed ? 'default' : 'primary'"
+          size="small"
+        >
+          {{ post.followed ? "已关注" : "关注" }}
         </el-button>
-        <el-icon v-if="userStore.userInfo.id === post.userId" @click="dialogVisible = true" class="action-icon danger"><Delete /></el-icon>
-        <el-popconfirm v-if="userStore.userInfo.authority === 'REVIEWER'" title="确定封禁/解封该文章吗？" @confirm="banPost">
+        <el-icon
+          v-if="userStore.userInfo.id === post.userId"
+          @click="dialogVisible = true"
+          class="action-icon danger"
+          ><Delete
+        /></el-icon>
+        <el-popconfirm
+          v-if="userStore.userInfo.authorityId === 3"
+          title="确定封禁/解封该文章吗？"
+          @confirm="banPost"
+        >
           <template #reference>
             <el-icon class="action-icon danger"><RemoveFilled /></el-icon>
           </template>
@@ -118,7 +160,10 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
         <span class="time">{{ post.createTime }}</span>
         <span class="divider">|</span>
         <el-icon @click="toggleLike" size="18" class="pointer">
-          <StarFilled v-if="post.liked" style="color: var(--el-color-warning, #e6a23c)" />
+          <StarFilled
+            v-if="post.liked"
+            style="color: var(--el-color-warning, #e6a23c)"
+          />
           <Star v-else />
         </el-icon>
         <span>{{ likeCount }} 赞</span>
@@ -130,7 +175,12 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
     </div>
 
     <div v-if="post.cover" class="cover">
-      <el-image :preview-src-list="srcList" :src="post.cover" fit="cover" class="cover-img" />
+      <el-image
+        :preview-src-list="srcList"
+        :src="post.cover"
+        fit="cover"
+        class="cover-img"
+      />
     </div>
 
     <div class="line"></div>
@@ -197,8 +247,12 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
     .action-icon {
       font-size: 22px;
       cursor: pointer;
-      &.danger { color: var(--el-color-danger, #f56c6c); }
-      &:hover { opacity: 0.7; }
+      &.danger {
+        color: var(--el-color-danger, #f56c6c);
+      }
+      &:hover {
+        opacity: 0.7;
+      }
     }
   }
 
@@ -209,13 +263,21 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
     font-size: 13px;
     color: var(--el-text-color-secondary, #909399);
 
-    .time { color: var(--el-text-color-placeholder, #c0c4cc); }
-    .divider { color: var(--el-border-color, #dcdfe6); }
+    .time {
+      color: var(--el-text-color-placeholder, #c0c4cc);
+    }
+    .divider {
+      color: var(--el-border-color, #dcdfe6);
+    }
 
-    .category-tag { margin-left: 10px; }
+    .category-tag {
+      margin-left: 10px;
+    }
   }
 
-  .pointer { cursor: pointer; }
+  .pointer {
+    cursor: pointer;
+  }
 
   .cover {
     margin-bottom: 20px;
@@ -250,7 +312,9 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
 @media (max-width: 640px) {
   .post-detail {
     padding: 12px 12px 32px;
-    .title { font-size: 22px; }
+    .title {
+      font-size: 22px;
+    }
   }
 }
 </style>

@@ -26,3 +26,19 @@ export const getBanUsersApi = async (params) => {
   });
   return res;
 };
+
+// 搜索封禁用户
+export const searchBanUsersApi = async (params) => {
+  const res = await request.get("/admin/ban/search", {
+    params,
+  });
+  return res;
+};
+
+// 数据面板
+export const getDashboardApi = async (params) => {
+  const res = await request.get("/admin/dashboard", {
+    params,
+  });
+  return res;
+};

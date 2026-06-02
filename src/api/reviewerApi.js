@@ -13,6 +13,14 @@ export const getBanPostsApi = async (params) => {
   return res;
 };
 
+// 搜索封禁帖子
+export const searchBanPostsApi = async (params) => {
+  const res = await request.get("/reviewer/post/ban/search", {
+    params,
+  });
+  return res;
+};
+
 // 删除评论
 export const deleteCommentApi = async (postId, id) => {
   const res = await request.delete("/reviewer/comment/" + postId + "/" + id);

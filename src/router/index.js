@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { useUserStore } from "@/stores/user";
+import { ElMessage } from "element-plus";
 import LayoutView from "@/views/LayoutView.vue";
 
 const router = createRouter({
@@ -77,14 +79,22 @@ const router = createRouter({
       component: () => import("@/views/PostView.vue"),
     },
     {
-      path: "/banPosts",
-      name: "banPosts",
+      path: "/posts/banned",
+      name: "bannedPosts",
       component: () => import("@/views/BanPostListView.vue"),
+      meta: { roles: [2, 3] },
     },
     {
-      path: "/banUsers",
-      name: "banUsers",
+      path: "/users/banned",
+      name: "bannedUsers",
       component: () => import("@/views/BanUserListView.vue"),
+      meta: { roles: [2] },
+    },
+    {
+      path: "/admin/dashboard",
+      name: "adminDashboard",
+      component: () => import("@/views/AdminDashboardView.vue"),
+      meta: { roles: [2] },
     },
     {
       path: "/aiChat",
@@ -107,6 +117,21 @@ const router = createRouter({
       component: () => import("@/views/ChatView.vue"),
     },
   ],
+});
+
+// 路由守卫：校验页面权限
+router.beforeEach((to, from, next) => {
+  const requiredRoles = to.meta.roles;
+  if (requiredRoles) {
+    const userStore = useUserStore();
+    const userRole = userStore.userInfo?.authorityId;
+    if (!requiredRoles.includes(userRole)) {
+      ElMessage.error("无权访问该页面");
+      next("/");
+      return;
+    }
+  }
+  next();
 });
 
 export default router;
