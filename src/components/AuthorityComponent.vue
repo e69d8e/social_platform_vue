@@ -31,7 +31,10 @@ defineProps({
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 14px;
+    font-size: 13px;
+    padding: 2px 8px;
+    border-radius: $radius-full;
+    background: var(--bg-subtle);
   }
 }
 </style>

@@ -1,4 +1,4 @@
-import "./assets/main.css";
+import "./styles/global.scss";
 import "element-plus/theme-chalk/dark/css-vars.css";
 
 import { createApp } from "vue";

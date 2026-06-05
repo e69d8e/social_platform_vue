@@ -310,45 +310,45 @@ watch(activeName, (name) => {
 .search {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 12px 40px;
+  padding: 16px 12px 40px;
 
   .search-top {
     display: flex;
     align-items: center;
     gap: 16px;
     padding: 12px 4px;
-    border-bottom: 1px solid var(--el-border-color-light, #e4e7ed);
+    border-bottom: 1px solid var(--border-light);
 
     .back {
       display: flex;
       align-items: center;
       gap: 4px;
       cursor: pointer;
-      color: var(--el-text-color-regular, #606266);
+      color: var(--text-secondary);
       font-size: 14px;
       padding: 4px 8px;
-      border-radius: 6px;
-      transition: all 0.2s;
+      border-radius: $radius-sm;
+      transition: all $transition-base;
       flex-shrink: 0;
 
       &:hover {
-        color: var(--el-color-primary, #409eff);
-        background: var(--el-color-primary-light-9, #ecf5ff);
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
       }
     }
 
     .search-info {
       font-size: 14px;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-secondary);
 
       .keyword {
-        color: var(--el-color-primary, #409eff);
+        color: var(--el-color-primary);
         font-weight: 600;
       }
 
       .divider {
         margin: 0 8px;
-        color: var(--el-border-color, #dcdfe6);
+        color: var(--border-default);
       }
     }
   }
@@ -356,9 +356,10 @@ watch(activeName, (name) => {
   .search-history {
     margin-top: 12px;
     padding: 12px 16px;
-    background: var(--el-bg-color, #ffffff);
-    border-radius: 12px;
-    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+    background: var(--bg-card);
+    border-radius: $radius-lg;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
 
     .history-header {
       display: flex;
@@ -369,7 +370,7 @@ watch(activeName, (name) => {
       .history-title {
         font-size: 14px;
         font-weight: 600;
-        color: var(--el-text-color-primary, #303133);
+        color: var(--text-primary);
       }
     }
 
@@ -385,17 +386,15 @@ watch(activeName, (name) => {
       gap: 4px;
       padding: 4px 10px;
       font-size: 13px;
-      color: var(--el-text-color-regular, #606266);
-      background: var(--el-bg-color-page, #f2f3f5);
-      border-radius: 16px;
+      color: var(--text-secondary);
+      background: var(--bg-subtle);
+      border-radius: $radius-full;
       cursor: pointer;
-      transition:
-        background 0.2s,
-        color 0.2s;
+      transition: all $transition-base;
 
       &:hover {
-        background: var(--el-color-primary-light-9, #ecf5ff);
-        color: var(--el-color-primary, #409eff);
+        background: var(--el-color-primary-light-9);
+        color: var(--el-color-primary);
       }
 
       .tag-keyword {
@@ -407,16 +406,17 @@ watch(activeName, (name) => {
 
       .tag-type {
         font-size: 11px;
-        color: var(--el-text-color-placeholder, #a8abb2);
+        color: var(--text-placeholder);
       }
 
       .tag-close {
         font-size: 12px;
         margin-left: 2px;
-        color: var(--el-text-color-placeholder, #a8abb2);
+        color: var(--text-placeholder);
+        transition: color $transition-fast;
 
         &:hover {
-          color: var(--el-color-danger, #f56c6c);
+          color: var(--el-color-danger);
         }
       }
     }
@@ -439,10 +439,10 @@ watch(activeName, (name) => {
       min-width: 20px;
       height: 20px;
       padding: 0 6px;
-      border-radius: 10px;
+      border-radius: $radius-full;
       font-size: 12px;
-      background: var(--el-color-primary-light-9, #ecf5ff);
-      color: var(--el-color-primary, #409eff);
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
     }
   }
 

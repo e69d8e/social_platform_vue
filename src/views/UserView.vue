@@ -244,28 +244,34 @@ const genderLabel = computed(() => {
     align-items: center;
     gap: 4px;
     cursor: pointer;
-    color: var(--el-text-color-regular, #606266);
+    color: var(--text-secondary);
     font-size: 14px;
     padding: 4px 8px;
-    border-radius: 6px;
-    transition: all 0.2s;
+    border-radius: $radius-sm;
+    transition: all $transition-base;
     margin-bottom: 20px;
+
     &:hover {
-      color: var(--el-color-primary, #409eff);
-      background: var(--el-color-primary-light-9, #ecf5ff);
+      color: var(--el-color-primary);
+      background: var(--el-color-primary-light-9);
     }
   }
 }
 
 .user-card {
   text-align: center;
-  background: var(--el-bg-color, #ffffff);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: $radius-xl;
   padding: 36px 24px 28px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
 
   .avatar {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
+    border: 3px solid transparent;
+    background-image: var(--gradient-primary);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
   }
 
   .user-meta {
@@ -284,14 +290,14 @@ const genderLabel = computed(() => {
 
     .meta-label {
       font-size: 11px;
-      color: var(--el-text-color-placeholder, #a8abb2);
+      color: var(--text-placeholder);
     }
   }
 
   .nickname {
     font-size: 20px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
     margin: 0;
   }
 
@@ -299,9 +305,12 @@ const genderLabel = computed(() => {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: var(--el-color-danger, #f56c6c);
+    color: var(--el-color-danger);
     font-size: 14px;
     margin: 10px 0;
+    padding: 4px 12px;
+    background: var(--el-color-danger-light-9);
+    border-radius: $radius-full;
   }
 
   .follow-action {
@@ -314,8 +323,8 @@ const genderLabel = computed(() => {
     gap: 24px;
     margin: 20px 0;
     padding: 16px 0;
-    border-top: 1px solid var(--el-border-color-light, #e4e7ed);
-    border-bottom: 1px solid var(--el-border-color-light, #e4e7ed);
+    border-top: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
 
     .info-item {
       display: flex;
@@ -324,13 +333,13 @@ const genderLabel = computed(() => {
 
       .label {
         font-size: 12px;
-        color: var(--el-text-color-secondary, #909399);
+        color: var(--text-secondary);
       }
 
       .value {
         font-size: 14px;
         font-weight: 500;
-        color: var(--el-text-color-primary, #303133);
+        color: var(--text-primary);
         display: flex;
         align-items: center;
         gap: 2px;
@@ -342,18 +351,18 @@ const genderLabel = computed(() => {
     text-align: left;
     margin: 16px 0;
     padding: 12px 16px;
-    background: var(--el-bg-color-page, #f2f3f5);
-    border-radius: 8px;
+    background: var(--bg-subtle);
+    border-radius: $radius-md;
 
     .label {
       font-size: 12px;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-secondary);
     }
 
     p {
       margin: 6px 0 0;
       font-size: 14px;
-      color: var(--el-text-color-regular, #606266);
+      color: var(--text-secondary);
       line-height: 1.6;
     }
   }
@@ -373,7 +382,7 @@ const genderLabel = computed(() => {
     flex-wrap: wrap;
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid var(--el-border-color-light, #e4e7ed);
+    border-top: 1px solid var(--border-light);
   }
 }
 </style>

@@ -176,16 +176,23 @@ const resetForm = (formEl) => {
   align-items: center;
   min-height: 100vh;
   padding: 40px 20px;
-  background: linear-gradient(135deg, var(--el-bg-color-page, #f2f3f5) 0%, var(--el-color-primary-light-9, #ecf5ff) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--bg-page) 0%,
+    var(--el-color-primary-light-9) 50%,
+    var(--bg-page) 100%
+  );
 }
 
 .login-card {
   width: 440px;
   max-width: 100%;
   padding: 40px 36px;
-  background: var(--el-bg-color, #ffffff);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  background: var(--bg-card);
+  border-radius: $radius-xl;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-light);
+  animation: fadeInUp 0.4s ease;
 
   .logo {
     text-align: center;
@@ -195,6 +202,7 @@ const resetForm = (formEl) => {
       width: 72px;
       height: 72px;
       border-radius: 50%;
+      box-shadow: var(--shadow-md);
     }
   }
 
@@ -202,14 +210,14 @@ const resetForm = (formEl) => {
     text-align: center;
     font-size: 24px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
     margin-bottom: 6px;
   }
 
   .subtitle {
     text-align: center;
     font-size: 14px;
-    color: var(--el-text-color-secondary, #909399);
+    color: var(--text-secondary);
     margin-bottom: 32px;
   }
 
@@ -217,7 +225,7 @@ const resetForm = (formEl) => {
     .switch-link {
       text-align: right;
       font-size: 14px;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-secondary);
       margin-bottom: 16px;
     }
 
@@ -229,13 +237,22 @@ const resetForm = (formEl) => {
       .agree-text {
         cursor: pointer;
         font-size: 14px;
-        color: var(--el-text-color-secondary, #909399);
+        color: var(--text-secondary);
         margin: 0 4px;
       }
     }
 
     .submit-btn {
       min-width: 100px;
+      background: var(--gradient-primary);
+      border: none;
+      font-weight: 500;
+      transition: all $transition-base;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--glow-primary);
+      }
     }
   }
 }

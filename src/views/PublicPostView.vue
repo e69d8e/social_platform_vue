@@ -269,31 +269,33 @@ const handleBackClick = async () => {
       align-items: center;
       gap: 4px;
       cursor: pointer;
-      color: var(--el-text-color-regular, #606266);
+      color: var(--text-secondary);
       font-size: 14px;
       padding: 4px 8px;
-      border-radius: 6px;
-      transition: all 0.2s;
+      border-radius: $radius-sm;
+      transition: all $transition-base;
       flex-shrink: 0;
+
       &:hover {
-        color: var(--el-color-primary, #409eff);
-        background: var(--el-color-primary-light-9, #ecf5ff);
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
       }
     }
 
     .page-title {
       font-size: 18px;
       font-weight: 600;
-      color: var(--el-text-color-primary, #303133);
+      color: var(--text-primary);
     }
   }
 }
 
 .form-card {
-  background: var(--el-bg-color, #ffffff);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: $radius-xl;
   padding: 28px 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
 
   .section {
     margin-bottom: 24px;
@@ -301,13 +303,13 @@ const handleBackClick = async () => {
     .section-label {
       font-size: 15px;
       font-weight: 600;
-      color: var(--el-text-color-primary, #303133);
+      color: var(--text-primary);
       margin-bottom: 8px;
     }
 
     .section-hint {
       font-size: 13px;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-secondary);
       margin-bottom: 10px;
     }
   }
@@ -322,18 +324,19 @@ const handleBackClick = async () => {
 .cover-preview-box {
   width: 250px;
   height: 150px;
-  border: 1px dashed var(--el-border-color, #dcdfe6);
-  border-radius: 8px;
+  border: 1px dashed var(--border-default);
+  border-radius: $radius-md;
   overflow: hidden;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: border-color $transition-base;
 
   &.has-image {
     border-style: solid;
-    border-color: var(--el-border-color-light, #e4e7ed);
+    border-color: var(--border-light);
 
     &:hover .cover-mask {
       opacity: 1;
@@ -355,7 +358,7 @@ const handleBackClick = async () => {
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity $transition-base;
   cursor: pointer;
 
   span {
@@ -366,7 +369,7 @@ const handleBackClick = async () => {
 
 .cover-empty-text {
   font-size: 13px;
-  color: var(--el-text-color-placeholder, #c0c4cc);
+  color: var(--text-placeholder);
 }
 
 .cover-uploader {
@@ -375,32 +378,32 @@ const handleBackClick = async () => {
   .upload-trigger {
     width: 100px;
     height: 150px;
-    border: 1px dashed var(--el-border-color, #dcdfe6);
-    border-radius: 8px;
+    border: 1px dashed var(--border-default);
+    border-radius: $radius-md;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 6px;
     cursor: pointer;
-    color: var(--el-text-color-secondary, #909399);
+    color: var(--text-secondary);
     font-size: 13px;
-    transition: all 0.2s;
+    transition: all $transition-base;
 
     &:hover {
-      color: var(--el-color-primary, #409eff);
-      border-color: var(--el-color-primary, #409eff);
+      color: var(--el-color-primary);
+      border-color: var(--el-color-primary);
     }
   }
 }
 
 .editor-wrapper {
-  border: 1px solid var(--el-border-color, #dcdfe6);
-  border-radius: 8px;
+  border: 1px solid var(--border-default);
+  border-radius: $radius-md;
   overflow: hidden;
 
   :deep(.w-e-toolbar) {
-    border-bottom: 1px solid var(--el-border-color-light, #e4e7ed);
+    border-bottom: 1px solid var(--border-light);
   }
 
   :deep(.w-e-text-container) {
@@ -410,11 +413,20 @@ const handleBackClick = async () => {
 
 .submit-area {
   padding-top: 24px;
-  border-top: 1px solid var(--el-border-color-light, #e4e7ed);
+  border-top: 1px solid var(--border-light);
 
   .submit-btn {
     width: 100%;
     max-width: 320px;
+    background: var(--gradient-primary);
+    border: none;
+    font-weight: 500;
+    transition: all $transition-base;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--glow-primary);
+    }
   }
 }
 

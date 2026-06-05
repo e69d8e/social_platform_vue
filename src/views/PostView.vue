@@ -162,7 +162,7 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
         <el-icon @click="toggleLike" size="18" class="pointer">
           <StarFilled
             v-if="post.liked"
-            style="color: var(--el-color-warning, #e6a23c)"
+            style="color: var(--el-color-warning)"
           />
           <Star v-else />
         </el-icon>
@@ -208,22 +208,23 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
     align-items: center;
     gap: 4px;
     cursor: pointer;
-    color: var(--el-text-color-regular, #606266);
+    color: var(--text-secondary);
     font-size: 14px;
     padding: 4px 8px;
-    border-radius: 6px;
-    transition: all 0.2s;
+    border-radius: $radius-sm;
+    transition: all $transition-base;
     margin-bottom: 20px;
+
     &:hover {
-      color: var(--el-color-primary, #409eff);
-      background: var(--el-color-primary-light-9, #ecf5ff);
+      color: var(--el-color-primary);
+      background: var(--el-color-primary-light-9);
     }
   }
 
   .title {
     font-size: 26px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
     margin: 0 0 24px;
     line-height: 1.4;
   }
@@ -240,18 +241,28 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
 
     .nickname {
       font-size: 15px;
-      font-weight: 500;
-      color: var(--el-text-color-primary, #303133);
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: color $transition-base;
+
+      &:hover {
+        color: var(--el-color-primary);
+      }
     }
 
     .action-icon {
       font-size: 22px;
       cursor: pointer;
+      transition: all $transition-base;
+
       &.danger {
-        color: var(--el-color-danger, #f56c6c);
+        color: var(--el-color-danger);
       }
+
       &:hover {
         opacity: 0.7;
+        transform: scale(1.1);
       }
     }
   }
@@ -261,13 +272,14 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: var(--el-text-color-secondary, #909399);
+    color: var(--text-secondary);
 
     .time {
-      color: var(--el-text-color-placeholder, #c0c4cc);
+      color: var(--text-placeholder);
     }
+
     .divider {
-      color: var(--el-border-color, #dcdfe6);
+      color: var(--border-default);
     }
 
     .category-tag {
@@ -277,21 +289,26 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
 
   .pointer {
     cursor: pointer;
+    transition: transform $transition-base;
+
+    &:hover {
+      transform: scale(1.05);
+    }
   }
 
   .cover {
     margin-bottom: 20px;
-    border-radius: 12px;
+    border-radius: $radius-lg;
     overflow: hidden;
 
     .cover-img {
       width: 100%;
-      aspect-ratio: 5 / 3;
+      aspect-ratio: 16 / 9;
     }
   }
 
   .line {
-    border-top: 1px solid var(--el-border-color-light, #e4e7ed);
+    border-top: 1px solid var(--border-light);
     margin: 24px 0;
   }
 
@@ -299,12 +316,12 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
     overflow: hidden;
     line-height: 1.8;
     font-size: 15px;
-    color: var(--el-text-color-regular, #606266);
+    color: var(--text-secondary);
     padding-bottom: 20px;
 
     :deep(img) {
       max-width: 100%;
-      border-radius: 8px;
+      border-radius: $radius-md;
     }
   }
 }
@@ -312,6 +329,7 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
 @media (max-width: 640px) {
   .post-detail {
     padding: 12px 12px 32px;
+
     .title {
       font-size: 22px;
     }

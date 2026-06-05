@@ -71,23 +71,24 @@ const fansCount = computed(() => formattedCount(props.count));
 
 <style lang="scss" scoped>
 .usercard {
-  transition: transform 0.25s ease;
-
-  &:hover {
-    transform: translateY(-3px);
-  }
-
   .card {
-    border-radius: 10px;
-    border-color: var(--el-border-color-light, #e4e7ed);
+    border-radius: $radius-lg;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+    transition: all $transition-base;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
 
     :deep(.el-card__header) {
-      padding: 12px 14px 8px;
+      padding: 14px 16px 8px;
       border-bottom: none;
     }
 
     :deep(.el-card__body) {
-      padding: 0 14px 12px;
+      padding: 0 16px 14px;
     }
   }
 
@@ -98,7 +99,7 @@ const fansCount = computed(() => formattedCount(props.count));
   .card-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
   }
 
   .user-info {
@@ -112,25 +113,32 @@ const fansCount = computed(() => formattedCount(props.count));
 
   .nickname {
     font-size: 15px;
-    font-weight: 500;
-    color: var(--el-text-color-primary, #303133);
+    font-weight: 600;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color $transition-base;
+
+    &:hover {
+      color: var(--el-color-primary);
+    }
   }
 
   .fans-count {
     font-size: 12px;
-    color: var(--el-color-primary, #409eff);
+    color: var(--el-color-primary);
+    font-weight: 500;
   }
 
   .follow-btn {
     flex-shrink: 0;
+    border-radius: $radius-full;
   }
 
   .bio {
     font-size: 13px;
-    color: var(--el-text-color-secondary, #909399);
+    color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

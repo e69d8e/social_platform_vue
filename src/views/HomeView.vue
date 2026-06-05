@@ -115,14 +115,14 @@ onUnmounted(() => {
 .home {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 12px;
+  padding: 16px 12px 40px;
 
   .category {
-    padding: 16px 8px 8px;
+    padding: 0 8px 16px;
   }
 
   .post-grid {
-    padding: 8px 0 0;
+    padding: 0;
     margin-left: 0 !important;
     margin-right: 0 !important;
 
@@ -135,13 +135,13 @@ onUnmounted(() => {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 16px 0 32px;
+    padding: 24px 0 32px;
 
     .loading-more {
       display: flex;
       align-items: center;
       gap: 8px;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-secondary);
       font-size: 14px;
 
       .loading-icon {
@@ -150,19 +150,10 @@ onUnmounted(() => {
     }
 
     .no-more {
-      color: var(--el-text-color-placeholder, #c0c4cc);
+      color: var(--text-placeholder);
       font-size: 13px;
       letter-spacing: 2px;
     }
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }
 </style>

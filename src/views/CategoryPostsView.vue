@@ -70,25 +70,25 @@ const pageChange = async (newPage) => {
       align-items: center;
       gap: 4px;
       cursor: pointer;
-      color: var(--el-text-color-regular, #606266);
+      color: var(--text-secondary);
       font-size: 14px;
       padding: 4px 8px;
-      border-radius: 6px;
-      transition: all 0.2s;
+      border-radius: $radius-sm;
+      transition: all $transition-base;
       flex-shrink: 0;
       &:hover {
-        color: var(--el-color-primary, #409eff);
-        background: var(--el-color-primary-light-9, #ecf5ff);
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
       }
     }
     .page-title {
       font-size: 18px;
       font-weight: 600;
-      color: var(--el-text-color-primary, #303133);
+      color: var(--text-primary);
     }
     .total-count {
       font-size: 13px;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-secondary);
     }
   }
 

@@ -57,7 +57,7 @@ const htmlToText = (html) => {
           <div class="like" @click.stop="like">
             <el-icon
               size="18"
-              :color="liked ? 'var(--el-color-danger, #f56c6c)' : ''"
+              :color="liked ? 'var(--el-color-danger)' : ''"
               ><Star
             /></el-icon>
             <span class="count">{{ formattedCount(likeCount) }}</span>
@@ -85,24 +85,26 @@ const htmlToText = (html) => {
 <style lang="scss" scoped>
 .postcard {
   cursor: pointer;
-  transition: transform 0.25s ease;
-
-  &:hover {
-    transform: translateY(-3px);
-  }
 
   .card {
-    border-radius: 10px;
+    border-radius: $radius-lg;
     overflow: hidden;
-    border-color: var(--el-border-color-light, #e4e7ed);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+    transition: all $transition-base;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
 
     :deep(.el-card__header) {
-      padding: 12px 14px 8px;
+      padding: 14px 16px 8px;
       border-bottom: none;
     }
 
     :deep(.el-card__body) {
-      padding: 0 14px 14px;
+      padding: 0 16px 16px;
     }
   }
 
@@ -121,7 +123,7 @@ const htmlToText = (html) => {
     text-overflow: ellipsis;
     flex: 1;
     margin-right: 8px;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
   }
 
   .card-meta {
@@ -132,7 +134,7 @@ const htmlToText = (html) => {
 
     .time {
       font-size: 12px;
-      color: var(--el-text-color-placeholder, #c0c4cc);
+      color: var(--text-placeholder);
     }
   }
 
@@ -140,31 +142,47 @@ const htmlToText = (html) => {
   .view {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
     flex-shrink: 0;
+  }
+
+  .like {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: $radius-sm;
+    transition: all $transition-base;
+
+    &:hover {
+      background: var(--el-color-danger-light-9);
+    }
   }
 
   .count {
     font-size: 13px;
-    color: var(--el-text-color-secondary, #909399);
+    color: var(--text-secondary);
   }
 
   .cover {
-    border-radius: 6px;
+    border-radius: $radius-md;
     overflow: hidden;
 
     img {
       width: 100%;
-      aspect-ratio: 5 / 3;
+      aspect-ratio: 16 / 9;
       object-fit: cover;
       display: block;
+      transition: transform 0.4s ease;
     }
+  }
+
+  &:hover .cover img {
+    transform: scale(1.03);
   }
 
   .text-content {
     font-size: 13px;
     line-height: 1.7;
-    color: var(--el-text-color-regular, #606266);
+    color: var(--text-secondary);
     white-space: pre-wrap;
     word-wrap: break-word;
     display: -webkit-box;
@@ -172,7 +190,7 @@ const htmlToText = (html) => {
     line-clamp: 8;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    min-height: 180px;
+    min-height: 160px;
   }
 }
 </style>

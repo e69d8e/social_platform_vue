@@ -69,7 +69,7 @@ const onAgree = () => {
 <style lang="scss" scoped>
 .agreement-page {
   min-height: 100vh;
-  background: var(--el-bg-color-page, #f5f5f5);
+  background: var(--bg-page);
   padding: 40px 20px;
 }
 
@@ -77,23 +77,24 @@ const onAgree = () => {
   max-width: 800px;
   margin: 0 auto;
   padding: 48px 40px;
-  background: var(--el-bg-color, #fff);
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  background: var(--bg-card);
+  border-radius: $radius-xl;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
 }
 
 .agreement-title {
   text-align: center;
   font-size: 28px;
   font-weight: 700;
-  color: var(--el-text-color-primary, #303133);
+  color: var(--text-primary);
   margin: 0 0 8px;
 }
 
 .agreement-date {
   text-align: center;
   font-size: 13px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--text-secondary);
   margin: 0 0 32px;
 }
 
@@ -103,16 +104,16 @@ const onAgree = () => {
   h2 {
     font-size: 18px;
     font-weight: 600;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
     margin: 0 0 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--el-border-color-light, #ebeef5);
+    border-bottom: 1px solid var(--border-light);
   }
 
   p {
     font-size: 14px;
     line-height: 1.8;
-    color: var(--el-text-color-regular, #606266);
+    color: var(--text-secondary);
     margin: 0;
   }
 }
@@ -121,6 +122,19 @@ const onAgree = () => {
   text-align: center;
   margin-top: 40px;
   padding-top: 24px;
-  border-top: 1px solid var(--el-border-color-light, #ebeef5);
+  border-top: 1px solid var(--border-light);
+
+  .el-button {
+    background: var(--gradient-primary);
+    border: none;
+    font-weight: 500;
+    padding: 10px 32px;
+    transition: all $transition-base;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--glow-primary);
+    }
+  }
 }
 </style>

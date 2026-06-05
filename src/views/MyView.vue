@@ -359,25 +359,27 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
     align-items: center;
     gap: 4px;
     cursor: pointer;
-    color: var(--el-text-color-regular, #606266);
+    color: var(--text-secondary);
     font-size: 14px;
     padding: 4px 8px;
-    border-radius: 6px;
-    transition: all 0.2s;
+    border-radius: $radius-sm;
+    transition: all $transition-base;
     margin-bottom: 20px;
+
     &:hover {
-      color: var(--el-color-primary, #409eff);
-      background: var(--el-color-primary-light-9, #ecf5ff);
+      color: var(--el-color-primary);
+      background: var(--el-color-primary-light-9);
     }
   }
 }
 
 .profile-card {
   text-align: center;
-  background: var(--el-bg-color, #ffffff);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: $radius-xl;
   padding: 28px 24px 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
   margin-bottom: 20px;
 
   .avatar-uploader {
@@ -390,8 +392,13 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
     height: 96px;
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s;
+    box-shadow: var(--shadow-md);
+    border: 3px solid transparent;
+    background-image: var(--gradient-primary);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    transition: transform $transition-base;
+
     &:hover {
       transform: scale(1.05);
     }
@@ -413,30 +420,32 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
 
     .meta-label {
       font-size: 11px;
-      color: var(--el-text-color-placeholder, #a8abb2);
+      color: var(--text-placeholder);
     }
   }
 
   .nickname {
     font-size: 20px;
     font-weight: 700;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
     margin: 0;
   }
 
   .avatar-uploader-icon {
     font-size: 28px;
-    color: var(--el-text-color-placeholder, #8c939d);
+    color: var(--text-placeholder);
     width: 96px;
     height: 96px;
     border-radius: 50%;
-    border: 1px dashed var(--el-border-color, #dcdfe6);
+    border: 1px dashed var(--border-default);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: border-color $transition-base;
+
     &:hover {
-      border-color: var(--el-color-primary, #409eff);
+      border-color: var(--el-color-primary);
     }
   }
 
@@ -453,14 +462,15 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
     justify-content: center;
     gap: 8px;
     padding-top: 16px;
-    border-top: 1px solid var(--el-border-color-light, #e4e7ed);
+    border-top: 1px solid var(--border-light);
   }
 }
 
 .form-card {
-  background: var(--el-bg-color, #ffffff);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: $radius-xl;
   padding: 24px 24px 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
 }
 </style>

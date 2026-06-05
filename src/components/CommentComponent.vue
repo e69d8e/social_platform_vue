@@ -201,19 +201,20 @@ const deleteComment = async (id) => {
   .comment-title {
     font-size: 17px;
     font-weight: 600;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
     margin: 0 0 16px;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--el-border-color-light, #e4e7ed);
+    border-bottom: 1px solid var(--border-light);
   }
 }
 
 .comment-input-card {
-  background: var(--el-bg-color, #ffffff);
-  border: 1px solid var(--el-border-color-light, #e4e7ed);
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: $radius-lg;
   padding: 16px;
   margin-bottom: 24px;
+  box-shadow: var(--shadow-xs);
 
   .comment-input-row {
     display: flex;
@@ -240,7 +241,16 @@ const deleteComment = async (id) => {
   display: flex;
   gap: 12px;
   padding: 16px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-bottom: 1px solid var(--border-light);
+  transition: background $transition-fast;
+
+  &:hover {
+    background: var(--bg-subtle);
+    margin: 0 -8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: $radius-md;
+  }
 
   .comment-avatar {
     flex-shrink: 0;
@@ -261,63 +271,73 @@ const deleteComment = async (id) => {
   .username {
     font-size: 14px;
     font-weight: 600;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
   }
 
   .time {
     font-size: 12px;
-    color: var(--el-text-color-placeholder, #c0c4cc);
+    color: var(--text-placeholder);
   }
 }
 
 .comment-content {
   font-size: 14px;
   line-height: 1.7;
-  color: var(--el-text-color-regular, #606266);
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
 .comment-actions {
   font-size: 13px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--text-muted);
 
   .reply-btn {
     cursor: pointer;
     margin-right: 12px;
-    &:hover { color: var(--el-color-primary, #409eff); }
+    transition: color $transition-fast;
+
+    &:hover {
+      color: var(--el-color-primary);
+    }
   }
 }
 
 .child-comments {
   margin-top: 10px;
   padding: 10px 12px;
-  background: var(--el-bg-color-page, #f2f3f5);
-  border-radius: 8px;
+  background: var(--bg-subtle);
+  border-radius: $radius-md;
 
   .child-item {
     font-size: 13px;
     line-height: 1.7;
     margin-bottom: 8px;
-    color: var(--el-text-color-regular, #606266);
+    color: var(--text-secondary);
 
-    &:last-child { margin-bottom: 0; }
+    &:last-child {
+      margin-bottom: 0;
+    }
 
     .username {
       font-weight: 600;
-      color: var(--el-text-color-primary, #303133);
+      color: var(--text-primary);
     }
 
     .reply-text {
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-muted);
       margin: 0 4px;
     }
 
     .reply-btn {
       cursor: pointer;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-muted);
       margin-left: 8px;
       font-size: 12px;
-      &:hover { color: var(--el-color-primary, #409eff); }
+      transition: color $transition-fast;
+
+      &:hover {
+        color: var(--el-color-primary);
+      }
     }
   }
 }
@@ -325,7 +345,7 @@ const deleteComment = async (id) => {
 .empty-comments {
   text-align: center;
   padding: 32px 0;
-  color: var(--el-text-color-placeholder, #c0c4cc);
+  color: var(--text-placeholder);
   font-size: 14px;
 }
 </style>

@@ -50,7 +50,13 @@ onMounted(async () => {
     width: 100%;
     height: 42px;
     font-size: 14px;
-    border-radius: var(--el-border-radius-base, 4px);
+    border-radius: $radius-md;
+    transition: all $transition-base;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
   }
 }
 </style>
