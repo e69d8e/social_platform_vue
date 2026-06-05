@@ -194,7 +194,6 @@ watch(
                   clearable
                 />
                 <el-button
-                  type="primary"
                   :icon="Search"
                   @click="search"
                   class="search-btn"
@@ -294,9 +293,8 @@ watch(
                 >我的关注</el-button
               >
               <el-button
-                type="warning"
-                plain
                 size="small"
+                class="publish-btn"
                 @click="$router.push('/publicPost')"
                 >发布</el-button
               >
@@ -348,78 +346,100 @@ watch(
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .layout {
   min-height: 100vh;
-  background: var(--el-bg-color-page, #f2f3f5);
+  background: var(--bg-page);
 
+  // ---- Header (frosted glass) ----
   .header {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: var(--el-bg-color, #ffffff);
-    border-bottom: 1px solid var(--el-border-color-light, #e4e7ed);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
     padding: 0;
+    background: rgba(250, 249, 245, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-light);
+    box-shadow: var(--shadow-xs);
+
+    html.dark & {
+      background: rgba(24, 23, 21, 0.85);
+    }
   }
 
   .header-inner {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 14px 20px;
+    padding: 0 24px;
+    height: 70px;
     position: relative;
   }
 
-  /* ---- 左侧 ---- */
+  // ---- Logo ----
   .header-left {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    gap: 16px;
     flex-shrink: 0;
   }
 
   .logo {
     display: flex;
     align-items: center;
+    gap: 10px;
     cursor: pointer;
     user-select: none;
   }
 
   .logo-img {
-    width: 42px;
-    height: 42px;
-    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
   }
 
   .logo-text {
-    margin-left: 10px;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
-    color: var(--el-color-primary, #409eff);
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .logo-icon {
-    margin-left: 8px;
     font-size: 18px;
-    color: var(--el-color-primary, #409eff);
+    color: var(--el-color-primary);
+    opacity: 0.7;
   }
 
+  // ---- Sign-in ----
   .sign {
     display: flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
     font-size: 12px;
-    color: var(--el-text-color-secondary, #909399);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    transition: all var(--transition-base);
+
+    &:hover {
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
   }
 
   .sign-text {
     white-space: nowrap;
   }
 
+  // ---- Left tools ----
   .header-left-tools {
     display: flex;
     align-items: center;
@@ -432,12 +452,12 @@ watch(
     min-width: 0;
   }
 
-  /* ---- 中间搜索 ---- */
+  // ---- Search ----
   .header-center {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    max-width: 420px;
+    max-width: 340px;
     width: 100%;
   }
 
@@ -453,23 +473,45 @@ watch(
 
   .search-input {
     flex: 1;
+
+    :deep(.el-input__wrapper) {
+      border-radius: 20px;
+      padding: 4px 16px;
+      box-shadow: 0 0 0 1px var(--border-default) inset;
+      transition: all var(--transition-base);
+
+      &:focus-within {
+        box-shadow: 0 0 0 2px var(--el-color-primary) inset,
+          var(--glow-primary);
+      }
+    }
   }
 
   .search-btn {
-    margin-left: -1px;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
+    margin-left: 8px;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: var(--gradient-primary);
+    border: none;
+    color: #fff;
+
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: var(--glow-primary);
+    }
   }
 
   .search-dropdown {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 6px);
     left: 0;
     right: 0;
-    margin-top: 4px;
-    background: var(--el-bg-color, #ffffff);
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-default);
     z-index: 200;
     padding: 8px 0;
     max-height: 320px;
@@ -479,28 +521,28 @@ watch(
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 4px 12px 8px;
+      padding: 4px 14px 8px;
       font-size: 13px;
       font-weight: 600;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-muted);
     }
 
     .dropdown-item {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 12px;
+      padding: 8px 14px;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background var(--transition-fast);
 
       &:hover {
-        background: var(--el-bg-color-page, #f2f3f5);
+        background: var(--bg-subtle);
       }
 
       .item-keyword {
         flex: 1;
         font-size: 14px;
-        color: var(--el-text-color-primary, #303133);
+        color: var(--text-primary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -508,53 +550,80 @@ watch(
 
       .item-type {
         font-size: 11px;
-        color: var(--el-text-color-placeholder, #a8abb2);
+        color: var(--text-placeholder);
         flex-shrink: 0;
       }
 
       .item-close {
         font-size: 12px;
-        color: var(--el-text-color-placeholder, #a8abb2);
+        color: var(--text-placeholder);
         flex-shrink: 0;
+        transition: color var(--transition-fast);
 
         &:hover {
-          color: var(--el-color-danger, #f56c6c);
+          color: var(--el-color-danger);
         }
       }
     }
   }
 
-  /* ---- 主题切换 ---- */
+  // ---- Theme toggle ----
   .theme-toggle {
     flex-shrink: 0;
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+
+    &:hover {
+      background: var(--bg-subtle);
+      color: var(--el-color-primary);
+      border-color: var(--el-color-primary-light-7);
+    }
   }
 
-  /* ---- 操作按钮 ---- */
+  // ---- Action buttons ----
   .header-actions {
     display: flex;
+    align-items: center;
     gap: 6px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    flex-shrink: 0;
+
+    .publish-btn {
+      background: var(--gradient-primary);
+      border: none;
+      color: #fff;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      padding: 6px 16px;
+      transition: all var(--transition-base);
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--glow-primary);
+      }
+    }
   }
 
-  /* ---- 右侧用户 ---- */
+  // ---- User section ----
   .header-user {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
-    margin-left: auto;
   }
 
   .user-avatar {
     cursor: pointer;
     flex-shrink: 0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  }
+    border: 2px solid transparent;
+    background-image: var(--gradient-primary);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    transition: transform var(--transition-base);
 
-  .user-avatar:hover {
-    transform: scale(1.05);
-    transition: transform 0.2s;
+    &:hover {
+      transform: scale(1.08);
+    }
   }
 
   .user-info {
@@ -567,30 +636,31 @@ watch(
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
-    color: var(--el-text-color-primary, #303133);
+    color: var(--text-primary);
     max-width: 80px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
+    transition: color var(--transition-base);
 
-  .user-nickname:hover {
-    color: var(--el-color-primary, #409eff);
+    &:hover {
+      color: var(--el-color-primary);
+    }
   }
 
   .user-fans {
     cursor: pointer;
   }
 
-  /* ---- main ---- */
+  // ---- Main content ----
   .main {
     padding: 0;
-    min-height: calc(100vh - 80px);
-    background: var(--el-bg-color, #ffffff);
+    min-height: calc(100vh - 70px);
+    background: var(--bg-page);
   }
 }
 
-/* ---- 响应式 ---- */
+// ---- Responsive ----
 @media (max-width: 992px) {
   .header-center,
   .header-actions {
@@ -600,8 +670,9 @@ watch(
 
 @media (max-width: 640px) {
   .header-inner {
-    padding: 10px 12px;
+    padding: 0 12px;
     gap: 10px;
+    height: 60px;
   }
 
   .logo-text {
@@ -610,6 +681,10 @@ watch(
 
   .sign-text {
     display: none;
+  }
+
+  .header-left-tools {
+    gap: 4px;
   }
 }
 </style>

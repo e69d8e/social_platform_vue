@@ -392,16 +392,16 @@ onUnmounted(() => {
 <style scoped>
 /* ========== CSS 变量映射 Element Plus 主题 ========== */
 .chat-page {
-  --chat-primary: var(--el-color-primary, #409eff);
-  --chat-primary-light: var(--el-color-primary-light-3, #79bbff);
-  --chat-primary-lighter: var(--el-color-primary-light-7, #d9ecff);
-  --chat-primary-dark: var(--el-color-primary-dark-1, #3a8ee6);
-  --chat-bg: var(--el-bg-color-page, #f2f3f5);
-  --chat-border: var(--el-border-color-light, #e4e7ed);
-  --chat-text: var(--el-text-color-primary, #303133);
-  --chat-text-secondary: var(--el-text-color-secondary, #909399);
-  --chat-white: var(--el-bg-color, #ffffff);
-  --chat-shadow: var(--el-box-shadow-light, 0 2px 12px rgba(0, 0, 0, 0.06));
+  --chat-primary: var(--el-color-primary);
+  --chat-primary-light: var(--el-color-primary-light-3);
+  --chat-primary-lighter: var(--el-color-primary-light-7);
+  --chat-primary-dark: var(--el-color-primary-dark-2);
+  --chat-bg: var(--bg-page);
+  --chat-border: var(--border-light);
+  --chat-text: var(--text-primary);
+  --chat-text-secondary: var(--text-secondary);
+  --chat-white: var(--bg-card);
+  --chat-shadow: var(--shadow-md);
   --chat-radius: 8px;
 
   display: flex;
@@ -466,7 +466,7 @@ onUnmounted(() => {
 
 .new-chat-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(64, 158, 255, 0.35);
+  box-shadow: var(--glow-primary);
 }
 
 .session-list {
@@ -499,7 +499,7 @@ onUnmounted(() => {
     var(--chat-primary-dark) 100%
   );
   color: #fff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+  box-shadow: var(--glow-primary);
 }
 
 .session-name {
@@ -536,8 +536,8 @@ onUnmounted(() => {
 }
 
 .delete-btn:hover {
-  color: var(--el-color-danger, #f56c6c) !important;
-  background: rgba(245, 108, 108, 0.1);
+  color: var(--el-color-danger) !important;
+  background: var(--el-color-danger-light-9);
 }
 
 /* ========== 主聊天区域 ========== */
@@ -603,12 +603,12 @@ onUnmounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 14px rgba(64, 158, 255, 0.25);
+  box-shadow: var(--glow-primary);
 }
 
 .start-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(64, 158, 255, 0.4);
+  box-shadow: 0 6px 24px rgba(204, 120, 92, 0.4);
 }
 
 /* 聊天容器 */
@@ -696,8 +696,8 @@ onUnmounted(() => {
 .assistant-message .message-avatar {
   background: linear-gradient(
     135deg,
-    var(--el-color-success, #67c23a) 0%,
-    var(--el-color-success-light-3, #95d475) 100%
+    var(--el-color-success) 0%,
+    var(--el-color-success-light-3) 100%
   );
 }
 
@@ -796,7 +796,7 @@ onUnmounted(() => {
 
 .input-area textarea:focus {
   border-color: var(--chat-primary);
-  box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
   background: var(--chat-white);
 }
 
@@ -820,12 +820,12 @@ onUnmounted(() => {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.25s ease;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(204, 120, 92, 0.2);
 }
 
 .send-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.35);
+  box-shadow: 0 4px 16px rgba(204, 120, 92, 0.35);
 }
 
 .send-btn:active:not(:disabled) {

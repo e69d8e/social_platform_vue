@@ -47,13 +47,13 @@ const handleDaysChange = () => {
 };
 
 const textColor = computed(() =>
-  themeStore.darkMode ? "#e5eaf3" : "#303133"
+  themeStore.darkMode ? "#faf9f5" : "#141413"
 );
 const subTextColor = computed(() =>
-  themeStore.darkMode ? "#a3a6ad" : "#909399"
+  themeStore.darkMode ? "#a09d96" : "#6c6a64"
 );
 const lineColor = computed(() =>
-  themeStore.darkMode ? "#4c4d4f" : "#e4e7ed"
+  themeStore.darkMode ? "#333230" : "#e6dfd8"
 );
 
 const baseOption = computed(() => ({
@@ -85,7 +85,7 @@ const postsOption = computed(() => ({
       data: dailyPosts.value.map((d) => d.count),
       smooth: true,
       areaStyle: { opacity: 0.15 },
-      itemStyle: { color: "#409eff" },
+      itemStyle: { color: "#cc785c" },
       lineStyle: { width: 2 },
     },
   ],
@@ -104,7 +104,7 @@ const usersOption = computed(() => ({
       data: weeklyNewUsers.value.map((d) => d.count),
       smooth: true,
       areaStyle: { opacity: 0.15 },
-      itemStyle: { color: "#67c23a" },
+      itemStyle: { color: "#5db872" },
       lineStyle: { width: 2 },
     },
   ],
@@ -123,7 +123,7 @@ const activeOption = computed(() => ({
       data: dailyActiveUsers.value.map((d) => d.count),
       smooth: true,
       areaStyle: { opacity: 0.15 },
-      itemStyle: { color: "#e6a23c" },
+      itemStyle: { color: "#e8a55a" },
       lineStyle: { width: 2 },
     },
   ],
@@ -184,23 +184,23 @@ const activeOption = computed(() => ({
       align-items: center;
       gap: 4px;
       cursor: pointer;
-      color: var(--el-text-color-regular, #606266);
+      color: var(--text-secondary);
       font-size: 14px;
       padding: 4px 8px;
-      border-radius: 6px;
-      transition: all 0.2s;
+      border-radius: $radius-sm;
+      transition: all $transition-base;
       flex-shrink: 0;
 
       &:hover {
-        color: var(--el-color-primary, #409eff);
-        background: var(--el-color-primary-light-9, #ecf5ff);
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
       }
     }
 
     .page-title {
       font-size: 18px;
       font-weight: 600;
-      color: var(--el-text-color-primary, #303133);
+      color: var(--text-primary);
     }
   }
 
@@ -212,7 +212,7 @@ const activeOption = computed(() => ({
 
     .toolbar-label {
       font-size: 13px;
-      color: var(--el-text-color-secondary, #909399);
+      color: var(--text-secondary);
     }
   }
 
@@ -222,10 +222,11 @@ const activeOption = computed(() => ({
     gap: 20px;
 
     .chart-card {
-      background: var(--el-bg-color, #fff);
-      border-radius: 12px;
+      background: var(--bg-card);
+      border-radius: $radius-lg;
       padding: 20px 16px 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-light);
     }
   }
 }

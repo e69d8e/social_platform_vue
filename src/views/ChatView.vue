@@ -306,16 +306,16 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .chat-page {
-  --chat-primary: var(--el-color-primary, #409eff);
-  --chat-primary-light: var(--el-color-primary-light-3, #79bbff);
-  --chat-primary-lighter: var(--el-color-primary-light-7, #d9ecff);
-  --chat-primary-dark: var(--el-color-primary-dark-1, #3a8ee6);
-  --chat-bg: var(--el-bg-color-page, #f0f2f5);
-  --chat-white: var(--el-bg-color, #ffffff);
-  --chat-border: var(--el-border-color-light, #e4e7ed);
-  --chat-text: var(--el-text-color-primary, #303133);
-  --chat-text-secondary: var(--el-text-color-secondary, #909399);
-  --chat-text-placeholder: var(--el-text-color-placeholder, #a8abb2);
+  --chat-primary: var(--el-color-primary);
+  --chat-primary-light: var(--el-color-primary-light-3);
+  --chat-primary-lighter: var(--el-color-primary-light-7);
+  --chat-primary-dark: var(--el-color-primary-dark-2);
+  --chat-bg: var(--bg-page);
+  --chat-white: var(--bg-card);
+  --chat-border: var(--border-light);
+  --chat-text: var(--text-primary);
+  --chat-text-secondary: var(--text-secondary);
+  --chat-text-placeholder: var(--text-placeholder);
 
   display: flex;
   flex-direction: column;
@@ -330,7 +330,7 @@ onUnmounted(() => {
   background: var(--chat-white);
   border-bottom: 1px solid var(--chat-border);
   flex-shrink: 0;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-xs);
 }
 
 .header-inner {
@@ -367,7 +367,7 @@ onUnmounted(() => {
 }
 
 .header-avatar {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .header-avatar.placeholder {
@@ -497,7 +497,7 @@ onUnmounted(() => {
   }
 
   &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-sm);
   }
 }
 
@@ -589,11 +589,11 @@ onUnmounted(() => {
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.25s;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(204, 120, 92, 0.3);
 
   &:hover:not(:disabled) {
     transform: scale(1.08);
-    box-shadow: 0 4px 16px rgba(64, 158, 255, 0.4);
+    box-shadow: 0 4px 16px rgba(204, 120, 92, 0.4);
   }
 
   &:active:not(:disabled) {

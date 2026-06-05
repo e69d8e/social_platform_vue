@@ -1,0 +1,287 @@
+// ============================================================
+// Y社区 Design System — SCSS Variables
+// Based on Claude DESIGN.md specification
+// Warm cream + coral color scheme
+// ============================================================
+
+// ---- Shadows ----
+$shadow-xs: 0 1px 2px rgba(20, 20, 19, 0.05);
+$shadow-sm: 0 1px 3px rgba(20, 20, 19, 0.08), 0 1px 2px rgba(20, 20, 19, 0.04);
+$shadow-md: 0 4px 6px -1px rgba(20, 20, 19, 0.1),
+  0 2px 4px -1px rgba(20, 20, 19, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(20, 20, 19, 0.1),
+  0 4px 6px -2px rgba(20, 20, 19, 0.05);
+$shadow-xl: 0 20px 25px -5px rgba(20, 20, 19, 0.1),
+  0 10px 10px -5px rgba(20, 20, 19, 0.04);
+$shadow-2xl: 0 25px 50px -12px rgba(20, 20, 19, 0.25);
+
+// ---- Border Radius ----
+$radius-xs: 4px;
+$radius-sm: 6px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+$radius-pill: 9999px;
+$radius-full: 9999px;
+
+// ---- Transitions ----
+$transition-fast: 0.15s ease;
+$transition-base: 0.2s ease;
+$transition-slow: 0.3s ease;
+
+// ============================================================
+// Element Plus Theme Overrides — Light Mode
+// ============================================================
+:root {
+  // Primary (coral) — !important needed to override Element Plus built-in styles
+  --el-color-primary: #cc785c !important;
+  --el-color-primary-light-3: #d99580 !important;
+  --el-color-primary-light-5: #e3b0a0 !important;
+  --el-color-primary-light-7: #edccc0 !important;
+  --el-color-primary-light-8: #f3ddd3 !important;
+  --el-color-primary-light-9: #f9eee8 !important;
+  --el-color-primary-dark-2: #a9583e !important;
+
+  // Success
+  --el-color-success: #5db872 !important;
+  --el-color-success-light-3: #8acc99 !important;
+  --el-color-success-light-5: #a7d9b3 !important;
+  --el-color-success-light-8: #d4eece !important;
+  --el-color-success-light-9: #eaf7e6 !important;
+  --el-color-success-dark-2: #4a9a5e !important;
+
+  // Warning
+  --el-color-warning: #d4a017 !important;
+  --el-color-warning-light-3: #e0b84d !important;
+  --el-color-warning-light-5: #eacc7a !important;
+  --el-color-warning-light-8: #f3e5b8 !important;
+  --el-color-warning-light-9: #f9f2dc !important;
+  --el-color-warning-dark-2: #b08512 !important;
+
+  // Danger
+  --el-color-danger: #c64545 !important;
+  --el-color-danger-light-3: #d67474 !important;
+  --el-color-danger-light-5: #e19999 !important;
+  --el-color-danger-light-8: #f0cccc !important;
+  --el-color-danger-light-9: #f8e6e6 !important;
+  --el-color-danger-dark-2: #a33939 !important;
+
+  // Info (muted)
+  --el-color-info: #6c6a64 !important;
+  --el-color-info-light-3: #918f8a !important;
+  --el-color-info-light-5: #b0aea9 !important;
+  --el-color-info-light-8: #d7d6d3 !important;
+  --el-color-info-light-9: #ebeae8 !important;
+  --el-color-info-dark-2: #585651 !important;
+
+  // Text
+  --el-text-color-primary: #141413 !important;
+  --el-text-color-regular: #3d3d3a !important;
+  --el-text-color-secondary: #6c6a64 !important;
+  --el-text-color-placeholder: #8e8b82 !important;
+  --el-text-color-disabled: #b0aea9 !important;
+
+  // Background
+  --el-bg-color: #faf9f5 !important;
+  --el-bg-color-page: #faf9f5 !important;
+  --el-bg-color-overlay: #faf9f5 !important;
+
+  // Border
+  --el-border-color: #e6dfd8 !important;
+  --el-border-color-light: #ebe6df !important;
+  --el-border-color-lighter: #f0ece6 !important;
+  --el-border-color-extra-light: #f5f2ed !important;
+
+  // Fill
+  --el-fill-color: #f5f0e8 !important;
+  --el-fill-color-light: #f0ece6 !important;
+  --el-fill-color-lighter: #f5f2ed !important;
+  --el-fill-color-extra-light: #faf8f4 !important;
+  --el-fill-color-blank: #faf9f5 !important;
+
+  // Border Radius
+  --el-border-radius-base: 8px !important;
+  --el-border-radius-small: 6px !important;
+  --el-border-radius-round: 20px !important;
+  --el-border-radius-circle: 50% !important;
+
+  // Font
+  --el-font-size-base: 14px !important;
+  --el-font-line-height-primary: 24px !important;
+
+  // ---- Custom Design Tokens ----
+  --bg-page: #faf9f5;
+  --bg-card: #efe9de;
+  --bg-subtle: #f5f0e8;
+  --bg-muted: #e8e0d2;
+  --bg-surface-dark: #181715;
+
+  --text-ink: #141413;
+  --text-body: #3d3d3a;
+  --text-body-strong: #252523;
+  --text-muted: #6c6a64;
+  --text-muted-soft: #8e8b82;
+  --text-placeholder: #b0aea9;
+
+  // Backward compat aliases
+  --text-primary: #141413;
+  --text-secondary: #6c6a64;
+
+  --border-default: #e6dfd8;
+  --border-light: #ebe6df;
+  --border-focus: #cc785c;
+
+  --shadow-xs: #{$shadow-xs};
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+  --shadow-xl: #{$shadow-xl};
+  --shadow-2xl: #{$shadow-2xl};
+
+  --radius-xs: #{$radius-xs};
+  --radius-sm: #{$radius-sm};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-xl: #{$radius-xl};
+  --radius-pill: #{$radius-pill};
+  --radius-full: #{$radius-full};
+
+  --transition-fast: #{$transition-fast};
+  --transition-base: #{$transition-base};
+  --transition-slow: #{$transition-slow};
+
+  // Gradients (coral-based)
+  --gradient-primary: linear-gradient(135deg, #cc785c 0%, #d99580 100%);
+  --gradient-accent: linear-gradient(135deg, #e8a55a 0%, #cc785c 100%);
+  --gradient-warm: linear-gradient(135deg, #e8a55a 0%, #c64545 100%);
+  --gradient-cool: linear-gradient(135deg, #5db8a6 0%, #5db872 100%);
+  --gradient-success: linear-gradient(135deg, #5db872 0%, #4a9a5e 100%);
+
+  // Glow
+  --glow-primary: 0 0 20px rgba(204, 120, 92, 0.3);
+  --glow-accent: 0 0 20px rgba(232, 165, 90, 0.3);
+
+  // On-color text
+  --color-on-primary: #ffffff;
+  --color-on-dark: #faf9f5;
+  --color-on-dark-soft: #a09d96;
+
+  // Surface dark tokens
+  --surface-dark: #181715;
+  --surface-dark-elevated: #252320;
+  --surface-dark-soft: #1f1e1b;
+}
+
+// ============================================================
+// Element Plus Theme Overrides — Dark Mode
+// ============================================================
+html.dark {
+  // Primary (coral — slightly brighter in dark)
+  --el-color-primary: #d99580 !important;
+  --el-color-primary-light-3: #e3b0a0 !important;
+  --el-color-primary-light-5: #edccc0 !important;
+  --el-color-primary-light-7: #f3ddd3 !important;
+  --el-color-primary-light-8: #f9eee8 !important;
+  --el-color-primary-light-9: #2a1f1a !important;
+  --el-color-primary-dark-2: #cc785c !important;
+
+  // Success
+  --el-color-success: #6dc982 !important;
+  --el-color-success-light-3: #8acc99 !important;
+  --el-color-success-light-5: #a7d9b3 !important;
+  --el-color-success-light-8: #1a3d20 !important;
+  --el-color-success-light-9: #142d18 !important;
+  --el-color-success-dark-2: #5db872 !important;
+
+  // Warning
+  --el-color-warning: #e8b54a !important;
+  --el-color-warning-light-3: #f0c970 !important;
+  --el-color-warning-light-5: #f5da96 !important;
+  --el-color-warning-light-8: #3d3018 !important;
+  --el-color-warning-light-9: #2a2010 !important;
+  --el-color-warning-dark-2: #d4a017 !important;
+
+  // Danger
+  --el-color-danger: #d66565 !important;
+  --el-color-danger-light-3: #e18989 !important;
+  --el-color-danger-light-5: #eba7a7 !important;
+  --el-color-danger-light-8: #3d1a1a !important;
+  --el-color-danger-light-9: #2a1212 !important;
+  --el-color-danger-dark-2: #c64545 !important;
+
+  // Info
+  --el-color-info: #a09d96 !important;
+  --el-color-info-light-3: #b5b3ae !important;
+  --el-color-info-light-5: #cccac6 !important;
+  --el-color-info-light-8: #2a2925 !important;
+  --el-color-info-light-9: #1f1e1b !important;
+  --el-color-info-dark-2: #8e8b82 !important;
+
+  // Text
+  --el-text-color-primary: #faf9f5 !important;
+  --el-text-color-regular: #d4d2cc !important;
+  --el-text-color-secondary: #a09d96 !important;
+  --el-text-color-placeholder: #6c6a64 !important;
+  --el-text-color-disabled: #504e49 !important;
+
+  // Background
+  --el-bg-color: #181715 !important;
+  --el-bg-color-page: #141311 !important;
+  --el-bg-color-overlay: #252320 !important;
+
+  // Border
+  --el-border-color: #333230 !important;
+  --el-border-color-light: #2a2925 !important;
+  --el-border-color-lighter: #222120 !important;
+  --el-border-color-extra-light: #1c1b19 !important;
+
+  // Fill
+  --el-fill-color: #252320 !important;
+  --el-fill-color-light: #1f1e1b !important;
+  --el-fill-color-lighter: #1c1b19 !important;
+  --el-fill-color-extra-light: #181715 !important;
+  --el-fill-color-blank: #181715 !important;
+
+  // ---- Custom Design Tokens (Dark) ----
+  --bg-page: #141311;
+  --bg-card: #252320;
+  --bg-subtle: #1f1e1b;
+  --bg-muted: #333230;
+  --bg-surface-dark: #181715;
+
+  --text-ink: #faf9f5;
+  --text-body: #d4d2cc;
+  --text-body-strong: #ebe8e2;
+  --text-muted: #a09d96;
+  --text-muted-soft: #6c6a64;
+  --text-placeholder: #504e49;
+
+  // Backward compat aliases
+  --text-primary: #faf9f5;
+  --text-secondary: #a09d96;
+
+  --border-default: #333230;
+  --border-light: #2a2925;
+  --border-focus: #d99580;
+
+  // Gradients (adjusted for dark)
+  --gradient-primary: linear-gradient(135deg, #d99580 0%, #e3b0a0 100%);
+  --gradient-accent: linear-gradient(135deg, #e8b54a 0%, #d99580 100%);
+  --gradient-warm: linear-gradient(135deg, #e8b54a 0%, #d66565 100%);
+  --gradient-cool: linear-gradient(135deg, #6dc9b8 0%, #6dc982 100%);
+  --gradient-success: linear-gradient(135deg, #6dc982 0%, #5db872 100%);
+
+  // Glow
+  --glow-primary: 0 0 20px rgba(217, 149, 128, 0.4);
+  --glow-accent: 0 0 20px rgba(232, 181, 74, 0.4);
+
+  // On-color text
+  --color-on-primary: #ffffff;
+  --color-on-dark: #faf9f5;
+  --color-on-dark-soft: #a09d96;
+
+  // Surface dark tokens
+  --surface-dark: #181715;
+  --surface-dark-elevated: #252320;
+  --surface-dark-soft: #1f1e1b;
+}

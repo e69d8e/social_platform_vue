@@ -149,19 +149,10 @@ const formatTime = (timeStr) => {
 
 <style lang="scss" scoped>
 .conversations-page {
-  --conv-bg: var(--el-bg-color-page, #f0f2f5);
-  --conv-white: var(--el-bg-color, #ffffff);
-  --conv-border: var(--el-border-color-light, #e4e7ed);
-  --conv-text: var(--el-text-color-primary, #303133);
-  --conv-text-secondary: var(--el-text-color-secondary, #909399);
-  --conv-text-placeholder: var(--el-text-color-placeholder, #a8abb2);
-  --conv-primary: var(--el-color-primary, #409eff);
-  --conv-primary-lighter: var(--el-color-primary-light-7, #d9ecff);
-
   max-width: 640px;
   margin: 0 auto;
   min-height: 100vh;
-  background: var(--conv-bg);
+  background: var(--bg-page);
 }
 
 /* ---- 顶部栏 ---- */
@@ -169,9 +160,15 @@ const formatTime = (timeStr) => {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--conv-white);
-  border-bottom: 1px solid var(--conv-border);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  background: rgba(250, 249, 245, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-light);
+  box-shadow: var(--shadow-xs);
+
+  html.dark & {
+    background: rgba(24, 23, 21, 0.85);
+  }
 }
 
 .header-inner {
@@ -189,13 +186,13 @@ const formatTime = (timeStr) => {
   height: 36px;
   border-radius: 50%;
   cursor: pointer;
-  color: var(--conv-text);
-  transition: all 0.2s;
+  color: var(--text-primary);
+  transition: all $transition-base;
   flex-shrink: 0;
 
   &:hover {
-    background: var(--el-fill-color-light, #ebedf0);
-    color: var(--conv-primary);
+    background: var(--bg-subtle);
+    color: var(--el-color-primary);
   }
 }
 
@@ -203,13 +200,13 @@ const formatTime = (timeStr) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--conv-primary);
+  color: var(--el-color-primary);
 
   h2 {
     margin: 0;
     font-size: 20px;
     font-weight: 700;
-    color: var(--conv-text);
+    color: var(--text-primary);
   }
 }
 
@@ -228,21 +225,21 @@ const formatTime = (timeStr) => {
     width: 96px;
     height: 96px;
     border-radius: 50%;
-    background: var(--conv-primary-lighter);
-    color: var(--conv-primary);
+    background: var(--el-color-primary-light-7);
+    color: var(--el-color-primary);
     margin-bottom: 20px;
   }
 
   h3 {
     font-size: 18px;
     font-weight: 600;
-    color: var(--conv-text);
+    color: var(--text-primary);
     margin: 0 0 8px;
   }
 
   p {
     font-size: 14px;
-    color: var(--conv-text-placeholder);
+    color: var(--text-placeholder);
     margin: 0;
   }
 }
@@ -258,16 +255,16 @@ const formatTime = (timeStr) => {
   gap: 12px;
   padding: 14px 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all $transition-base;
   position: relative;
 
   &:hover {
-    background: var(--conv-white);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
   }
 
   &:active {
-    background: var(--el-fill-color-light, #ebedf0);
+    background: var(--bg-subtle);
   }
 }
 
@@ -282,8 +279,8 @@ const formatTime = (timeStr) => {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--el-color-danger, #f56c6c);
-    border: 2px solid var(--conv-bg);
+    background: var(--el-color-danger);
+    border: 2px solid var(--bg-page);
   }
 }
 
@@ -305,7 +302,7 @@ const formatTime = (timeStr) => {
 .conversation-name {
   font-size: 15px;
   font-weight: 600;
-  color: var(--conv-text);
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -313,7 +310,7 @@ const formatTime = (timeStr) => {
 
 .conversation-time {
   font-size: 12px;
-  color: var(--conv-text-placeholder);
+  color: var(--text-placeholder);
   flex-shrink: 0;
 }
 
@@ -326,7 +323,7 @@ const formatTime = (timeStr) => {
 
 .conversation-last {
   font-size: 13px;
-  color: var(--conv-text-secondary);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -342,6 +339,6 @@ const formatTime = (timeStr) => {
   gap: 8px;
   padding: 24px;
   font-size: 13px;
-  color: var(--conv-text-placeholder);
+  color: var(--text-placeholder);
 }
 </style>
