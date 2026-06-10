@@ -66,3 +66,9 @@ export const getPostIdApi = async () => {
   const res = await request.get("/post");
   return res;
 };
+
+// 记录帖子浏览量
+export const recordPostViewApi = async (id) => {
+  const res = await request.post("/post/view/" + id);
+  return res;
+};

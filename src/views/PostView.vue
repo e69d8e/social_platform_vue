@@ -1,6 +1,11 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { getPostDetailApi, likeApi, deletePostApi } from "@/api/postApi";
+import {
+  getPostDetailApi,
+  likeApi,
+  deletePostApi,
+  recordPostViewApi,
+} from "@/api/postApi";
 import { useRoute, useRouter } from "vue-router";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
@@ -48,6 +53,7 @@ const getPost = async (id) => {
 onMounted(async () => {
   await getPost(route.params.id);
   loading.value = false;
+  recordPostViewApi(route.params.id);
 });
 
 const likeLoading = ref(false);
