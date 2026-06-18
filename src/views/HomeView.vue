@@ -20,16 +20,22 @@ const posts = ref([]);
 onMounted(async () => {
   await getPosts();
   loading.value = false;
+  // 内容不满一屏时自动加载更多，直到填满或没有更多数据
+  while (!noMore.value && document.documentElement.scrollHeight <= window.innerHeight + 100) {
+    await getPosts();
+  }
 });
 
 const getPosts = async () => {
   const postList = await getIndexPostsApi(params.value);
   const list = postList.data.data.list;
-  posts.value = [...posts.value, ...list];
+  const existingIds = new Set(posts.value.map((p) => p.id));
+  const newPosts = list.filter((p) => !existingIds.has(p.id));
+  posts.value = [...posts.value, ...newPosts];
   params.value.lastId = postList.data.data.minTime;
   params.value.offset = postList.data.data.offset;
 
-  if (list.length === 0) {
+  if (list.length === 0 || newPosts.length === 0) {
     noMore.value = true;
   }
 };

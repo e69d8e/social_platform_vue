@@ -47,7 +47,7 @@ Layout-wrapped routes are children of `/` using `LayoutView`. Standalone routes 
 
 ### API Modules (`src/api/`)
 
-One file per domain: `userApi`, `postApi`, `commentApi`, `followApi`, `uploadApi`, `searchApi`, `adminApi`, `reviewerApi`, `aiApi`. All functions suffixed with `Api`.
+One file per domain: `userApi`, `postApi`, `commentApi`, `followApi`, `messageApi`, `uploadApi`, `searchApi`, `adminApi`, `reviewerApi`, `aiApi`. All functions suffixed with `Api`.
 
 ### Roles
 
