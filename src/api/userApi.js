@@ -25,7 +25,7 @@ export const getUserInfoApi = () => {
   });
 };
 
-export const layoutApi = () => {
+export const logoutApi = () => {
   return request({
     url: "/user/logout",
     method: "post",

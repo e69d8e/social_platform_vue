@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue";
 import { getBanPostsApi, searchBanPostsApi } from "@/api/reviewerApi";
 import PostCard from "@/components/PostCard.vue";
 import { ArrowLeft, Search } from "@element-plus/icons-vue";
-import { debounce } from "lodash";
+import { debounce } from "lodash-es";
 
 const postList = ref([]);
 const pageNum = ref(1);

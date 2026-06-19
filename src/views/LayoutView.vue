@@ -134,17 +134,38 @@ const fetchUnreadCount = async () => {
 
 let unreadTimer = null;
 
+const startUnreadPolling = () => {
+  stopUnreadPolling();
+  unreadTimer = setInterval(fetchUnreadCount, 30000);
+};
+
+const stopUnreadPolling = () => {
+  if (unreadTimer) {
+    clearInterval(unreadTimer);
+    unreadTimer = null;
+  }
+};
+
+const handleVisibilityChange = () => {
+  if (document.hidden) {
+    stopUnreadPolling();
+  } else if (userStore.userInfo.username) {
+    fetchUnreadCount();
+    startUnreadPolling();
+  }
+};
+
 onMounted(() => {
   if (userStore.userInfo.username) {
     fetchUnreadCount();
-    unreadTimer = setInterval(fetchUnreadCount, 30000);
+    startUnreadPolling();
   }
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 });
 
 onUnmounted(() => {
-  if (unreadTimer) {
-    clearInterval(unreadTimer);
-  }
+  stopUnreadPolling();
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
 });
 
 watch(

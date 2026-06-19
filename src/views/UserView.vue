@@ -5,7 +5,7 @@ import { getUserInfoByIdApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { banUserApi, setReviewerApi, setUserApi } from "@/api/adminApi";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
-import { throttle } from "lodash";
+import { throttle } from "lodash-es";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import formattedCount from "@/utils/formattedCount";
 import { ArrowLeft, Male, Female, Warning } from "@element-plus/icons-vue";

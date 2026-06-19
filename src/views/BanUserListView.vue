@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue";
 import { getBanUsersApi, searchBanUsersApi } from "@/api/adminApi";
 import UserCard from "@/components/UserCard.vue";
 import { ArrowLeft, Search } from "@element-plus/icons-vue";
-import { debounce } from "lodash";
+import { debounce } from "lodash-es";
 
 const usersList = ref([]);
 const pageNum = ref(1);

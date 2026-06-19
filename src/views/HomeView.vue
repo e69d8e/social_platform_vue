@@ -4,7 +4,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { getIndexPostsApi } from "@/api/postApi";
 import CategoryComponent from "@/components/CategoryComponent.vue";
 import { Loading } from "@element-plus/icons-vue";
-import { debounce } from "lodash";
+import { debounce } from "lodash-es";
 
 const timestamp = Date.parse(new Date());
 const params = ref({
@@ -18,24 +18,38 @@ const noMore = ref(false);
 const posts = ref([]);
 
 onMounted(async () => {
-  await getPosts();
-  loading.value = false;
-  // 内容不满一屏时自动加载更多，直到填满或没有更多数据
-  while (!noMore.value && document.documentElement.scrollHeight <= window.innerHeight + 100) {
+  try {
+    await getPosts();
+  } finally {
+    loading.value = false;
+  }
+  // 内容不满一屏时自动加载更多，最多重试 10 次防止死循环
+  let fillAttempts = 0;
+  while (
+    !noMore.value &&
+    fillAttempts < 10 &&
+    document.documentElement.scrollHeight <= window.innerHeight + 100
+  ) {
+    fillAttempts++;
     await getPosts();
   }
 });
 
 const getPosts = async () => {
-  const postList = await getIndexPostsApi(params.value);
-  const list = postList.data.data.list;
-  const existingIds = new Set(posts.value.map((p) => p.id));
-  const newPosts = list.filter((p) => !existingIds.has(p.id));
-  posts.value = [...posts.value, ...newPosts];
-  params.value.lastId = postList.data.data.minTime;
-  params.value.offset = postList.data.data.offset;
+  try {
+    const postList = await getIndexPostsApi(params.value);
+    const list = postList.data.data.list;
+    const existingIds = new Set(posts.value.map((p) => p.id));
+    const newPosts = list.filter((p) => !existingIds.has(p.id));
+    posts.value = [...posts.value, ...newPosts];
+    params.value.lastId = postList.data.data.minTime;
+    params.value.offset = postList.data.data.offset;
 
-  if (list.length === 0 || newPosts.length === 0) {
+    if (list.length === 0 || newPosts.length === 0) {
+      noMore.value = true;
+    }
+  } catch {
+    ElMessage.error("加载帖子失败");
     noMore.value = true;
   }
 };

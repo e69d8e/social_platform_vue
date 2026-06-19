@@ -252,7 +252,6 @@ const selectSession = async (sessionId) => {
     if (res.data.code === 1) {
       // 后端返回的是原始消息字符串格式
       rawMessages.value = JSON.parse(res.data.data) || [];
-      console.log("rawMessages.value", rawMessages.value);
 
       await scrollToBottom();
     }
@@ -283,12 +282,26 @@ const deleteSession = async (sessionId) => {
 const sendMessage = async () => {
   if (!inputMessage.value.trim() || isLoading.value) return;
 
-  if (!currentSessionId.value) {
-    await createNewSession();
-    return;
-  }
-
+  // 先保存用户输入，再清空输入框
   const userMessageContent = inputMessage.value;
+  inputMessage.value = "";
+
+  // 如果没有会话，先创建会话
+  if (!currentSessionId.value) {
+    try {
+      const res = await createSessionApi();
+      if (res.data.code === 1) {
+        currentSessionId.value = res.data.data;
+        await loadSessions();
+      } else {
+        ElMessage.error("创建会话失败");
+        return;
+      }
+    } catch {
+      ElMessage.error("创建会话失败");
+      return;
+    }
+  }
 
   // 添加用户消息到原始数据
   const userMsg = {
@@ -303,7 +316,6 @@ const sendMessage = async () => {
   };
   rawMessages.value.push(userMsg);
 
-  inputMessage.value = "";
   isLoading.value = true;
 
   try {
@@ -342,16 +354,12 @@ const sendMessage = async () => {
       const chunk = decoder.decode(value, { stream: true });
       aiResponse += chunk;
 
-      // 更新最后一条AI消息
-      const lastMessage = rawMessages.value[rawMessages.value.length - 1];
-      lastMessage.text = aiResponse;
-
-      // 触发响应式更新
-      rawMessages.value = [...rawMessages.value];
+      // 直接修改最后一条消息的 text，利用 Vue 响应性自动更新
+      rawMessages.value[rawMessages.value.length - 1].text = aiResponse;
     }
   } catch (error) {
     if (error.message !== "Unauthorized") {
-      console.error("发送消息失败:", error);
+      ElMessage.error("消息发送失败，请重试");
       rawMessages.value.push({
         type: "AI",
         text: "消息发送失败，请重试",

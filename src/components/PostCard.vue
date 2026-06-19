@@ -1,7 +1,7 @@
 <script setup>
 import { likeApi } from "@/api/postApi";
-import { ref } from "vue";
-import { throttle } from "lodash";
+import { ref, computed, watch } from "vue";
+import { throttle } from "lodash-es";
 import formattedCount from "@/utils/formattedCount";
 import { Star, View } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
@@ -20,6 +20,10 @@ const props = defineProps({
 const likeCount = ref(props.likeCount);
 const liked = ref(props.liked);
 
+// 同步 prop 变化到本地状态
+watch(() => props.liked, (val) => { liked.value = val; });
+watch(() => props.likeCount, (val) => { likeCount.value = val; });
+
 const handleLike = async () => {
   const oldLiked = liked.value;
   const oldCount = likeCount.value;
@@ -37,6 +41,7 @@ const handleLike = async () => {
 const like = throttle(handleLike, 800);
 
 const htmlToText = (html) => {
+  if (!html) return "";
   const formattedHtml = html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
@@ -46,6 +51,8 @@ const htmlToText = (html) => {
   const doc = parser.parseFromString(formattedHtml, "text/html");
   return doc.body.textContent?.trim() || "";
 };
+
+const textContent = computed(() => htmlToText(props.content));
 </script>
 
 <template>
@@ -76,7 +83,7 @@ const htmlToText = (html) => {
         <img :src="props.cover" />
       </div>
       <div v-else class="text-content">
-        {{ htmlToText(props.content) }}
+        {{ textContent }}
       </div>
     </el-card>
   </div>

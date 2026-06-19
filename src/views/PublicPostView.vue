@@ -114,7 +114,9 @@ const cleanupResources = async () => {
   if (id.value) {
     try {
       await deletePostImgApi(id.value);
-    } catch {}
+    } catch {
+      // 清理失败不影响页面退出
+    }
   }
   if (oldObjectUrl) {
     URL.revokeObjectURL(oldObjectUrl);
@@ -142,7 +144,9 @@ const handleBackClick = async () => {
         },
       );
       router.back();
-    } catch {}
+    } catch {
+      // 用户取消退出
+    }
   } else {
     router.back();
   }

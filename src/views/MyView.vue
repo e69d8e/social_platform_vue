@@ -4,7 +4,7 @@ import { ref, reactive, onMounted, computed } from "vue";
 import {
   updateUserInfoApi,
   updatePasswordApi,
-  layoutApi,
+  logoutApi,
   getUserInfoApi,
 } from "@/api/userApi";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
@@ -70,7 +70,7 @@ const submitForm = async (ref) => {
     if (valid) {
       if (file.value) {
         const newAvatar = await uploadAvatar(file.value);
-        if (newAvatar.data.code === 0) {
+        if (newAvatar.data.code !== 1) {
           ElMessage.error(newAvatar.data.message);
           loading.value = false;
           return;
@@ -78,7 +78,7 @@ const submitForm = async (ref) => {
         ruleForm.avatar = newAvatar.data.data;
       }
       const res = await updateUserInfoApi({ ...ruleForm });
-      if (!res || res.data.code === 0) {
+      if (!res || res.data.code !== 1) {
         loading.value = false;
         return;
       }
@@ -140,7 +140,7 @@ const changePassword = (formEl) => {
 };
 
 const logout = async () => {
-  const res = await layoutApi();
+  const res = await logoutApi();
   userStore.removeInfo();
   dialogVisible.value = false;
   ElMessage.success(res.data.message);

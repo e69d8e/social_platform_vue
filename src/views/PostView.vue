@@ -10,7 +10,8 @@ import { useRoute, useRouter } from "vue-router";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
-import { throttle } from "lodash";
+import { throttle } from "lodash-es";
+import DOMPurify from "dompurify";
 import CommentComponent from "@/components/CommentComponent.vue";
 import formattedCount from "@/utils/formattedCount";
 import {
@@ -46,8 +47,12 @@ const dialogVisible = ref(false);
 const loading = ref(true);
 
 const getPost = async (id) => {
-  const res = await getPostDetailApi(id);
-  post.value = res.data.data;
+  try {
+    const res = await getPostDetailApi(id);
+    post.value = res.data.data;
+  } catch {
+    ElMessage.error("加载帖子失败");
+  }
 };
 
 onMounted(async () => {
@@ -102,20 +107,29 @@ const toggleFollow = throttle(async () => {
 }, 800);
 
 const deletePost = async () => {
-  const res = await deletePostApi(post.value.id);
-  if (res.data.code === 1) ElMessage.success(res.data.message);
-  dialogVisible.value = false;
-  router.back();
+  try {
+    const res = await deletePostApi(post.value.id);
+    if (res.data.code === 1) ElMessage.success(res.data.message);
+    dialogVisible.value = false;
+    router.back();
+  } catch {
+    ElMessage.error("删除失败，请重试");
+  }
 };
 
 const banPost = async () => {
-  const res = await banPostApi(post.value.id);
-  if (res.data.code === 1) ElMessage.success(res.data.message);
-  router.back();
+  try {
+    const res = await banPostApi(post.value.id);
+    if (res.data.code === 1) ElMessage.success(res.data.message);
+    router.back();
+  } catch {
+    ElMessage.error("操作失败，请重试");
+  }
 };
 
 const likeCount = computed(() => formattedCount(post.value.likeCount));
 const viewCount = computed(() => formattedCount(post.value.viewCount));
+const sanitizedContent = computed(() => DOMPurify.sanitize(post.value.content));
 </script>
 
 <template>
@@ -190,7 +204,7 @@ const viewCount = computed(() => formattedCount(post.value.viewCount));
     </div>
 
     <div class="line"></div>
-    <div class="content" v-html="post.content"></div>
+    <div class="content" v-html="sanitizedContent"></div>
 
     <el-dialog v-model="dialogVisible" title="确认删除?" width="400" center>
       <template #footer>

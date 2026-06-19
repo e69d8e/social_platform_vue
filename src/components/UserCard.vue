@@ -1,7 +1,7 @@
 <script setup>
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
-import { ref, computed } from "vue";
-import { throttle } from "lodash";
+import { ref, computed, watch } from "vue";
+import { throttle } from "lodash-es";
 import { useUserStore } from "@/stores/user";
 import formattedCount from "@/utils/formattedCount";
 import { ElMessage } from "element-plus";
@@ -17,6 +17,9 @@ const props = defineProps({
 
 const followed = ref(props.followed);
 const userStore = useUserStore();
+
+// 同步 prop 变化到本地状态
+watch(() => props.followed, (val) => { followed.value = val; });
 const followLoading = ref(false);
 
 const toggleFollow = throttle(async () => {

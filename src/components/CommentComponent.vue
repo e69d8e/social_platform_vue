@@ -5,7 +5,7 @@ import { addCommentApi, getCommentApi } from "@/api/commentApi";
 import { useUserStore } from "@/stores/user";
 import { Delete } from "@element-plus/icons-vue";
 import { deleteCommentApi } from "@/api/reviewerApi";
-import { debounce } from "lodash";
+import { debounce } from "lodash-es";
 
 const userStore = useUserStore();
 const content = ref("");

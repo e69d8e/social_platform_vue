@@ -3,7 +3,7 @@ import PostCard from "@/components/PostCard.vue";
 import { ref, onMounted, onUnmounted } from "vue";
 import { getFollowPostsApi } from "@/api/postApi";
 import { ArrowLeft, Loading } from "@element-plus/icons-vue";
-import { debounce } from "lodash";
+import { debounce } from "lodash-es";
 
 const timestamp = Date.parse(new Date());
 const params = ref({ lastId: timestamp, offset: 0 });
