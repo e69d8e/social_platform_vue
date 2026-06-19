@@ -1,17 +1,11 @@
 import request from "@/utils/request";
+
 // 评论
-export const addCommentApi = async (data) => {
-  console.log(data);
-  const res = await request.post("/comment", {
-    ...data,
-  });
-  return res;
+export const addCommentApi = (data) => {
+  return request.post("/comment", { ...data });
 };
 
 // 获取评论
-export const getCommentApi = async (id, params) => {
-  const res = await request.get("/comment/" + id, {
-    params,
-  });
-  return res;
+export const getCommentApi = (id, params) => {
+  return request.get(`/comment/${id}`, { params });
 };

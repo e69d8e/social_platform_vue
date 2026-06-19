@@ -1,6 +1,6 @@
 <script setup>
 import { useRoute } from "vue-router";
-const logoUrl = "http://localhost:8080/imgs/logo.png";
+import { logoUrl } from "@/utils/request";
 import { loginApi, registerApi, getUserInfoApi, getSignInDaysApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { ref, reactive, watch } from "vue";
@@ -87,8 +87,8 @@ const submitForm = (formEl) => {
           ElMessage.success(res.data.message);
           isLogin.value = true;
         }
-      } catch (error) {
-        console.log(error);
+      } catch {
+        ElMessage.error("操作失败，请重试");
       } finally {
         loading.value = false;
       }

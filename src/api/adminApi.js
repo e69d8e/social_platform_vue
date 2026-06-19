@@ -1,44 +1,31 @@
 import request from "@/utils/request";
+
 // 封禁用户
-export const banUserApi = async (id) => {
-  const res = await request.put("/admin/ban/" + id);
-  return res;
+export const banUserApi = (id) => {
+  return request.put(`/admin/ban/${id}`);
 };
 
-// 封禁帖子
-
-// 将用户设为 审核
-export const setReviewerApi = async (id) => {
-  const res = await request.put("/admin/review/" + id);
-  return res;
+// 将用户设为审核员
+export const setReviewerApi = (id) => {
+  return request.put(`/admin/review/${id}`);
 };
 
 // 将用户设为普通用户
-export const setUserApi = async (id) => {
-  const res = await request.put("/admin/user/" + id);
-  return res;
+export const setUserApi = (id) => {
+  return request.put(`/admin/user/${id}`);
 };
 
 // 查询封禁用户
-export const getBanUsersApi = async (params) => {
-  const res = await request.get("/admin/ban", {
-    params,
-  });
-  return res;
+export const getBanUsersApi = (params) => {
+  return request.get("/admin/ban", { params });
 };
 
 // 搜索封禁用户
-export const searchBanUsersApi = async (params) => {
-  const res = await request.get("/admin/ban/search", {
-    params,
-  });
-  return res;
+export const searchBanUsersApi = (params) => {
+  return request.get("/admin/ban/search", { params });
 };
 
 // 数据面板
-export const getDashboardApi = async (params) => {
-  const res = await request.get("/admin/dashboard", {
-    params,
-  });
-  return res;
+export const getDashboardApi = (params) => {
+  return request.get("/admin/dashboard", { params });
 };

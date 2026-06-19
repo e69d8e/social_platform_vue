@@ -108,54 +108,10 @@ import {
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from "vue";
 import { ArrowLeft } from "@element-plus/icons-vue";
 import { baseURL, logoUrl } from "@/utils/request";
+import { authFetch } from "@/utils/authFetch";
 import { useUserStore } from "@/stores/user";
-import { router } from "@/main.js";
 
 const userStore = useUserStore();
-
-// 刷新 token（复用 request.js 的逻辑）
-async function refreshToken() {
-  const token = userStore.token?.refreshToken;
-  if (!token) throw new Error("No refresh token");
-
-  const res = await fetch(baseURL + "/user/refresh", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ refreshToken: token }),
-  });
-
-  const data = await res.json();
-  if (data.code !== 1) throw new Error("刷新令牌失败");
-
-  const { accessToken, refreshToken: newRefreshToken } = data.data;
-  userStore.setToken({ accessToken, refreshToken: newRefreshToken });
-  return accessToken;
-}
-
-function redirectLogin() {
-  userStore.removeToken();
-  userStore.removeInfo();
-  router.push("/login");
-}
-
-// 带 401 重试的 fetch
-async function fetchWithRetry(url, options, retry = true) {
-  const response = await fetch(url, options);
-
-  if (response.status === 401 && retry) {
-    try {
-      const newToken = await refreshToken();
-      options.headers.authorization = "Bearer " + newToken;
-      return fetchWithRetry(url, options, false);
-    } catch {
-      redirectLogin();
-      throw new Error("Unauthorized");
-    }
-  }
-
-  return response;
-}
 
 // 响应式数据
 const sessions = ref([]);
@@ -319,11 +275,10 @@ const sendMessage = async () => {
   isLoading.value = true;
 
   try {
-    const response = await fetchWithRetry(baseURL + "/chat", {
+    const response = await authFetch(baseURL + "/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        authorization: "Bearer " + userStore.token.accessToken,
       },
       credentials: "include",
       body: JSON.stringify({

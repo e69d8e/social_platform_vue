@@ -1,31 +1,25 @@
 import request from "@/utils/request";
+
 // 上传用户头像
-export const uploadAvatar = async (file) => {
+export const uploadAvatar = (file) => {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await request.post("/upload/avatar", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+  return request.post("/upload/avatar", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
-  return res;
 };
 
 // 上传帖子图片
-export const uploadPostImgApi = async (file, id) => {
+export const uploadPostImgApi = (file, id) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("postId", id);
-  const res = await request.post("/upload/post", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+  return request.post("/upload/post", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
-  return res;
 };
 
 // 删除帖子图片
-export const deletePostImgApi = async (id) => {
-  const res = await request.delete("/upload/delete/" + id);
-  return res;
+export const deletePostImgApi = (id) => {
+  return request.delete(`/upload/delete/${id}`);
 };

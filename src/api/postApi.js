@@ -1,74 +1,51 @@
 import request from "@/utils/request";
+
 // 首页帖子
-export const getIndexPostsApi = async (params) => {
-  const res = await request.get("/post/list", {
-    params,
-  });
-  return res;
+export const getIndexPostsApi = (params) => {
+  return request.get("/post/list", { params });
 };
 
 // 发帖
-// {
-//     "title": "好啊",
-//     "content": "666",
-//     "categoryId": 1,
-//     "images": [
-//         "http://127.0.0.1:8080/imgs/post/5/4/52827fe6-6a45-4a71-bd21-5bfe5d35d7ae.png"
-//     ]
-// }
-export const publicPostApi = async (data) => {
-  const res = await request.post("/post", data);
-  return res;
+export const publishPostApi = (data) => {
+  return request.post("/post", data);
 };
 
 // 获取帖子分类
-export const getPostCategoryApi = async () => {
-  const res = await request.get("/category");
-  return res;
+export const getPostCategoryApi = () => {
+  return request.get("/category");
 };
 
 // 根据用户id获取帖子
-export const getPostListApi = async (id, params) => {
-  const res = await request.get("/post/user/" + id, {
-    params,
-  });
-  return res;
+export const getPostListApi = (id, params) => {
+  return request.get(`/post/user/${id}`, { params });
 };
 
 // 点赞
-export const likeApi = async (id) => {
-  const res = await request.put("/like/" + id);
-  return res;
+export const likeApi = (id) => {
+  return request.put(`/like/${id}`);
 };
 
 // 获取帖子详情
-export const getPostDetailApi = async (id) => {
-  const res = await request.get("/post/" + id);
-  return res;
+export const getPostDetailApi = (id) => {
+  return request.get(`/post/${id}`);
 };
 
 // 我关注的帖子
-export const getFollowPostsApi = async (params) => {
-  const res = await request.get("/post/follow/list", {
-    params,
-  });
-  return res;
+export const getFollowPostsApi = (params) => {
+  return request.get("/post/follow/list", { params });
 };
 
 // 删除帖子
-export const deletePostApi = async (id) => {
-  const res = await request.delete("/post/" + id);
-  return res;
+export const deletePostApi = (id) => {
+  return request.delete(`/post/${id}`);
 };
 
-// 获取帖子id
-export const getPostIdApi = async () => {
-  const res = await request.get("/post");
-  return res;
+// 获取新帖子ID
+export const getPostIdApi = () => {
+  return request.get("/post");
 };
 
 // 记录帖子浏览量
-export const recordPostViewApi = async (id) => {
-  const res = await request.post("/post/view/" + id);
-  return res;
+export const recordPostViewApi = (id) => {
+  return request.post(`/post/view/${id}`);
 };

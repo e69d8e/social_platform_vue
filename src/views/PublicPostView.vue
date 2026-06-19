@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, shallowRef, onBeforeUnmount } from "vue";
-import { getPostCategoryApi, getPostIdApi, publicPostApi } from "@/api/postApi";
+import { getPostCategoryApi, getPostIdApi, publishPostApi } from "@/api/postApi";
 import { deletePostImgApi, uploadPostImgApi } from "@/api/uploadApi";
 import { useRouter } from "vue-router";
 import "@wangeditor/editor/dist/css/style.css";
@@ -50,7 +50,7 @@ const publicPost = async () => {
     url = await uploadPostImgApi(file.value, id.value);
   }
   loading.value = true;
-  const res = await publicPostApi({
+  const res = await publishPostApi({
     id: id.value,
     cover: url ? url.data.data : null,
     title: title.value,

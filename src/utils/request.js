@@ -3,7 +3,7 @@ import { router } from "@/main.js";
 import { useUserStore } from "@/stores/user";
 import { ElMessage } from "element-plus";
 
-const BASE_URL = "http://127.0.0.1:8080/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const request = axios.create({
   baseURL: BASE_URL,
@@ -105,4 +105,4 @@ request.interceptors.response.use(
 
 export default request;
 export const baseURL = BASE_URL;
-export const logoUrl = "http://127.0.0.1:8080/imgs/logo.png";
+export const logoUrl = `${import.meta.env.VITE_BASE_URL}/imgs/logo.png`;

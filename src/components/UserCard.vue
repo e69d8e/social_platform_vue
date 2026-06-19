@@ -4,11 +4,12 @@ import { ref, computed, watch } from "vue";
 import { throttle } from "lodash-es";
 import { useUserStore } from "@/stores/user";
 import formattedCount from "@/utils/formattedCount";
+import { baseURL } from "@/utils/request";
 import { ElMessage } from "element-plus";
 
 const props = defineProps({
   id: { type: String, default: "" },
-  avatar: { type: String, default: "http://127.0.0.1:8080/imgs/avatar/default.jpg" },
+  avatar: { type: String, default: `${baseURL.replace("/api", "")}/imgs/avatar/default.jpg` },
   nickname: { type: String, default: "用户名" },
   bio: { type: String, default: "个性签名" },
   followed: { type: Boolean, default: false },

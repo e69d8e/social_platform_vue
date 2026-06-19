@@ -1,51 +1,36 @@
 import request from "@/utils/request";
+
 // 获取关注列表
-export const getFollowListApi = async (params) => {
-  const res = await request.get("/follow/followee", {
-    params,
-  });
-  return res;
+export const getFollowListApi = (params) => {
+  return request.get("/follow/followee", { params });
 };
 
 // 获取粉丝列表
-export const getFollowerListApi = async (params) => {
-  const res = await request.get("/follow/list", {
-    params,
-  });
-  return res;
+export const getFollowerListApi = (params) => {
+  return request.get("/follow/list", { params });
 };
 
 // 关注用户
-export const followUserApi = async (id) => {
-  const res = await request.post("/follow/" + id);
-  return res;
+export const followUserApi = (id) => {
+  return request.post(`/follow/${id}`);
 };
 
 // 取消关注用户
-export const unfollowUserApi = async (id) => {
-  const res = await request.delete("/follow/" + id);
-  return res;
+export const unfollowUserApi = (id) => {
+  return request.delete(`/follow/${id}`);
 };
 
 // 获取用户关注列表
-export const getUserFollowListApi = async (params, id) => {
-  const res = await request.get("/follow/list/followee/" + id, {
-    params,
-  });
-  return res;
+export const getUserFollowListApi = (params, id) => {
+  return request.get(`/follow/list/followee/${id}`, { params });
 };
 
 // 获取用户粉丝列表
-export const getUserFollowerListApi = async (params, id) => {
-  const res = await request.get("/follow/list/" + id, {
-    params,
-  });
-  return res;
+export const getUserFollowerListApi = (params, id) => {
+  return request.get(`/follow/list/${id}`, { params });
 };
 
-export const getFriendListApi = async (params) => {
-  const res = await request.get("/follow/friend", {
-    params,
-  });
-  return res;
+// 获取好友列表
+export const getFriendListApi = (params) => {
+  return request.get("/follow/friend", { params });
 };

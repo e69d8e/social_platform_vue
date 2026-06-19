@@ -1,28 +1,21 @@
 import request from "@/utils/request";
+
 // 封禁帖子
-export const banPostApi = async (id) => {
-  const res = await request.put("/reviewer/post/" + id);
-  return res;
+export const banPostApi = (id) => {
+  return request.put(`/reviewer/post/${id}`);
 };
 
 // 查询封禁的帖子
-export const getBanPostsApi = async (params) => {
-  const res = await request.get("/reviewer/post/ban", {
-    params,
-  });
-  return res;
+export const getBanPostsApi = (params) => {
+  return request.get("/reviewer/post/ban", { params });
 };
 
 // 搜索封禁帖子
-export const searchBanPostsApi = async (params) => {
-  const res = await request.get("/reviewer/post/ban/search", {
-    params,
-  });
-  return res;
+export const searchBanPostsApi = (params) => {
+  return request.get("/reviewer/post/ban/search", { params });
 };
 
 // 删除评论
-export const deleteCommentApi = async (postId, id) => {
-  const res = await request.delete("/reviewer/comment/" + postId + "/" + id);
-  return res;
+export const deleteCommentApi = (postId, id) => {
+  return request.delete(`/reviewer/comment/${postId}/${id}`);
 };

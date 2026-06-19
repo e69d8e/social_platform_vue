@@ -87,35 +87,43 @@ const clearReply = () => {
   replyContext.value = { parentId: 0, replyUserId: null, replyUserName: "" };
 };
 
+const resetComments = async () => {
+  lastId.value = "";
+  offset.value = 0;
+  noMore.value = false;
+  comments.value = [];
+  await getComments();
+};
+
 const submitComment = async () => {
   if (!content.value.trim()) { ElMessage.warning("评论不能为空"); return; }
-  const res = await addCommentApi({
-    postId: props.postId,
-    content: content.value,
-    parentId: replyContext.value.parentId,
-    replyTo: replyContext.value.replyUserId,
-  });
-  if (res.data.code === 1) {
-    ElMessage.success("评论成功");
-    lastId.value = null;
-    offset.value = 0;
-    noMore.value = false;
-    comments.value = [];
-    await getComments();
+  try {
+    const res = await addCommentApi({
+      postId: props.postId,
+      content: content.value,
+      parentId: replyContext.value.parentId,
+      replyTo: replyContext.value.replyUserId,
+    });
+    if (res.data.code === 1) {
+      ElMessage.success("评论成功");
+      await resetComments();
+    }
+  } catch {
+    ElMessage.error("评论失败，请重试");
   }
   content.value = "";
   clearReply();
 };
 
 const deleteComment = async (id) => {
-  const res = await deleteCommentApi(props.postId, id);
-  if (res.data.code === 1) {
-    ElMessage.success("删除成功");
-    lastId.value = null;
-    offset.value = 0;
-    noMore.value = false;
-    comments.value = [];
-    await getComments();
+  try {
+    const res = await deleteCommentApi(props.postId, id);
+    if (res.data.code === 1) {
+      ElMessage.success("删除成功");
+      await resetComments();
+    }
+  } catch {
+    ElMessage.error("删除失败，请重试");
   }
 };
 </script>

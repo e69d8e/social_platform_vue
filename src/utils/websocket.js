@@ -27,7 +27,7 @@ export function connect(onMessage) {
 
   messageCallback = onMessage;
   const userStore = useUserStore();
-  const socket = new SockJS("http://127.0.0.1:8081/ws");
+  const socket = new SockJS(import.meta.env.VITE_WS_URL);
   stompClient = Stomp.over(socket);
   stompClient.debug = null;
 
