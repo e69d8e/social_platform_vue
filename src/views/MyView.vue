@@ -141,6 +141,7 @@ const changePassword = (formEl) => {
 
 const logout = async () => {
   const res = await logoutApi();
+  if (res.data.code !== 1) return;
   userStore.removeInfo();
   dialogVisible.value = false;
   ElMessage.success(res.data.message);

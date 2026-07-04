@@ -84,6 +84,7 @@ const submitForm = (formEl) => {
           router.push("/");
         } else {
           const res = await registerApi(ruleForm.value);
+          if (res.data.code !== 1) { loading.value = false; return; }
           ElMessage.success(res.data.message);
           isLogin.value = true;
         }

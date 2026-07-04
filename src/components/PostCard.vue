@@ -31,6 +31,7 @@ const handleLike = async () => {
   likeCount.value += liked.value ? 1 : -1;
   try {
     const res = await likeApi(props.id);
+    if (res.data.code !== 1) throw new Error("操作失败");
     ElMessage.success(res.data.message);
   } catch {
     liked.value = oldLiked;

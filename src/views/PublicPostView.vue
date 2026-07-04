@@ -59,6 +59,7 @@ const publicPost = async () => {
   });
   dialogConfirmVisible.value = false;
   loading.value = false;
+  if (res.data.code !== 1) return;
   ElMessage.success(res.data.message);
   isPublished.value = true;
   router.back();
