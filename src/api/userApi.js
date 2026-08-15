@@ -1,11 +1,11 @@
 import request from "@/utils/request";
 
-export const loginApi = (username, password) => {
-  return request.post("/user/login", { username, password });
+export const loginApi = (username, password, verifyToken) => {
+  return request.post("/user/login", { username, password, verifyToken });
 };
 
-export const registerApi = (data) => {
-  return request.post("/user/register", data);
+export const registerApi = (data, verifyToken) => {
+  return request.post("/user/register", { ...data, verifyToken });
 };
 
 export const getUserInfoApi = () => {

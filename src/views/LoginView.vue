@@ -2,10 +2,14 @@
 import { useRoute } from "vue-router";
 import { logoUrl } from "@/utils/request";
 import { loginApi, registerApi, getUserInfoApi, getSignInDaysApi } from "@/api/userApi";
+import { getSlideCaptchaApi, verifySlideCaptchaApi } from "@/api/captchaApi";
 import { useUserStore } from "@/stores/user";
-import { ref, reactive, watch } from "vue";
+import { ref, reactive, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
+import { Loading } from "@element-plus/icons-vue";
+import SlideVerify from "vue3-slide-verify";
+import "vue3-slide-verify/dist/style.css";
 // import { ElMessage } from "element-plus";
 
 const router = useRouter();
@@ -21,6 +25,12 @@ const loading = ref(false);
 const userStore = useUserStore();
 const isCheck = ref(false);
 const isLogin = ref(true);
+const slideVerified = ref(false);
+const slideCaptchaId = ref("");
+const slideOffset = ref(0);
+const verifyToken = ref("");
+const captchaLoading = ref(false);
+const captchaError = ref(false);
 
 watch(
   () => route.query.checked,
@@ -60,6 +70,62 @@ const rules = reactive({
   confirmPassword: [{ validator: validateConfirmPassword, trigger: "blur" }],
 });
 
+const loadSlideCaptcha = async () => {
+  slideVerified.value = false;
+  verifyToken.value = "";
+  captchaLoading.value = true;
+  captchaError.value = false;
+  try {
+    const res = await getSlideCaptchaApi();
+    if (res.data.code !== 1) {
+      captchaError.value = true;
+      ElMessage.error(res.data.message || "验证码加载失败");
+      return;
+    }
+    slideCaptchaId.value = res.data.data.captchaId;
+    slideOffset.value = res.data.data.offset;
+  } catch {
+    captchaError.value = true;
+    ElMessage.error("验证码加载失败，请重试");
+  } finally {
+    captchaLoading.value = false;
+  }
+};
+
+const onSlideSuccess = async (detail) => {
+  try {
+    const res = await verifySlideCaptchaApi(slideCaptchaId.value, detail.left, detail.timestamp);
+    if (res.data.code !== 1) {
+      slideVerified.value = false;
+      ElMessage.error(res.data.message || "验证失败");
+      loadSlideCaptcha();
+      return;
+    }
+    verifyToken.value = res.data.data.verifyToken;
+    slideVerified.value = true;
+  } catch {
+    slideVerified.value = false;
+    loadSlideCaptcha();
+  }
+};
+const onSlideFail = () => {
+  slideVerified.value = false;
+  verifyToken.value = "";
+};
+const onSlideAgain = () => {
+  slideVerified.value = false;
+  verifyToken.value = "";
+  loadSlideCaptcha();
+};
+const onSlideRefresh = () => {
+  loadSlideCaptcha();
+};
+const resetSlideVerify = () => {
+  loadSlideCaptcha();
+};
+
+onMounted(loadSlideCaptcha);
+
 const submitForm = (formEl) => {
   if (!formEl) return;
   formEl.validate(async (valid) => {
@@ -68,13 +134,17 @@ const submitForm = (formEl) => {
         ElMessage.error("请勾选用户协议");
         return;
       }
+      if (!slideVerified.value) {
+        ElMessage.error("请完成滑块验证");
+        return;
+      }
       try {
         ruleForm.value.username = ruleForm.value.username.trim();
         ruleForm.value.password = ruleForm.value.password.trim();
         loading.value = true;
         if (isLogin.value) {
-          const res = await loginApi(ruleForm.value.username, ruleForm.value.password);
-          if (res.data.code !== 1) { loading.value = false; return; }
+          const res = await loginApi(ruleForm.value.username, ruleForm.value.password, verifyToken.value);
+          if (res.data.code !== 1) { loading.value = false; resetSlideVerify(); return; }
           userStore.setToken(res.data.data);
           ElMessage.success(res.data.message);
           const userInfo = await getUserInfoApi();
@@ -83,10 +153,11 @@ const submitForm = (formEl) => {
           signStore.setSignDay(data.data.data);
           router.push("/");
         } else {
-          const res = await registerApi(ruleForm.value);
-          if (res.data.code !== 1) { loading.value = false; return; }
+          const res = await registerApi(ruleForm.value, verifyToken.value);
+          if (res.data.code !== 1) { loading.value = false; resetSlideVerify(); return; }
           ElMessage.success(res.data.message);
           isLogin.value = true;
+          resetSlideVerify();
         }
       } catch {
         ElMessage.error("操作失败，请重试");
@@ -103,11 +174,13 @@ const toLogin = () => {
   isLogin.value = true;
   isCheck.value = false;
   ruleForm.value = { username: "", password: "", confirmPassword: "" };
+  loadSlideCaptcha();
 };
 const toRegister = () => {
   isLogin.value = false;
   isCheck.value = false;
   ruleForm.value = { username: "", password: "", confirmPassword: "" };
+  loadSlideCaptcha();
 };
 const resetForm = (formEl) => {
   if (!formEl) return;
@@ -141,6 +214,28 @@ const resetForm = (formEl) => {
         <el-form-item label="确认密码" prop="confirmPassword" v-if="!isLogin">
           <el-input v-model="ruleForm.confirmPassword" type="password" autocomplete="off" placeholder="请再次输入密码" show-password />
         </el-form-item>
+
+        <div class="slide-verify-wrapper">
+          <div v-if="captchaLoading" class="slide-verify-tip">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span>验证码加载中…</span>
+          </div>
+          <div v-else-if="captchaError || !slideCaptchaId" class="slide-verify-tip">
+            <span>验证码加载失败</span>
+            <el-button link type="primary" @click="loadSlideCaptcha">点击重试</el-button>
+          </div>
+          <SlideVerify
+            v-else
+            :key="slideCaptchaId"
+            :offset="slideOffset"
+            slider-text="向右滑动完成验证"
+            :accuracy="3"
+            @success="onSlideSuccess"
+            @fail="onSlideFail"
+            @again="onSlideAgain"
+            @refresh="onSlideRefresh"
+          />
+        </div>
 
         <div class="switch-link">
           <template v-if="isLogin">
@@ -223,6 +318,44 @@ const resetForm = (formEl) => {
   }
 
   .form {
+    .slide-verify-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 210px;
+      margin-bottom: 16px;
+
+      .slide-verify-tip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--text-secondary);
+
+        .el-icon.is-loading {
+          font-size: 18px;
+        }
+      }
+
+      :deep(.slider-verify-loading) {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-card);
+        border-radius: 4px;
+        z-index: 999;
+
+        &::after {
+          content: "验证码图片加载中…";
+          font-size: 12px;
+          color: var(--text-secondary);
+        }
+      }
+    }
+
     .switch-link {
       text-align: right;
       font-size: 14px;

@@ -1,47 +1,20 @@
 <script setup>
-import { followUserApi, unfollowUserApi } from "@/api/followApi";
-import { ref, computed, watch } from "vue";
-import { throttle } from "lodash-es";
-import { useUserStore } from "@/stores/user";
+import { computed } from "vue";
+import FollowButton from "@/components/FollowButton.vue";
 import formattedCount from "@/utils/formattedCount";
 import { baseURL } from "@/utils/request";
-import { ElMessage } from "element-plus";
 
 const props = defineProps({
   id: { type: String, default: "" },
-  avatar: { type: String, default: `${baseURL.replace("/api", "")}/imgs/avatar/default.jpg` },
+  avatar: {
+    type: String,
+    default: `${baseURL.replace("/api", "")}/imgs/avatar/default.jpg`,
+  },
   nickname: { type: String, default: "用户名" },
   bio: { type: String, default: "个性签名" },
   followed: { type: Boolean, default: false },
   count: { type: Number, default: 0 },
 });
-
-const followed = ref(props.followed);
-const userStore = useUserStore();
-
-// 同步 prop 变化到本地状态
-watch(() => props.followed, (val) => { followed.value = val; });
-const followLoading = ref(false);
-
-const toggleFollow = throttle(async () => {
-  if (userStore.userInfo.id === props.id) {
-    ElMessage.warning("不能关注自己");
-    return;
-  }
-  if (followLoading.value) return;
-  followLoading.value = true;
-  const oldFollowed = followed.value;
-  followed.value = !followed.value;
-  try {
-    const res = followed.value ? await followUserApi(props.id) : await unfollowUserApi(props.id);
-    if (res.data.code !== 1) throw new Error();
-    ElMessage.success(res.data.message);
-  } catch {
-    followed.value = oldFollowed;
-  } finally {
-    followLoading.value = false;
-  }
-}, 800);
 
 const fansCount = computed(() => formattedCount(props.count));
 </script>
@@ -51,19 +24,21 @@ const fansCount = computed(() => formattedCount(props.count));
     <el-card shadow="hover" class="card">
       <template #header>
         <div class="card-header">
-          <el-avatar :size="44" :src="props.avatar" class="pointer" @click="$router.push(`/user/${props.id}`)" />
+          <el-avatar
+            :size="44"
+            :src="props.avatar"
+            class="pointer"
+            @click="$router.push(`/user/${props.id}`)"
+          />
           <div class="user-info" @click="$router.push(`/user/${props.id}`)">
             <span class="nickname">{{ props.nickname }}</span>
             <span class="fans-count">{{ fansCount }} 粉</span>
           </div>
-          <el-button
-            @click.stop="toggleFollow"
-            :type="followed ? 'default' : 'primary'"
+          <FollowButton
+            :user-id="props.id"
+            :followed="props.followed"
             size="small"
-            class="follow-btn"
-          >
-            {{ followed ? '已关注' : '关注' }}
-          </el-button>
+          />
         </div>
       </template>
       <div class="bio pointer" @click="$router.push(`/user/${props.id}`)">
@@ -133,11 +108,6 @@ const fansCount = computed(() => formattedCount(props.count));
     font-size: 12px;
     color: var(--el-color-primary);
     font-weight: 500;
-  }
-
-  .follow-btn {
-    flex-shrink: 0;
-    border-radius: $radius-full;
   }
 
   .bio {

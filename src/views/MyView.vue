@@ -1,61 +1,64 @@
 <script setup>
+import { ref, reactive, onMounted, onUnmounted, computed } from "vue";
+import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
-import { ref, reactive, onMounted, computed } from "vue";
 import {
   updateUserInfoApi,
   updatePasswordApi,
   logoutApi,
   getUserInfoApi,
 } from "@/api/userApi";
-import AuthorityComponent from "@/components/AuthorityComponent.vue";
-import { useRouter } from "vue-router";
-import formattedCount from "@/utils/formattedCount";
-// import { ElMessage } from "element-plus";
 import { uploadAvatar } from "@/api/uploadApi";
-import { ArrowLeft, Male, Female, Plus } from "@element-plus/icons-vue";
+import AuthorityComponent from "@/components/AuthorityComponent.vue";
+import PageHeader from "@/components/PageHeader.vue";
+import formattedCount from "@/utils/formattedCount";
+import { Male, Female, Plus } from "@element-plus/icons-vue";
 
 const router = useRouter();
 const userStore = useUserStore();
-const userInfo = userStore.userInfo;
-const imageUrl = ref(userInfo.avatar);
-const dialogFormVisible = ref(false);
-const dialogVisible = ref(false);
+
+// 始终跟随 store，避免 setInfo 整体替换后本地引用失效
+const userInfo = computed(() => userStore.userInfo);
+
+const imageUrl = ref(userStore.userInfo.avatar || "");
+const previewUrl = ref("");
+const file = ref(null);
 const loading = ref(false);
-const file = ref();
+const initLoading = ref(true);
+
 const ruleFormRef = ref();
 const passwordFormRef = ref();
+const dialogFormVisible = ref(false);
+const dialogVisible = ref(false);
 
-const ruleForm = reactive({ oldAvatar: userInfo.avatar, ...userInfo });
+const ruleForm = reactive({ ...userStore.userInfo });
 
 const getUserInfo = async () => {
   const res = await getUserInfoApi();
-  Object.assign(ruleForm, res.data.data);
-  userStore.setInfo(res.data.data);
+  const data = res.data.data;
+  Object.assign(ruleForm, data);
+  userStore.setInfo(data);
+  imageUrl.value = data.avatar || "";
 };
 
-const initLoading = ref(true);
 onMounted(async () => {
-  await getUserInfo();
-  initLoading.value = false;
+  try {
+    await getUserInfo();
+  } finally {
+    initLoading.value = false;
+  }
 });
 
-const beforeAvatarUpload = (rawFile) => {
-  if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
-    ElMessage.error("图像格式应为 jpeg/png");
-    return false;
-  } else if (rawFile.size / 1024 / 1024 > 2) {
-    ElMessage.error("头像大小不能超过 2MB");
-    return false;
-  }
-  return true;
-};
+onUnmounted(() => {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+});
 
 const rules = reactive({
   nickname: [
     {
       validator: (rule, value, callback) => {
-        if (value.length < 2 || value.length > 16)
-          callback(new Error("用户名长度不能小于 2 或大于 16 "));
+        if (!value || value.length < 2 || value.length > 16)
+          callback(new Error("用户名长度不能小于 2 或大于 16"));
         else callback();
       },
       trigger: "blur",
@@ -64,30 +67,64 @@ const rules = reactive({
   gender: [{ required: true, message: "请选择性别", trigger: "blur" }],
 });
 
-const submitForm = async (ref) => {
-  await ref.validate(async (valid) => {
-    loading.value = true;
-    if (valid) {
-      if (file.value) {
-        const newAvatar = await uploadAvatar(file.value);
-        if (newAvatar.data.code !== 1) {
-          ElMessage.error(newAvatar.data.message);
-          loading.value = false;
-          return;
-        }
-        ruleForm.avatar = newAvatar.data.data;
-      }
-      const res = await updateUserInfoApi({ ...ruleForm });
-      if (!res || res.data.code !== 1) {
-        loading.value = false;
-        return;
-      }
-      ElMessage.success(res.data.message);
-    } else {
-      ElMessage.error("请填写正确的信息");
+const beforeAvatarUpload = (rawFile) => {
+  if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
+    ElMessage.error("图像格式应为 jpeg/png");
+    return false;
+  }
+  if (rawFile.size / 1024 / 1024 > 2) {
+    ElMessage.error("头像大小不能超过 2MB");
+    return false;
+  }
+  return true;
+};
+
+const handleAvatarChange = (uploadFile) => {
+  const raw = uploadFile.raw;
+  if (!raw) return;
+
+  // auto-upload=false 时 before-upload 不一定触发，这里兜底校验
+  if (!["image/jpeg", "image/png"].includes(raw.type)) {
+    ElMessage.error("图像格式应为 jpeg/png");
+    return;
+  }
+  if (raw.size / 1024 / 1024 > 2) {
+    ElMessage.error("头像大小不能超过 2MB");
+    return;
+  }
+
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+  previewUrl.value = URL.createObjectURL(raw);
+  imageUrl.value = previewUrl.value;
+  file.value = raw;
+};
+
+const submitForm = async (formEl) => {
+  if (!formEl) return;
+  try {
+    await formEl.validate();
+  } catch {
+    ElMessage.error("请填写正确的信息");
+    return;
+  }
+
+  loading.value = true;
+  try {
+    if (file.value) {
+      const res = await uploadAvatar(file.value);
+      if (res.data.code !== 1) return;
+      ruleForm.avatar = res.data.data;
+      imageUrl.value = res.data.data;
     }
+    const res = await updateUserInfoApi({ ...ruleForm });
+    if (res.data.code !== 1) return;
+    // 同步 store，让全局头像/昵称即时更新
+    userStore.setInfo({ ...userStore.userInfo, ...ruleForm });
+    file.value = null;
+    ElMessage.success(res.data.message || "修改成功");
+  } finally {
     loading.value = false;
-  });
+  }
 };
 
 const passwordForm = ref({ password: "", confirmPassword: "" });
@@ -95,9 +132,9 @@ const passwordRules = reactive({
   password: [
     {
       validator: (rule, value, callback) => {
-        if (value === "") return callback(new Error("密码不能为空"));
+        if (!value) return callback(new Error("密码不能为空"));
         if (value.length < 6 || value.length > 16)
-          callback(new Error("密码应该为6-16位字符"));
+          callback(new Error("密码应该为 6-16 位字符"));
         else callback();
       },
       trigger: "blur",
@@ -106,7 +143,7 @@ const passwordRules = reactive({
   confirmPassword: [
     {
       validator: (rule, value, callback) => {
-        if (value === "") return callback(new Error("请输入确认密码"));
+        if (!value) return callback(new Error("请输入确认密码"));
         if (value !== passwordForm.value.password)
           callback(new Error("两次输入的密码不一致"));
         else callback();
@@ -116,52 +153,47 @@ const passwordRules = reactive({
   ],
 });
 
-const changePassword = (formEl) => {
+const changePassword = async (formEl) => {
   if (!formEl) return;
-  formEl.validate(async (valid) => {
-    if (valid) {
-      loading.value = true;
-      try {
-        const res = await updatePasswordApi(passwordForm.value.password);
-        passwordForm.value = { password: "", confirmPassword: "" };
-        if (res.data.code !== 1) {
-          loading.value = false;
-          return;
-        }
-        ElMessage.success(res.data.message);
-      } finally {
-        loading.value = false;
-        dialogFormVisible.value = false;
-      }
-    } else {
-      ElMessage.error("请检查输入");
+  try {
+    await formEl.validate();
+  } catch {
+    ElMessage.error("请检查输入");
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const res = await updatePasswordApi(passwordForm.value.password);
+    if (res.data.code === 1) {
+      ElMessage.success(res.data.message || "修改成功");
+      dialogFormVisible.value = false;
+      passwordForm.value = { password: "", confirmPassword: "" };
     }
-  });
+  } finally {
+    loading.value = false;
+  }
 };
 
 const logout = async () => {
-  const res = await logoutApi();
-  if (res.data.code !== 1) return;
-  userStore.removeInfo();
-  dialogVisible.value = false;
-  ElMessage.success(res.data.message);
-  router.push("/login");
+  try {
+    const res = await logoutApi();
+    if (res.data.code !== 1) return;
+    userStore.removeInfo();
+    dialogVisible.value = false;
+    ElMessage.success(res.data.message || "已注销");
+    router.push("/login");
+  } catch {
+    // 错误提示已由请求拦截器统一处理
+  }
 };
 
-const handleAvatarChange = (uploadFile) => {
-  imageUrl.value = URL.createObjectURL(uploadFile.raw);
-  file.value = uploadFile.raw;
-};
-
-const fansCount = computed(() => formattedCount(userInfo.fansCount));
+const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 </script>
 
 <template>
   <div class="my-page" v-loading="initLoading">
-    <div class="back" @click="$router.back()">
-      <el-icon size="18"><ArrowLeft /></el-icon>
-      <span>返回</span>
-    </div>
+    <PageHeader title="个人中心" large />
 
     <div class="profile-card">
       <el-upload
@@ -172,47 +204,38 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
         :on-change="handleAvatarChange"
         :before-upload="beforeAvatarUpload"
       >
-        <img v-if="imageUrl" :src="imageUrl" class="avatar" />
+        <img v-if="imageUrl" :src="imageUrl" class="avatar" alt="头像" />
         <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
       </el-upload>
 
       <div class="user-meta">
-        <div class="meta-item">
-          <span class="meta-label">昵称</span>
-          <h3 class="nickname">{{ userInfo.nickname }}</h3>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">账号</span>
-          <el-text
-            :type="
-              userInfo.authorityId === 3
-                ? 'primary'
-                : userInfo.authorityId === 2
-                  ? 'danger'
-                  : 'success'
-            "
-            size="small"
-          >
-            @{{ userInfo.username }}
-          </el-text>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">角色</span>
-          <AuthorityComponent :authority-id="userInfo.authorityId" />
-        </div>
+        <h3 class="nickname">{{ userInfo.nickname || "未设置昵称" }}</h3>
+        <el-text
+          :type="
+            userInfo.authorityId === 3
+              ? 'primary'
+              : userInfo.authorityId === 2
+                ? 'danger'
+                : 'success'
+          "
+          size="small"
+        >
+          @{{ userInfo.username }}
+        </el-text>
+        <AuthorityComponent :authority-id="userInfo.authorityId" />
       </div>
 
       <div class="stat-buttons">
         <el-button
           size="small"
-          @click="$router.push('/fans/' + userStore.userInfo.id)"
+          @click="$router.push('/fans/' + userInfo.id)"
           type="primary"
           plain
-          >{{ fansCount }} 粉</el-button
+          >{{ fansCount }} 粉丝</el-button
         >
         <el-button
           size="small"
-          @click="$router.push('/follow/' + userStore.userInfo.id)"
+          @click="$router.push('/follow/' + userInfo.id)"
           type="primary"
           plain
           >我的关注</el-button
@@ -254,7 +277,11 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
         <el-button size="small" @click="dialogFormVisible = true"
           >修改密码</el-button
         >
-        <el-button size="small" type="danger" @click="dialogVisible = true"
+        <el-button
+          size="small"
+          type="danger"
+          :loading="loading"
+          @click="dialogVisible = true"
           >注销</el-button
         >
       </div>
@@ -270,7 +297,7 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
         label-position="top"
       >
         <el-form-item label="昵称" prop="nickname">
-          <el-input v-model="ruleForm.nickname" />
+          <el-input v-model="ruleForm.nickname" maxlength="16" show-word-limit />
         </el-form-item>
         <el-form-item label="性别" prop="gender">
           <el-radio-group v-model="ruleForm.gender">
@@ -296,7 +323,13 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
           </el-radio-group>
         </el-form-item>
         <el-form-item label="简介" prop="bio">
-          <el-input v-model="ruleForm.bio" type="textarea" :rows="3" />
+          <el-input
+            v-model="ruleForm.bio"
+            type="textarea"
+            :rows="3"
+            maxlength="200"
+            show-word-limit
+          />
         </el-form-item>
         <el-form-item>
           <el-button
@@ -334,7 +367,10 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
       </el-form>
       <template #footer>
         <el-button @click="dialogFormVisible = false">取消</el-button>
-        <el-button type="primary" @click="changePassword(passwordFormRef)"
+        <el-button
+          type="primary"
+          :loading="loading"
+          @click="changePassword(passwordFormRef)"
           >确认</el-button
         >
       </template>
@@ -343,7 +379,9 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
     <el-dialog v-model="dialogVisible" title="确认注销？" width="400" center>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="logout">确认</el-button>
+        <el-button type="primary" :loading="loading" @click="logout"
+          >确认</el-button
+        >
       </template>
     </el-dialog>
   </div>
@@ -354,24 +392,6 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
   max-width: 520px;
   margin: 0 auto;
   padding: 16px 16px 40px;
-
-  .back {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    font-size: 14px;
-    padding: 4px 8px;
-    border-radius: $radius-sm;
-    transition: all $transition-base;
-    margin-bottom: 20px;
-
-    &:hover {
-      color: var(--el-color-primary);
-      background: var(--el-color-primary-light-9);
-    }
-  }
 }
 
 .profile-card {
@@ -392,6 +412,7 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
     width: 96px;
     height: 96px;
     border-radius: 50%;
+    object-fit: cover;
     cursor: pointer;
     box-shadow: var(--shadow-md);
     border: 3px solid transparent;
@@ -409,20 +430,8 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin: 14px 0 8px;
-
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-
-    .meta-label {
-      font-size: 11px;
-      color: var(--text-placeholder);
-    }
   }
 
   .nickname {
@@ -456,6 +465,10 @@ const fansCount = computed(() => formattedCount(userInfo.fansCount));
     gap: 6px;
     flex-wrap: wrap;
     margin: 16px 0;
+
+    :deep(.el-button) {
+      border-radius: $radius-full;
+    }
   }
 
   .security-actions {

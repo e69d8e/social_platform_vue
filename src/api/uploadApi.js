@@ -19,7 +19,7 @@ export const uploadPostImgApi = (file, id) => {
   });
 };
 
-// 删除帖子图片
+// 删除帖子图片（静默清理，失败时不弹出错误提示）
 export const deletePostImgApi = (id) => {
-  return request.delete(`/upload/delete/${id}`);
+  return request.delete(`/upload/delete/${id}`, { silent: true });
 };

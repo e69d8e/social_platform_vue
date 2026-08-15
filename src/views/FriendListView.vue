@@ -1,56 +1,47 @@
 <script setup>
-import { ref, onMounted } from "vue";
 import { getFriendListApi } from "@/api/followApi";
+import { usePageList } from "@/composables/usePageList";
 import UserCard from "@/components/UserCard.vue";
-import { ArrowLeft } from "@element-plus/icons-vue";
+import PageHeader from "@/components/PageHeader.vue";
+import CardGrid from "@/components/CardGrid.vue";
+import ListPagination from "@/components/ListPagination.vue";
 
-const friendList = ref([]);
-const pageNum = ref(1);
-const pageSize = ref(12);
-const total = ref(0);
-const loading = ref(true);
-
-const getFriendList = async () => {
-  const res = await getFriendListApi({ pageNum: pageNum.value, pageSize: pageSize.value });
-  friendList.value = res.data.data;
-  total.value = res.data.total;
-};
-
-onMounted(async () => {
-  await getFriendList();
-  loading.value = false;
-});
-
-const pageChange = async (newPage) => {
-  pageNum.value = newPage;
-  loading.value = true;
-  await getFriendList();
-  loading.value = false;
-};
+const { list: friendList, pageNum, pageSize, total, loading, pageChange } =
+  usePageList({
+    pageSize: 12,
+    fetchPage: ({ pageNum, pageSize }) =>
+      getFriendListApi({ pageNum, pageSize }).then((res) => ({
+        data: res.data.data,
+        total: res.data.total,
+      })),
+  });
 </script>
 
 <template>
   <div class="list-page" v-loading="loading">
-    <div class="page-header">
-      <div class="back" @click="$router.back()">
-        <el-icon size="18"><ArrowLeft /></el-icon>
-        <span>返回</span>
-      </div>
-      <span class="page-title">好友列表</span>
-      <span class="total-count">共 {{ total }} 人</span>
-    </div>
+    <PageHeader title="好友列表" :total="total" unit="人" />
 
     <el-empty v-if="friendList.length === 0 && !loading" description="暂无好友" />
 
-    <el-row v-else :gutter="16" class="result-grid">
-      <el-col v-for="user in friendList" :key="user.id" :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-        <UserCard :id="user.id" :avatar="user.avatar" :nickname="user.nickname" :bio="user.bio" :followed="user.followed" :count="user.count" />
-      </el-col>
-    </el-row>
+    <CardGrid v-else :items="friendList">
+      <template #item="{ item }">
+        <UserCard
+          :id="item.id"
+          :avatar="item.avatar"
+          :nickname="item.nickname"
+          :bio="item.bio"
+          :followed="item.followed"
+          :count="item.count"
+        />
+      </template>
+    </CardGrid>
 
-    <div v-if="total > pageSize" class="pagination">
-      <el-pagination @current-change="pageChange" :total="total" v-model:current-page="pageNum" :page-size="pageSize" background layout="prev, pager, next" />
-    </div>
+    <ListPagination
+      v-model:page-num="pageNum"
+      :total="total"
+      :page-size="pageSize"
+      @change="pageChange"
+    />
   </div>
 </template>
 
@@ -59,52 +50,5 @@ const pageChange = async (newPage) => {
   max-width: 1400px;
   margin: 0 auto;
   padding: 16px 12px 40px;
-
-  .page-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 4px 16px;
-
-    .back {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-size: 14px;
-      padding: 4px 8px;
-      border-radius: $radius-sm;
-      transition: all $transition-base;
-      flex-shrink: 0;
-      &:hover {
-        color: var(--el-color-primary);
-        background: var(--el-color-primary-light-9);
-      }
-    }
-
-    .page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .total-count {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-  }
-
-  .result-grid {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    :deep(.el-col) { margin-bottom: 16px; }
-  }
-
-  .pagination {
-    display: flex;
-    justify-content: center;
-    padding: 16px 0 8px;
-  }
 }
 </style>

@@ -1,56 +1,57 @@
 <script setup>
-import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { searchPostsApi } from "@/api/searchApi";
+import { usePageList } from "@/composables/usePageList";
 import PostCard from "@/components/PostCard.vue";
-import { ArrowLeft } from "@element-plus/icons-vue";
+import PageHeader from "@/components/PageHeader.vue";
+import CardGrid from "@/components/CardGrid.vue";
+import ListPagination from "@/components/ListPagination.vue";
 
 const route = useRoute();
-const postList = ref([]);
-const pageNum = ref(1);
-const pageSize = ref(8);
-const total = ref(0);
-const loading = ref(true);
 
-const getPostList = async () => {
-  const res = await searchPostsApi({ pageNum: pageNum.value, pageSize: pageSize.value, categoryId: route.params.id });
-  postList.value = res.data.data;
-  total.value = res.data.total;
-};
-
-onMounted(async () => {
-  await getPostList();
-  loading.value = false;
-});
-
-const pageChange = async (newPage) => {
-  pageNum.value = newPage;
-  await getPostList();
-};
+const { list: postList, pageNum, pageSize, total, loading, pageChange } =
+  usePageList({
+    pageSize: 8,
+    fetchPage: ({ pageNum, pageSize }) =>
+      searchPostsApi({
+        pageNum,
+        pageSize,
+        categoryId: route.params.id,
+      }).then((res) => ({ data: res.data.data, total: res.data.total })),
+  });
 </script>
 
 <template>
   <div class="list-page" v-loading="loading">
-    <div class="page-header">
-      <div class="back" @click="$router.back()">
-        <el-icon size="18"><ArrowLeft /></el-icon>
-        <span>返回</span>
-      </div>
-      <span class="page-title">{{ route.query.category }}</span>
-      <span class="total-count">共 {{ total }} 篇</span>
-    </div>
+    <PageHeader :title="route.query.category" :total="total" unit="篇" />
 
-    <el-empty v-if="postList.length === 0 && !loading" description="该分类暂无帖子" />
+    <el-empty
+      v-if="postList.length === 0 && !loading"
+      description="该分类暂无帖子"
+    />
 
-    <el-row v-else :gutter="16" class="result-grid">
-      <el-col v-for="post in postList" :key="post.id" :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-        <PostCard :id="post.id" :img-url="post.imgUrl" :title="post.title" :cover="post.cover" :content="post.content" :liked="post.liked" :like-count="post.likeCount" :time="post.createTime" :view-count="post.viewCount" />
-      </el-col>
-    </el-row>
+    <CardGrid v-else :items="postList">
+      <template #item="{ item }">
+        <PostCard
+          :id="item.id"
+          :img-url="item.imgUrl"
+          :title="item.title"
+          :cover="item.cover"
+          :content="item.content"
+          :liked="item.liked"
+          :like-count="item.likeCount"
+          :time="item.createTime"
+          :view-count="item.viewCount"
+        />
+      </template>
+    </CardGrid>
 
-    <div v-if="total > pageSize" class="pagination">
-      <el-pagination @current-change="pageChange" :total="total" v-model:current-page="pageNum" :page-size="pageSize" background layout="prev, pager, next" />
-    </div>
+    <ListPagination
+      v-model:page-num="pageNum"
+      :total="total"
+      :page-size="pageSize"
+      @change="pageChange"
+    />
   </div>
 </template>
 
@@ -59,49 +60,5 @@ const pageChange = async (newPage) => {
   max-width: 1400px;
   margin: 0 auto;
   padding: 16px 12px 40px;
-
-  .page-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 4px 16px;
-    .back {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-size: 14px;
-      padding: 4px 8px;
-      border-radius: $radius-sm;
-      transition: all $transition-base;
-      flex-shrink: 0;
-      &:hover {
-        color: var(--el-color-primary);
-        background: var(--el-color-primary-light-9);
-      }
-    }
-    .page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-    .total-count {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-  }
-
-  .result-grid {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    :deep(.el-col) { margin-bottom: 16px; }
-  }
-
-  .pagination {
-    display: flex;
-    justify-content: center;
-    padding: 16px 0 8px;
-  }
 }
 </style>

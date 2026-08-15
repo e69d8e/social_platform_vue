@@ -4,15 +4,15 @@ import { useRoute } from "vue-router";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { banUserApi, setReviewerApi, setUserApi } from "@/api/adminApi";
-import { followUserApi, unfollowUserApi } from "@/api/followApi";
-import { throttle } from "lodash-es";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
+import PageHeader from "@/components/PageHeader.vue";
+import FollowButton from "@/components/FollowButton.vue";
 import formattedCount from "@/utils/formattedCount";
-import { ArrowLeft, Male, Female, Warning } from "@element-plus/icons-vue";
-// import { ElMessage } from "element-plus";
+import { Male, Female, Warning } from "@element-plus/icons-vue";
 
 const route = useRoute();
 const userStore = useUserStore();
+
 const userInfo = ref({
   id: "",
   username: "",
@@ -37,56 +37,47 @@ const getUserInfo = async () => {
 };
 
 onMounted(async () => {
-  await getUserInfo();
-  loading.value = false;
+  try {
+    await getUserInfo();
+  } finally {
+    loading.value = false;
+  }
 });
 
-const followLoading = ref(false);
-const toggleFollow = throttle(async () => {
-  if (userStore.userInfo.id === userInfo.value.id) {
-    ElMessage.warning("不能关注自己");
-    return;
-  }
-  if (followLoading.value) return;
-  followLoading.value = true;
-  const oldFollowed = userInfo.value.followed;
-  userInfo.value.followed = !oldFollowed;
-  try {
-    const api = oldFollowed ? unfollowUserApi : followUserApi;
-    const res = await api(userInfo.value.id);
-    if (res.data.code !== 1) throw new Error(res.data.message || "操作失败");
-    ElMessage.success(res.data.message);
-  } catch (e) {
-    userInfo.value.followed = oldFollowed;
-    ElMessage.error(e.message || "操作失败，请重试");
-  } finally {
-    followLoading.value = false;
-  }
-}, 800);
+// 统一转字符串比较，避免后端返回 id 数字/字符串不一致导致误判
+const isSelf = computed(
+  () => String(userStore.userInfo.id) === String(userInfo.value.id),
+);
 
+const banLoading = ref(false);
 const ban = async () => {
-  const res = await banUserApi(route.params.id);
-  if (res.data.code === 1) {
-    userInfo.value.enabled = !userInfo.value.enabled;
-    ElMessage.success(res.data.message);
+  banLoading.value = true;
+  try {
+    const res = await banUserApi(route.params.id);
+    if (res.data.code === 1) {
+      userInfo.value.enabled = !userInfo.value.enabled;
+      ElMessage.success(res.data.message);
+    }
+  } finally {
+    banLoading.value = false;
   }
 };
 
-const setUser = async () => {
-  const res = await setUserApi(route.params.id);
-  if (res.data.code === 1) {
-    userInfo.value.authorityId = 1;
-    ElMessage.success(res.data.message);
+const roleLoading = ref(false);
+const setRole = async (api, targetRole) => {
+  roleLoading.value = true;
+  try {
+    const res = await api(route.params.id);
+    if (res.data.code === 1) {
+      userInfo.value.authorityId = targetRole;
+      ElMessage.success(res.data.message);
+    }
+  } finally {
+    roleLoading.value = false;
   }
 };
-
-const setReviewer = async () => {
-  const res = await setReviewerApi(route.params.id);
-  if (res.data.code === 1) {
-    userInfo.value.authorityId = 3;
-    ElMessage.success(res.data.message);
-  }
-};
+const setUser = () => setRole(setUserApi, 1);
+const setReviewer = () => setRole(setReviewerApi, 3);
 
 const fansCount = computed(() => formattedCount(userInfo.value.fansCount));
 
@@ -100,33 +91,28 @@ const genderLabel = computed(() => {
   if (userInfo.value.gender === 2) return "女";
   return "未知";
 });
+
+const formattedCreateTime = computed(() => {
+  const t = userInfo.value.createTime;
+  if (!t) return "—";
+  const parts = String(t).split(" ");
+  return parts[0] || String(t);
+});
 </script>
 
 <template>
   <div class="user-page" v-loading="loading">
-    <div class="back" @click="$router.back()">
-      <el-icon size="18"><ArrowLeft /></el-icon>
-      <span>返回</span>
-    </div>
+    <PageHeader title="个人主页" large />
 
     <div class="user-card">
       <el-avatar :src="userInfo.avatar" :size="88" class="avatar" />
 
       <div class="user-meta">
-        <div class="meta-item">
-          <span class="meta-label">昵称</span>
-          <h3 class="nickname">{{ userInfo.nickname }}</h3>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">账号</span>
-          <el-text :type="authorityType" size="small"
-            >@{{ userInfo.username }}</el-text
-          >
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">角色</span>
-          <AuthorityComponent :authority-id="userInfo.authorityId" />
-        </div>
+        <h3 class="nickname">{{ userInfo.nickname || "未设置昵称" }}</h3>
+        <el-text :type="authorityType" size="small"
+          >@{{ userInfo.username }}</el-text
+        >
+        <AuthorityComponent :authority-id="userInfo.authorityId" />
       </div>
 
       <div v-if="!userInfo.enabled" class="banned-badge">
@@ -134,13 +120,8 @@ const genderLabel = computed(() => {
         <span>该账号已被封禁</span>
       </div>
 
-      <div class="follow-action">
-        <el-button
-          @click="toggleFollow"
-          :type="userInfo.followed ? 'default' : 'primary'"
-        >
-          {{ userInfo.followed ? "已关注" : "关注" }}
-        </el-button>
+      <div v-if="!isSelf" class="follow-action">
+        <FollowButton :user-id="userInfo.id" :followed="userInfo.followed" />
       </div>
 
       <div class="info-grid">
@@ -158,7 +139,7 @@ const genderLabel = computed(() => {
         </div>
         <div class="info-item">
           <span class="label">注册时间</span>
-          <span class="value">{{ userInfo.createTime }}</span>
+          <span class="value">{{ formattedCreateTime }}</span>
         </div>
       </div>
 
@@ -169,7 +150,7 @@ const genderLabel = computed(() => {
 
       <div class="actions">
         <el-button
-          v-if="userStore.userInfo.id && userStore.userInfo.id !== userInfo.id"
+          v-if="!isSelf"
           type="primary"
           plain
           size="small"
@@ -205,16 +186,22 @@ const genderLabel = computed(() => {
           @confirm="setReviewer"
         >
           <template #reference>
-            <el-button type="primary" size="small">设为审核</el-button>
+            <el-button type="primary" size="small" :loading="roleLoading"
+              >设为审核</el-button
+            >
           </template>
         </el-popconfirm>
-        <el-button
+        <el-popconfirm
           v-else-if="userInfo.authorityId === 3"
-          type="info"
-          size="small"
-          @click="setUser"
-          >设为普通用户</el-button
+          title="确认将该用户设为普通用户吗？"
+          @confirm="setUser"
         >
+          <template #reference>
+            <el-button type="info" size="small" :loading="roleLoading"
+              >设为普通用户</el-button
+            >
+          </template>
+        </el-popconfirm>
 
         <el-popconfirm
           v-if="userInfo.enabled"
@@ -222,12 +209,18 @@ const genderLabel = computed(() => {
           @confirm="ban"
         >
           <template #reference>
-            <el-button type="danger" size="small">封禁该用户</el-button>
+            <el-button type="danger" size="small" :loading="banLoading"
+              >封禁该用户</el-button
+            >
           </template>
         </el-popconfirm>
-        <el-button v-else type="info" size="small" @click="ban"
-          >解封该用户</el-button
-        >
+        <el-popconfirm v-else title="确认解封该用户吗？" @confirm="ban">
+          <template #reference>
+            <el-button type="info" size="small" :loading="banLoading"
+              >解封该用户</el-button
+            >
+          </template>
+        </el-popconfirm>
       </div>
     </div>
   </div>
@@ -238,24 +231,6 @@ const genderLabel = computed(() => {
   max-width: 480px;
   margin: 0 auto;
   padding: 16px 16px 40px;
-
-  .back {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    font-size: 14px;
-    padding: 4px 8px;
-    border-radius: $radius-sm;
-    transition: all $transition-base;
-    margin-bottom: 20px;
-
-    &:hover {
-      color: var(--el-color-primary);
-      background: var(--el-color-primary-light-9);
-    }
-  }
 }
 
 .user-card {
@@ -278,20 +253,8 @@ const genderLabel = computed(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin: 14px 0 8px;
-
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-
-    .meta-label {
-      font-size: 11px;
-      color: var(--text-placeholder);
-    }
   }
 
   .nickname {
@@ -342,6 +305,7 @@ const genderLabel = computed(() => {
         color: var(--text-primary);
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 2px;
       }
     }
@@ -364,6 +328,8 @@ const genderLabel = computed(() => {
       font-size: 14px;
       color: var(--text-secondary);
       line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
   }
 
@@ -373,6 +339,10 @@ const genderLabel = computed(() => {
     gap: 8px;
     flex-wrap: wrap;
     margin: 16px 0;
+
+    :deep(.el-button) {
+      border-radius: $radius-full;
+    }
   }
 
   .admin-actions {

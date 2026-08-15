@@ -7,15 +7,15 @@ import {
   recordPostViewApi,
 } from "@/api/postApi";
 import { useRoute, useRouter } from "vue-router";
-import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
 import { throttle } from "lodash-es";
 import DOMPurify from "dompurify";
 import CommentComponent from "@/components/CommentComponent.vue";
+import BackButton from "@/components/BackButton.vue";
+import FollowButton from "@/components/FollowButton.vue";
 import formattedCount from "@/utils/formattedCount";
 import {
-  ArrowLeft,
   Star,
   StarFilled,
   View,
@@ -82,30 +82,6 @@ const toggleLike = throttle(async () => {
   }
 }, 800);
 
-const followLoading = ref(false);
-const toggleFollow = throttle(async () => {
-  if (userStore.userInfo.id === post.value.userId) {
-    ElMessage.warning("不能关注自己");
-    return;
-  }
-  if (followLoading.value) return;
-  followLoading.value = true;
-  const oldFollowed = post.value.followed;
-  post.value.followed = !post.value.followed;
-  try {
-    const res = post.value.followed
-      ? await followUserApi(post.value.userId)
-      : await unfollowUserApi(post.value.userId);
-    if (res.data.code !== 1) throw new Error("操作失败");
-    ElMessage.success(res.data.message);
-  } catch {
-    post.value.followed = oldFollowed;
-    ElMessage.error("操作失败，请重试");
-  } finally {
-    followLoading.value = false;
-  }
-}, 800);
-
 const deletePost = async () => {
   try {
     const res = await deletePostApi(post.value.id);
@@ -134,10 +110,7 @@ const sanitizedContent = computed(() => DOMPurify.sanitize(post.value.content));
 
 <template>
   <div class="post-detail" v-loading="loading">
-    <div class="back" @click="$router.back()">
-      <el-icon size="18"><ArrowLeft /></el-icon>
-      <span>返回</span>
-    </div>
+    <BackButton class="back-margin" />
 
     <h1 class="title">{{ post.title }}</h1>
 
@@ -152,13 +125,12 @@ const sanitizedContent = computed(() => DOMPurify.sanitize(post.value.content));
         <span class="nickname" @click="$router.push('/user/' + post.userId)">{{
           post.nickname
         }}</span>
-        <el-button
-          @click="toggleFollow"
-          :type="post.followed ? 'default' : 'primary'"
+        <FollowButton
+          :user-id="post.userId"
+          :followed="post.followed"
           size="small"
-        >
-          {{ post.followed ? "已关注" : "关注" }}
-        </el-button>
+          :round="false"
+        />
         <el-icon
           v-if="userStore.userInfo.id === post.userId"
           @click="dialogVisible = true"
@@ -223,22 +195,8 @@ const sanitizedContent = computed(() => DOMPurify.sanitize(post.value.content));
   margin: 0 auto;
   padding: 16px 16px 40px;
 
-  .back {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    font-size: 14px;
-    padding: 4px 8px;
-    border-radius: $radius-sm;
-    transition: all $transition-base;
+  .back-margin {
     margin-bottom: 20px;
-
-    &:hover {
-      color: var(--el-color-primary);
-      background: var(--el-color-primary-light-9);
-    }
   }
 
   .title {

@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { getDashboardApi } from "@/api/adminApi";
 import VChart from "vue-echarts";
+import PageHeader from "@/components/PageHeader.vue";
 import { use } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { LineChart } from "echarts/charts";
@@ -11,7 +12,16 @@ import {
   GridComponent,
   DataZoomComponent,
 } from "echarts/components";
-import { ArrowLeft } from "@element-plus/icons-vue";
+import {
+  User,
+  UserFilled,
+  Document,
+  ChatDotRound,
+  Star,
+  View,
+  Edit,
+  TrendCharts,
+} from "@element-plus/icons-vue";
 import { useThemeStore } from "@/stores/theme";
 
 use([
@@ -31,14 +41,42 @@ const dailyPosts = ref([]);
 const weeklyNewUsers = ref([]);
 const dailyActiveUsers = ref([]);
 
+const emptySummary = () => ({
+  totalUsers: 0,
+  totalPosts: 0,
+  totalComments: 0,
+  totalLikes: 0,
+  totalViews: 0,
+  todayNewUsers: 0,
+  todayPosts: 0,
+  todayActiveUsers: 0,
+});
+const summary = ref(emptySummary());
+
 const fetchData = async () => {
   loading.value = true;
   const res = await getDashboardApi({ days: days.value });
-  dailyPosts.value = res.data.data.dailyPosts;
-  weeklyNewUsers.value = res.data.data.weeklyNewUsers;
-  dailyActiveUsers.value = res.data.data.dailyActiveUsers;
+  const data = res.data.data || {};
+  summary.value = { ...emptySummary(), ...(data.summary || {}) };
+  dailyPosts.value = data.dailyPosts || [];
+  weeklyNewUsers.value = data.weeklyNewUsers || [];
+  dailyActiveUsers.value = data.dailyActiveUsers || [];
   loading.value = false;
 };
+
+const summaryCards = computed(() => [
+  { label: "用户总数", value: summary.value.totalUsers, icon: User },
+  { label: "帖子总数", value: summary.value.totalPosts, icon: Document },
+  { label: "评论总数", value: summary.value.totalComments, icon: ChatDotRound },
+  { label: "点赞总数", value: summary.value.totalLikes, icon: Star },
+  { label: "浏览总数", value: summary.value.totalViews, icon: View },
+  { label: "今日新增用户", value: summary.value.todayNewUsers, icon: UserFilled },
+  { label: "今日新增帖子", value: summary.value.todayPosts, icon: Edit },
+  { label: "今日活跃用户", value: summary.value.todayActiveUsers, icon: TrendCharts },
+]);
+
+const formatCount = (value) =>
+  Number(value ?? 0).toLocaleString("zh-CN");
 
 onMounted(fetchData);
 
@@ -136,13 +174,7 @@ const activeOption = computed(() => ({
 
 <template>
   <div class="dashboard-page" v-loading="loading">
-    <div class="page-header">
-      <div class="back" @click="$router.back()">
-        <el-icon size="18"><ArrowLeft /></el-icon>
-        <span>返回</span>
-      </div>
-      <span class="page-title">数据面板</span>
-    </div>
+    <PageHeader title="数据面板" />
 
     <div class="toolbar">
       <span class="toolbar-label">时间范围</span>
@@ -151,6 +183,22 @@ const activeOption = computed(() => ({
         <el-radio-button :value="30">近 30 天</el-radio-button>
         <el-radio-button :value="90">近 90 天</el-radio-button>
       </el-radio-group>
+    </div>
+
+    <div class="summary-grid">
+      <div
+        v-for="card in summaryCards"
+        :key="card.label"
+        class="summary-card"
+      >
+        <div class="summary-icon">
+          <el-icon :size="20"><component :is="card.icon" /></el-icon>
+        </div>
+        <div class="summary-info">
+          <span class="summary-value">{{ formatCount(card.value) }}</span>
+          <span class="summary-label">{{ card.label }}</span>
+        </div>
+      </div>
     </div>
 
     <div class="charts-grid">
@@ -173,37 +221,6 @@ const activeOption = computed(() => ({
   margin: 0 auto;
   padding: 16px 12px 40px;
 
-  .page-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 4px 16px;
-
-    .back {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-size: 14px;
-      padding: 4px 8px;
-      border-radius: $radius-sm;
-      transition: all $transition-base;
-      flex-shrink: 0;
-
-      &:hover {
-        color: var(--el-color-primary);
-        background: var(--el-color-primary-light-9);
-      }
-    }
-
-    .page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-  }
-
   .toolbar {
     display: flex;
     align-items: center;
@@ -213,6 +230,55 @@ const activeOption = computed(() => ({
     .toolbar-label {
       font-size: 13px;
       color: var(--text-secondary);
+    }
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 0 4px 20px;
+
+    .summary-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: $radius-lg;
+      padding: 16px;
+      box-shadow: var(--shadow-md);
+
+      .summary-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        border-radius: $radius-md;
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
+      }
+
+      .summary-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+
+        .summary-value {
+          font-size: 22px;
+          font-weight: 700;
+          line-height: 1.2;
+          color: var(--text-primary);
+        }
+
+        .summary-label {
+          font-size: 13px;
+          color: var(--text-secondary);
+        }
+      }
     }
   }
 
@@ -232,6 +298,10 @@ const activeOption = computed(() => ({
 }
 
 @media (min-width: 900px) {
+  .dashboard-page .summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
   .dashboard-page .charts-grid {
     grid-template-columns: 1fr 1fr;
 

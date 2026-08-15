@@ -6,7 +6,8 @@ import { useRouter } from "vue-router";
 import "@wangeditor/editor/dist/css/style.css";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 // import { ElMessage, ElMessageBox } from "element-plus";
-import { ArrowLeft, Plus } from "@element-plus/icons-vue";
+import PageHeader from "@/components/PageHeader.vue";
+import { Plus } from "@element-plus/icons-vue";
 
 const router = useRouter();
 const dialogConfirmVisible = ref(false);
@@ -31,6 +32,7 @@ onMounted(async () => {
 
 const imageUrl = ref("");
 const file = ref();
+const hasUploadedImg = ref(false);
 let oldObjectUrl = null;
 
 const beforeUpload = (rawFile) => {
@@ -48,6 +50,7 @@ const publicPost = async () => {
   let url = null;
   if (file.value) {
     url = await uploadPostImgApi(file.value, id.value);
+    if (url?.data?.data) hasUploadedImg.value = true;
   }
   loading.value = true;
   const res = await publishPostApi({
@@ -81,7 +84,10 @@ editorConfig.MENU_CONF["uploadImage"] = {
   async customUpload(file, insertFn) {
     const res = await uploadPostImgApi(file, id.value);
     const url = res.data.data;
-    insertFn(url, "图片描述", url);
+    if (url) {
+      hasUploadedImg.value = true;
+      insertFn(url, "图片描述", url);
+    }
   },
 };
 
@@ -112,7 +118,7 @@ const isPublished = ref(false);
 
 const cleanupResources = async () => {
   if (isPublished.value) return;
-  if (id.value) {
+  if (id.value && hasUploadedImg.value) {
     try {
       await deletePostImgApi(id.value);
     } catch {
@@ -156,13 +162,7 @@ const handleBackClick = async () => {
 
 <template>
   <div class="public-page" v-loading="loading">
-    <div class="page-header">
-      <div class="back" @click="handleBackClick">
-        <el-icon size="18"><ArrowLeft /></el-icon>
-        <span>返回</span>
-      </div>
-      <span class="page-title">发布帖子</span>
-    </div>
+    <PageHeader title="发布帖子" @click="handleBackClick" />
 
     <div class="form-card">
       <div class="section">
@@ -262,37 +262,6 @@ const handleBackClick = async () => {
   max-width: 860px;
   margin: 0 auto;
   padding: 16px 16px 40px;
-
-  .page-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 4px 16px;
-
-    .back {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-size: 14px;
-      padding: 4px 8px;
-      border-radius: $radius-sm;
-      transition: all $transition-base;
-      flex-shrink: 0;
-
-      &:hover {
-        color: var(--el-color-primary);
-        background: var(--el-color-primary-light-9);
-      }
-    }
-
-    .page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-  }
 }
 
 .form-card {
@@ -439,5 +408,33 @@ const handleBackClick = async () => {
   .form-card {
     padding: 20px 16px;
   }
+}
+</style>
+
+<style lang="scss">
+// WangEditor 自带浅色样式，暗色模式下覆盖其 CSS 变量，
+// 使编辑器正文区、工具栏、弹窗等跟随项目暗色主题。
+html.dark {
+  // 编辑区
+  --w-e-textarea-bg-color: #181715;
+  --w-e-textarea-color: #faf9f5;
+  --w-e-textarea-border-color: #333230;
+  --w-e-textarea-slight-border-color: #2a2925;
+  --w-e-textarea-slight-color: #6c6a64;
+  --w-e-textarea-slight-bg-color: #252320;
+  --w-e-textarea-selected-border-color: #d99580;
+  --w-e-textarea-handler-bg-color: #d99580;
+
+  // 工具栏
+  --w-e-toolbar-color: #d4d2cc;
+  --w-e-toolbar-bg-color: #181715;
+  --w-e-toolbar-active-color: #faf9f5;
+  --w-e-toolbar-active-bg-color: #333230;
+  --w-e-toolbar-disabled-color: #504e49;
+  --w-e-toolbar-border-color: #2a2925;
+
+  // 弹窗 / 下拉面板
+  --w-e-modal-button-bg-color: #252320;
+  --w-e-modal-button-border-color: #333230;
 }
 </style>

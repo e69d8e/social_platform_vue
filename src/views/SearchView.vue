@@ -10,7 +10,10 @@ import {
 import { searchUsersApi } from "@/api/userApi";
 import PostCard from "@/components/PostCard.vue";
 import UserCard from "@/components/UserCard.vue";
-import { ArrowLeft, Close, Delete, Search } from "@element-plus/icons-vue";
+import BackButton from "@/components/BackButton.vue";
+import CardGrid from "@/components/CardGrid.vue";
+import ListPagination from "@/components/ListPagination.vue";
+import { Close, Delete, Search } from "@element-plus/icons-vue";
 // import { ElMessage } from "element-plus";
 
 const route = useRoute();
@@ -170,10 +173,7 @@ watch(activeName, (name) => {
   <div class="search" v-loading="loading">
     <!-- 顶部栏 -->
     <div class="search-top">
-      <div class="back" @click="$router.back()">
-        <el-icon size="20"><ArrowLeft /></el-icon>
-        <span>返回</span>
-      </div>
+      <BackButton :size="20" />
       <div class="search-info" v-if="searchQuery">
         <span class="keyword">"{{ searchQuery }}"</span>
         <span class="divider">|</span>
@@ -230,29 +230,21 @@ watch(activeName, (name) => {
           <el-empty description="暂无相关帖子" />
         </div>
 
-        <el-row v-else :gutter="16" class="result-grid">
-          <el-col
-            v-for="post in posts"
-            :key="post.id"
-            :xs="24"
-            :sm="12"
-            :md="8"
-            :lg="6"
-            :xl="4"
-          >
+        <CardGrid v-else :items="posts">
+          <template #item="{ item }">
             <PostCard
-              :id="post.id"
-              :img-url="post.imgUrl"
-              :title="post.title"
-              :content="post.content"
-              :cover="post.cover"
-              :liked="post.liked"
-              :like-count="post.likeCount"
-              :time="post.createTime"
-              :view-count="post.viewCount"
+              :id="item.id"
+              :img-url="item.imgUrl"
+              :title="item.title"
+              :content="item.content"
+              :cover="item.cover"
+              :liked="item.liked"
+              :like-count="item.likeCount"
+              :time="item.createTime"
+              :view-count="item.viewCount"
             />
-          </el-col>
-        </el-row>
+          </template>
+        </CardGrid>
       </el-tab-pane>
 
       <el-tab-pane name="2">
@@ -267,42 +259,29 @@ watch(activeName, (name) => {
           <el-empty description="暂无相关用户" />
         </div>
 
-        <el-row v-else :gutter="16" class="result-grid">
-          <el-col
-            v-for="user in users"
-            :key="user.id"
-            :xs="24"
-            :sm="12"
-            :md="8"
-            :lg="6"
-            :xl="4"
-          >
+        <CardGrid v-else :items="users">
+          <template #item="{ item }">
             <UserCard
-              :id="user.id"
-              :avatar="user.avatar"
-              :nickname="user.nickname"
-              :bio="user.bio"
-              :followed="user.followed"
-              :count="user.count"
+              :id="item.id"
+              :avatar="item.avatar"
+              :nickname="item.nickname"
+              :bio="item.bio"
+              :followed="item.followed"
+              :count="item.count"
             />
-          </el-col>
-        </el-row>
+          </template>
+        </CardGrid>
       </el-tab-pane>
     </el-tabs>
 
     <!-- 分页 -->
-    <div
-      v-if="(activeName === '1' ? postTotal : usersTotal) > 0"
-      class="pagination"
-    >
-      <el-pagination
-        @current-change="pageChange"
-        :total="activeName === '1' ? postTotal : usersTotal"
-        :default-page-size="activeName === '1' ? postPageSize : userPageSize"
-        background
-        layout="prev, pager, next"
-      />
-    </div>
+    <ListPagination
+      v-model:page-num="pageNum"
+      :total="activeName === '1' ? postTotal : usersTotal"
+      :page-size="activeName === '1' ? postPageSize : userPageSize"
+      show-when="zero"
+      @change="pageChange"
+    />
   </div>
 </template>
 
@@ -318,24 +297,6 @@ watch(activeName, (name) => {
     gap: 16px;
     padding: 12px 4px;
     border-bottom: 1px solid var(--border-light);
-
-    .back {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-size: 14px;
-      padding: 4px 8px;
-      border-radius: $radius-sm;
-      transition: all $transition-base;
-      flex-shrink: 0;
-
-      &:hover {
-        color: var(--el-color-primary);
-        background: var(--el-color-primary-light-9);
-      }
-    }
 
     .search-info {
       font-size: 14px;
@@ -446,23 +407,8 @@ watch(activeName, (name) => {
     }
   }
 
-  .result-grid {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-
-    :deep(.el-col) {
-      margin-bottom: 16px;
-    }
-  }
-
   .empty-state {
     padding: 60px 0;
-  }
-
-  .pagination {
-    display: flex;
-    justify-content: center;
-    padding: 24px 0 8px;
   }
 }
 </style>

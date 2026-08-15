@@ -50,7 +50,7 @@ function processQueue(err, token = null) {
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
-    if (response.data.code !== 1) {
+    if (response.data.code !== 1 && !response.config?.silent) {
       ElMessage.error(response.data.message || "请求失败");
     }
     return response;
@@ -98,7 +98,9 @@ request.interceptors.response.use(
     }
 
     const msg = error.response?.data?.message || error.message || "网络错误";
-    ElMessage.error(msg);
+    if (!originalRequest?.silent) {
+      ElMessage.error(msg);
+    }
     return Promise.reject(error);
   },
 );
