@@ -10,6 +10,7 @@ import {
 import { searchUsersApi } from "@/api/userApi";
 import PostCard from "@/components/PostCard.vue";
 import UserCard from "@/components/UserCard.vue";
+import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import BackButton from "@/components/BackButton.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
@@ -110,7 +111,7 @@ const searchPosts = async (keyword) => {
       keyword,
     });
     posts.value = res.data.data || [];
-    postTotal.value = res.data.total || 0;
+    postTotal.value = Number(res.data.total || 0);
   } catch {
     ElMessage.error("搜索帖子失败");
   }
@@ -125,7 +126,7 @@ const searchUsers = async (keyword) => {
       keyword,
     });
     users.value = res.data.data || [];
-    usersTotal.value = res.data.total || 0;
+    usersTotal.value = Number(res.data.total || 0);
   } catch {
     ElMessage.error("搜索用户失败");
   }
@@ -226,15 +227,16 @@ watch(activeName, (name) => {
           </span>
         </template>
 
-        <div v-if="posts.length === 0 && !loading" class="empty-state">
+        <SkeletonGrid v-if="loading && posts.length === 0" :count="8" />
+
+        <div v-else-if="posts.length === 0" class="empty-state">
           <el-empty description="暂无相关帖子" />
         </div>
 
         <CardGrid v-else :items="posts">
-          <template #item="{ item }">
+          <template #item="{ item, index }">
             <PostCard
               :id="item.id"
-              :img-url="item.imgUrl"
               :title="item.title"
               :content="item.content"
               :cover="item.cover"
@@ -242,6 +244,7 @@ watch(activeName, (name) => {
               :like-count="item.likeCount"
               :time="item.createTime"
               :view-count="item.viewCount"
+              :delay="index < 12 ? index * 40 : 0"
             />
           </template>
         </CardGrid>
@@ -255,12 +258,18 @@ watch(activeName, (name) => {
           </span>
         </template>
 
-        <div v-if="users.length === 0 && !loading" class="empty-state">
+        <SkeletonGrid
+          v-if="loading && users.length === 0"
+          type="user"
+          :count="12"
+        />
+
+        <div v-else-if="users.length === 0" class="empty-state">
           <el-empty description="暂无相关用户" />
         </div>
 
         <CardGrid v-else :items="users">
-          <template #item="{ item }">
+          <template #item="{ item, index }">
             <UserCard
               :id="item.id"
               :avatar="item.avatar"
@@ -268,6 +277,7 @@ watch(activeName, (name) => {
               :bio="item.bio"
               :followed="item.followed"
               :count="item.count"
+              :delay="index < 12 ? index * 40 : 0"
             />
           </template>
         </CardGrid>

@@ -40,5 +40,41 @@ const handleChange = (page) => {
   display: flex;
   justify-content: center;
   padding: 16px 0 8px;
+
+  // 品牌化分页：当前页渐变胶囊 + 悬停轻反馈
+  :deep(.el-pagination) {
+    .el-pager li {
+      border-radius: $radius-sm;
+      font-weight: 500;
+      transition: all var(--transition-base);
+
+      &:hover {
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
+      }
+
+      &.is-active {
+        background: var(--gradient-primary);
+        color: #fff;
+        box-shadow: var(--shadow-sm);
+
+        &:hover {
+          color: #fff;
+          background: var(--gradient-primary);
+        }
+      }
+    }
+
+    .btn-prev,
+    .btn-next {
+      border-radius: $radius-sm;
+      transition: all var(--transition-base);
+
+      &:hover:not(:disabled) {
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
+      }
+    }
+  }
 }
 </style>

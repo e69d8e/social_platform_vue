@@ -1,7 +1,23 @@
 <template>
   <div class="chat-page">
+    <!-- 移动端：打开会话抽屉 -->
+    <button
+      class="mobile-menu-btn"
+      aria-label="打开会话列表"
+      @click="sidebarOpen = true"
+    >
+      <el-icon :size="18"><Menu /></el-icon>
+    </button>
+
+    <!-- 移动端抽屉遮罩 -->
+    <div
+      v-if="sidebarOpen"
+      class="sidebar-backdrop"
+      @click="sidebarOpen = false"
+    ></div>
+
     <!-- 侧边栏 - 会话列表 -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ open: sidebarOpen }">
       <div class="sidebar-brand">
         <el-avatar :size="38" :src="logoUrl" class="brand-logo"></el-avatar>
         <div class="brand-text">
@@ -22,22 +38,27 @@
       </div>
 
       <div class="session-list">
-        <div
-          v-for="session in sessions"
-          :key="session.id"
-          :class="['session-item', { active: currentSessionId === session.id }]"
-          @click="selectSession(session.id)"
-        >
-          <el-icon class="session-icon" :size="16"><ChatDotRound /></el-icon>
-          <div class="session-name">{{ session.name }}</div>
-          <button
-            class="delete-btn"
-            title="删除会话"
-            @click.stop="deleteSession(session.id)"
+        <TransitionGroup name="session">
+          <div
+            v-for="session in sessions"
+            :key="session.id"
+            :class="[
+              'session-item',
+              { active: currentSessionId === session.id },
+            ]"
+            @click="selectSession(session.id)"
           >
-            <el-icon :size="14"><Close /></el-icon>
-          </button>
-        </div>
+            <el-icon class="session-icon" :size="16"><ChatDotRound /></el-icon>
+            <div class="session-name">{{ session.name }}</div>
+            <button
+              class="delete-btn"
+              title="删除会话"
+              @click.stop="deleteSession(session.id)"
+            >
+              <el-icon :size="14"><Close /></el-icon>
+            </button>
+          </div>
+        </TransitionGroup>
 
         <div v-if="!sessions.length" class="session-empty">
           <el-icon :size="30"><ChatLineRound /></el-icon>
@@ -80,8 +101,8 @@
             <div class="chat-header-meta">
               <h3>{{ currentSessionName }}</h3>
               <span class="chat-status">
-                <i :class="['status-dot', { loading: isLoading }]"></i>
-                {{ isLoading ? "正在输入…" : "AI 助手在线" }}
+                <i :class="['status-dot', { loading: isStreamingHere }]"></i>
+                {{ isStreamingHere ? "正在输入…" : "AI 助手在线" }}
               </span>
             </div>
           </div>
@@ -91,7 +112,12 @@
           </button>
         </div>
 
-        <div class="messages-container" ref="messagesContainer">
+        <div
+          class="messages-container"
+          ref="messagesContainer"
+          @scroll="onMessagesScroll"
+          @click="onMessageClick"
+        >
           <div class="messages-inner">
             <div
               v-for="(msg, index) in displayMessages"
@@ -110,13 +136,19 @@
                   <span class="message-sender">{{
                     msg.role === "user" ? "我" : "小Y AI"
                   }}</span>
-                  <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+                  <span class="message-time">{{
+                    formatTime(msg.timestamp)
+                  }}</span>
                 </div>
                 <div class="message-content">
                   <div
                     v-if="msg.role === 'assistant'"
                     class="message-text markdown-body"
-                    v-html="renderMarkdown(msg.content)"
+                    :class="{
+                      streaming:
+                        isStreamingHere && index === displayMessages.length - 1,
+                    }"
+                    v-html="renderCached(msg.content)"
                   ></div>
                   <div v-else class="message-text">{{ msg.content }}</div>
                 </div>
@@ -141,12 +173,24 @@
                 </div>
               </div>
             </div>
-
-            <div ref="messagesEnd"></div>
           </div>
         </div>
 
         <div class="input-area">
+          <!-- 回到底部（锚定输入区，随输入框增高上移） -->
+          <Transition name="back-bottom">
+            <button
+              v-show="!isNearBottom"
+              class="back-bottom-btn"
+              type="button"
+              aria-label="回到底部"
+              title="回到底部"
+              @click="jumpToBottom"
+            >
+              <el-icon :size="16"><ArrowDownBold /></el-icon>
+            </button>
+          </Transition>
+
           <div class="input-box">
             <textarea
               ref="inputRef"
@@ -154,7 +198,7 @@
               @keydown="handleKeyPress"
               placeholder="输入消息，Enter 发送，Shift+Enter 换行"
               :disabled="isLoading"
-              rows="3"
+              rows="1"
             ></textarea>
             <div class="input-toolbar">
               <span class="input-hint">Enter 发送 · Shift+Enter 换行</span>
@@ -183,11 +227,13 @@ import {
 } from "@/api/aiApi";
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from "vue";
 import {
+  ArrowDownBold,
   ArrowLeft,
-  Plus,
   ChatDotRound,
-  Close,
   ChatLineRound,
+  Close,
+  Menu,
+  Plus,
   Promotion,
 } from "@element-plus/icons-vue";
 import DOMPurify from "dompurify";
@@ -326,6 +372,16 @@ function renderMarkdown(md) {
   return DOMPurify.sanitize(html);
 }
 
+// 带缓存的渲染：同一内容只渲染一次（流式期间历史消息不重复解析）
+function renderCached(content) {
+  if (!content) return "";
+  if (mdCache.has(content)) return mdCache.get(content);
+  const html = renderMarkdown(content);
+  if (mdCache.size > 300) mdCache.clear();
+  mdCache.set(content, html);
+  return html;
+}
+
 // 时间格式化
 function formatTime(ts) {
   if (!ts) return "";
@@ -355,8 +411,18 @@ const suggestions = [
 
 // DOM refs
 const messagesContainer = ref(null);
-const messagesEnd = ref(null);
 const inputRef = ref(null);
+
+// 是否停留在底部附近（决定流式输出时是否自动跟随滚动）
+const isNearBottom = ref(true);
+// 移动端会话抽屉
+const sidebarOpen = ref(false);
+// 正在流式输出的会话id（isLoading 可能属于已切走的会话）
+const streamingSessionId = ref(null);
+let streamController = null;
+
+// Markdown 渲染缓存：流式输出时仅最后一条变化，其余消息避免重复渲染
+const mdCache = new Map();
 
 // 当前会话名称
 const currentSessionName = computed(() => {
@@ -366,55 +432,70 @@ const currentSessionName = computed(() => {
 
 // 计算属性：将原始消息转换为显示格式
 const displayMessages = computed(() => {
-  return rawMessages.value
-    .filter((msg) => msg.type === "USER" || msg.type === "AI")
-    .map((msg) => {
-      if (msg.type === "USER") {
-        // 用户消息格式
-        const content = msg.contents?.[0]?.text || "";
-        return {
-          role: "user",
-          content: content,
-          timestamp: msg.timestamp || new Date(),
-        };
-      } else if (msg.type === "AI") {
-        // AI消息格式
-        const content = msg.text || "";
-        return {
-          role: "assistant",
-          content: content,
-          timestamp: msg.timestamp || new Date(),
-        };
-      }
-      return null;
-    })
-    .filter((msg) => msg !== null)
-    // 流式输出时隐藏空的 AI 占位气泡（由打字指示器替代）
-    .filter((msg) => !(msg.role === "assistant" && !msg.content));
+  return (
+    rawMessages.value
+      .filter((msg) => msg.type === "USER" || msg.type === "AI")
+      .map((msg) => {
+        if (msg.type === "USER") {
+          // 用户消息格式
+          const content = msg.contents?.[0]?.text || "";
+          return {
+            role: "user",
+            content: content,
+            timestamp: msg.timestamp || new Date(),
+          };
+        } else if (msg.type === "AI") {
+          // AI消息格式
+          const content = msg.text || "";
+          return {
+            role: "assistant",
+            content: content,
+            timestamp: msg.timestamp || new Date(),
+          };
+        }
+        return null;
+      })
+      .filter((msg) => msg !== null)
+      // 流式输出时隐藏空的 AI 占位气泡（由打字指示器替代）
+      .filter((msg) => !(msg.role === "assistant" && !msg.content))
+  );
 });
 
-// 是否显示打字指示器：正在加载且 AI 尚未输出任何文字
+// 当前会话是否正在流式输出（与 isLoading 区分：别的会话可能仍在后台收尾）
+const isStreamingHere = computed(
+  () => isLoading.value && streamingSessionId.value === currentSessionId.value,
+);
+
+// 是否显示打字指示器：当前会话正在加载且 AI 尚未输出任何文字
 const showTyping = computed(() => {
-  if (!isLoading.value) return false;
+  if (!isStreamingHere.value) return false;
   const last = displayMessages.value[displayMessages.value.length - 1];
   if (!last || last.role !== "assistant") return true;
   return !last.content;
 });
 
-// 滚动到消息底部
-const scrollToBottom = async () => {
+// ---------- 滚动控制 ----------
+const scrollToBottom = async (smooth = true) => {
   await nextTick();
-  messagesEnd.value?.scrollIntoView({ behavior: "smooth" });
+  const el = messagesContainer.value;
+  if (!el) return;
+  el.scrollTo({
+    top: el.scrollHeight,
+    behavior: smooth ? "smooth" : "auto",
+  });
 };
 
-// 监听消息变化，自动滚动
-watch(
-  displayMessages,
-  () => {
-    scrollToBottom();
-  },
-  { deep: true },
-);
+// 判断用户是否停留在底部附近：流式输出只在用户位于底部时才跟随
+const onMessagesScroll = () => {
+  const el = messagesContainer.value;
+  if (!el) return;
+  isNearBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+};
+
+const jumpToBottom = () => {
+  isNearBottom.value = true;
+  scrollToBottom(true);
+};
 
 // 加载会话列表
 const loadSessions = async () => {
@@ -429,17 +510,24 @@ const loadSessions = async () => {
   }
 };
 
-// 创建新会话
+// 创建新会话（回复期间不允许新建，避免流式数据串台）
 const createNewSession = async () => {
+  if (isLoading.value) {
+    ElMessage.info("AI 正在回复中，请稍候再开新对话");
+    return;
+  }
   try {
     const res = await createSessionApi();
     if (res.data.code === 1) {
       currentSessionId.value = res.data.data;
       rawMessages.value = [];
+      isNearBottom.value = true;
+      sidebarOpen.value = false;
       await loadSessions();
       // 聚焦到输入框
       await nextTick();
       inputRef.value?.focus();
+      autoResize();
     }
   } catch (error) {
     console.error("创建会话失败:", error);
@@ -447,28 +535,32 @@ const createNewSession = async () => {
   }
 };
 
-// 点击建议问题
+// 点击建议问题：直接发送（主流 AI 聊天交互）
 const useSuggestion = async (text) => {
+  if (isLoading.value) return;
   if (!currentSessionId.value) {
     await createNewSession();
   }
-  if (currentSessionId.value) {
-    inputMessage.value = text;
-    await nextTick();
-    inputRef.value?.focus();
-  }
+  if (!currentSessionId.value) return;
+  inputMessage.value = text;
+  await nextTick();
+  autoResize();
+  sendMessage();
 };
 
-// 选择会话
+// 选择会话：切换时中断当前会话的流式输出，防止消息写串
 const selectSession = async (sessionId) => {
+  if (currentSessionId.value === sessionId) return;
+  abortActiveStream();
   currentSessionId.value = sessionId;
+  sidebarOpen.value = false;
   try {
     const res = await getSessionContentApi(sessionId);
-    if (res.data.code === 1) {
-      // 后端返回的是原始消息字符串格式
+    // 防止快速连点时旧请求回写（以当前选中为准）
+    if (res.data.code === 1 && currentSessionId.value === sessionId) {
       rawMessages.value = JSON.parse(res.data.data) || [];
-
-      await scrollToBottom();
+      isNearBottom.value = true;
+      await scrollToBottom(false);
     }
   } catch (error) {
     console.error("加载会话消息失败:", error);
@@ -476,16 +568,36 @@ const selectSession = async (sessionId) => {
   }
 };
 
-// 删除会话
+// 中断正在进行的流式请求
+const abortActiveStream = () => {
+  streamController?.abort();
+};
+
+// 删除会话（二次确认，防止误删）
 const deleteSession = async (sessionId) => {
+  try {
+    await ElMessageBox.confirm(
+      "删除后无法恢复，确定删除该会话吗？",
+      "删除会话",
+      {
+        confirmButtonText: "删除",
+        cancelButtonText: "取消",
+        type: "warning",
+      },
+    );
+  } catch {
+    return; // 用户取消
+  }
   try {
     const res = await deleteSessionApi(sessionId);
     if (res.data.code === 1) {
       if (currentSessionId.value === sessionId) {
+        abortActiveStream();
         currentSessionId.value = null;
         rawMessages.value = [];
       }
       await loadSessions();
+      ElMessage.success("会话已删除");
     }
   } catch (error) {
     console.error("删除会话失败:", error);
@@ -495,11 +607,13 @@ const deleteSession = async (sessionId) => {
 
 // 发送消息
 const sendMessage = async () => {
-  if (!inputMessage.value.trim() || isLoading.value) return;
+  const content = inputMessage.value.trim();
+  if (!content || isLoading.value) return;
 
-  // 先保存用户输入，再清空输入框
-  const userMessageContent = inputMessage.value;
+  // 先保存用户输入，再清空输入框（建会话失败时回填）
   inputMessage.value = "";
+  autoResize();
+  isNearBottom.value = true;
 
   // 如果没有会话，先创建会话
   if (!currentSessionId.value) {
@@ -509,41 +623,41 @@ const sendMessage = async () => {
         currentSessionId.value = res.data.data;
         await loadSessions();
       } else {
+        inputMessage.value = content;
         ElMessage.error("创建会话失败");
         return;
       }
     } catch {
+      inputMessage.value = content;
       ElMessage.error("创建会话失败");
       return;
     }
   }
 
+  const sentSessionId = currentSessionId.value;
+
   // 添加用户消息到原始数据
-  const userMsg = {
+  rawMessages.value.push({
     type: "USER",
-    contents: [
-      {
-        text: userMessageContent,
-        type: "TEXT",
-      },
-    ],
+    contents: [{ text: content, type: "TEXT" }],
     timestamp: new Date(),
-  };
-  rawMessages.value.push(userMsg);
+  });
+  await scrollToBottom(true);
 
   isLoading.value = true;
+  streamingSessionId.value = sentSessionId;
+  streamController = new AbortController();
 
   try {
     const response = await authFetch(baseURL + "/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
+      signal: streamController.signal,
       body: JSON.stringify({
         userId: userStore.userInfo.id,
-        memoryId: currentSessionId.value,
-        content: userMessageContent,
+        memoryId: sentSessionId,
+        content,
       }),
     });
 
@@ -552,27 +666,29 @@ const sendMessage = async () => {
     let aiResponse = "";
 
     // 添加AI消息占位符
-    const aiMsg = {
+    rawMessages.value.push({
       type: "AI",
       text: "",
       toolExecutionRequests: [],
       attributes: {},
       timestamp: new Date(),
-    };
-    rawMessages.value.push(aiMsg);
+    });
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
-      aiResponse += chunk;
+      aiResponse += decoder.decode(value, { stream: true });
 
-      // 直接修改最后一条消息的 text，利用 Vue 响应性自动更新
-      rawMessages.value[rawMessages.value.length - 1].text = aiResponse;
+      // 会话未切换才写入，防止流式数据写进别的会话
+      if (currentSessionId.value === sentSessionId) {
+        rawMessages.value[rawMessages.value.length - 1].text = aiResponse;
+        // 用户停在底部时跟随滚动；翻看历史时不打扰
+        if (isNearBottom.value) scrollToBottom(false);
+      }
     }
   } catch (error) {
-    if (error.message !== "Unauthorized") {
+    if (error?.name !== "AbortError") {
       ElMessage.error("消息发送失败，请重试");
       rawMessages.value.push({
         type: "AI",
@@ -584,34 +700,69 @@ const sendMessage = async () => {
     }
   } finally {
     isLoading.value = false;
-    setTimeout(() => {
-      loadSessions();
-    }, 1000);
+    streamingSessionId.value = null;
+    streamController = null;
+    if (currentSessionId.value === sentSessionId) {
+      // 会话名可能被后端更新，延迟刷新列表
+      setTimeout(() => loadSessions(), 800);
+      await nextTick();
+      inputRef.value?.focus();
+    }
   }
 };
 
-// 处理键盘事件
+// 处理键盘事件（中文输入法组词期间的回车不发送）
 const handleKeyPress = (e) => {
+  if (e.isComposing || e.keyCode === 229) return;
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
   }
 };
 
+// 输入框自适应高度（上限 160px）
+const autoResize = () => {
+  const el = inputRef.value;
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+};
+
+watch(inputMessage, autoResize);
+
+// 点击消息内容：点到代码块时复制整段代码
+const onMessageClick = (e) => {
+  const pre = e.target.closest("pre");
+  if (!pre) return;
+  const text = pre.querySelector("code")?.textContent ?? pre.textContent ?? "";
+  navigator.clipboard?.writeText(text).then(() => {
+    pre.classList.add("copied");
+    setTimeout(() => pre.classList.remove("copied"), 1600);
+  });
+};
+
+// Esc 关闭移动端会话抽屉
+const onGlobalKeydown = (e) => {
+  if (e.key === "Escape") sidebarOpen.value = false;
+};
+
 // 组件挂载时加载会话列表
 onMounted(() => {
   document.body.style.overflow = "hidden";
   document.documentElement.style.overflow = "hidden";
+  window.addEventListener("keydown", onGlobalKeydown);
   loadSessions();
 });
 
 onUnmounted(() => {
   document.body.style.overflow = "";
   document.documentElement.style.overflow = "";
+  window.removeEventListener("keydown", onGlobalKeydown);
+  abortActiveStream();
 });
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 /* ========== CSS 变量映射 Element Plus 主题 ========== */
 .chat-page {
   --chat-primary: var(--el-color-primary);
@@ -630,6 +781,7 @@ onUnmounted(() => {
 
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--chat-bg);
   color: var(--chat-text);
@@ -743,6 +895,32 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 12px 12px;
+  position: relative;
+}
+
+/* 会话增删时的无缝过渡 */
+.session-enter-active,
+.session-leave-active,
+.session-move {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.session-enter-from {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+.session-leave-to {
+  opacity: 0;
+  transform: translateX(12px);
+}
+
+.session-leave-active {
+  position: absolute;
+  left: 12px;
+  right: 12px;
 }
 
 .session-item {
@@ -821,7 +999,15 @@ onUnmounted(() => {
 }
 
 .session-item.active .delete-btn {
+  opacity: 1;
   color: rgba(255, 255, 255, 0.8);
+}
+
+// 触屏设备没有 hover：保持删除按钮可见
+@media (hover: none) {
+  .delete-btn {
+    opacity: 0.55;
+  }
 }
 
 .delete-btn:hover {
@@ -864,12 +1050,11 @@ onUnmounted(() => {
   align-items: center;
   text-align: center;
   padding: 40px 24px;
-  background:
-    radial-gradient(
-      ellipse 60% 50% at 50% 38%,
-      var(--chat-primary-soft) 0%,
-      transparent 70%
-    );
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 38%,
+    var(--chat-primary-soft) 0%,
+    transparent 70%
+  );
 }
 
 .welcome-logo {
@@ -976,6 +1161,7 @@ onUnmounted(() => {
 
 /* 聊天容器 */
 .chat-container {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1253,12 +1439,41 @@ onUnmounted(() => {
 }
 
 .markdown-body :deep(pre) {
+  position: relative;
   margin: 0.85em 0;
   padding: 14px 16px;
   border-radius: 10px;
   background: var(--chat-code-block-bg);
   border: 1px solid var(--chat-border);
   overflow-x: auto;
+}
+
+// “复制”按钮：伪元素实现，点击事件由消息容器委托处理
+.markdown-body :deep(pre::after) {
+  content: "复制";
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #cfccc7;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  user-select: none;
+}
+
+.markdown-body :deep(pre:hover::after),
+.markdown-body :deep(pre:focus-within::after) {
+  opacity: 1;
+}
+
+.markdown-body :deep(pre.copied::after) {
+  content: "已复制 ✓";
+  opacity: 1;
+  color: #86d9a4;
 }
 
 .markdown-body :deep(pre code) {
@@ -1300,6 +1515,26 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
+/* 流式输出的闪烁光标 */
+.markdown-body.streaming::after {
+  content: "▍";
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--chat-primary);
+  animation: cursorBlink 1s steps(2) infinite;
+}
+
+@keyframes cursorBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
 /* ========== 打字指示器 ========== */
 .typing-indicator {
   display: flex;
@@ -1339,13 +1574,10 @@ onUnmounted(() => {
 
 /* ========== 输入区域 ========== */
 .input-area {
+  position: relative;
   flex-shrink: 0;
   padding: 12px 20px 20px;
-  background: linear-gradient(
-    to top,
-    var(--chat-bg) 60%,
-    transparent 100%
-  );
+  background: linear-gradient(to top, var(--chat-bg) 60%, transparent 100%);
 }
 
 .input-box {
@@ -1378,6 +1610,9 @@ onUnmounted(() => {
   outline: none;
   background: transparent;
   color: var(--chat-text);
+  min-height: 44px;
+  max-height: 160px;
+  overflow-y: auto;
 }
 
 .input-box textarea::placeholder {
@@ -1437,6 +1672,55 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
+/* ========== 回到底部按钮 ========== */
+.back-bottom-btn {
+  position: absolute;
+  right: 34px;
+  bottom: calc(100% + 12px);
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--chat-border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--chat-primary);
+  background: var(--chat-white);
+  box-shadow: var(--shadow-lg);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.back-bottom-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow-primary);
+}
+
+.back-bottom-enter-active,
+.back-bottom-leave-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.back-bottom-enter-from,
+.back-bottom-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+/* ========== 移动端菜单按钮（会话抽屉） ========== */
+.mobile-menu-btn {
+  display: none;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
 /* ========== 滚动条 ========== */
 .session-list::-webkit-scrollbar,
 .messages-container::-webkit-scrollbar {
@@ -1471,8 +1755,73 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
+  // 会话列表改为抽屉
   .sidebar {
-    display: none;
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    transform: translateX(-105%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-xl);
+    z-index: 60;
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
+
+  .mobile-menu-btn {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 55;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    color: #fff;
+    background: linear-gradient(
+      135deg,
+      var(--chat-primary) 0%,
+      var(--chat-primary-light) 100%
+    );
+    box-shadow: 0 4px 14px rgba(204, 120, 92, 0.32);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(24, 23, 21, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
+  // 头部让出抽屉按钮位置
+  .chat-header {
+    padding: 10px 16px 10px 60px;
+  }
+
+  .chat-header-title {
+    gap: 8px;
+
+    // 隐藏头像避免与抽屉按钮重叠
+    :deep(.el-avatar) {
+      display: none;
+    }
+  }
+
+  .header-new-btn {
+    padding: 8px 12px;
+    font-size: 12px;
   }
 
   .messages-container {
@@ -1483,12 +1832,13 @@ onUnmounted(() => {
     max-width: 85%;
   }
 
-  .chat-header {
-    padding: 10px 16px;
-  }
-
   .input-area {
     padding: 10px 12px 14px;
+  }
+
+  .back-bottom-btn {
+    right: 16px;
+    bottom: calc(100% + 8px);
   }
 }
 </style>

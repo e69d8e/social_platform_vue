@@ -14,14 +14,29 @@
 
 html {
   scroll-behavior: smooth;
+  // 移动端点击不出现高亮遮罩
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   min-height: 100vh;
-  font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-    "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans",
-    "Helvetica Neue", sans-serif;
+  font-family:
+    Inter,
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    "WenQuanYi Micro Hei",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
+    sans-serif;
   font-size: 14px;
   line-height: 1.55;
   color: var(--text-ink);
@@ -29,7 +44,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 // ---- Links ----
@@ -142,7 +159,9 @@ img {
   background: var(--bg-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-base), transform var(--transition-base);
+  transition:
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
 
   &:hover {
     box-shadow: var(--shadow-md);
@@ -272,6 +291,42 @@ img {
   }
 }
 
+// ============================================================
+// Page & Dropdown Transitions
+// ============================================================
+
+// 路由页面切换：轻量淡入上移，避免喧宾夺主
+.page-enter-active,
+.page-leave-active {
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+// 下拉浮层（搜索历史等）
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 // ---- Heart Animation (for likes) ----
 @keyframes heartBeat {
   0% {
@@ -305,6 +360,17 @@ img {
   transition: all var(--transition-base) !important;
 }
 
+// 按钮按压微回弹反馈
+.el-button:not(.is-disabled):active {
+  transform: scale(0.96) !important;
+}
+
+// 键盘导航可见焦点（不干扰 EP 输入框自带的 focus ring）
+:where(a, button, [role="link"], [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
 // Input focus glow
 .el-input__wrapper {
   transition: box-shadow var(--transition-base) !important;
@@ -333,4 +399,69 @@ img {
 // Notification border radius
 .el-notification {
   border-radius: var(--radius-lg) !important;
+}
+
+// Empty state 主题化：把 EP 默认灰蓝插图染成暖珊瑚色系
+.el-empty {
+  padding: 48px 20px;
+
+  // EP 空状态插图由 --el-empty-fill-color-0..9 驱动
+  --el-empty-fill-color-0: var(--el-color-primary-light-9);
+  --el-empty-fill-color-1: #f0e1d6;
+  --el-empty-fill-color-2: #f3e7dc;
+  --el-empty-fill-color-3: #e9d3c5;
+  --el-empty-fill-color-4: #e2c9bb;
+  --el-empty-fill-color-5: #d8a992;
+  --el-empty-fill-color-6: #deae9d;
+  --el-empty-fill-color-7: #d59c88;
+  --el-empty-fill-color-8: #d59c8c;
+  --el-empty-fill-color-9: var(--el-color-primary);
+
+  .el-empty__image {
+    color: var(--el-color-primary);
+    opacity: 0.55;
+
+    svg {
+      color: inherit;
+    }
+  }
+
+  .el-empty__description p {
+    color: var(--text-muted);
+  }
+}
+
+html.dark .el-empty {
+  // 压过 element-plus dark/css-vars 中的同名定义（加载顺序靠后）
+  --el-empty-fill-color-0: rgba(217, 149, 128, 0.22) !important;
+  --el-empty-fill-color-1: rgba(217, 149, 128, 0.28) !important;
+  --el-empty-fill-color-2: rgba(217, 149, 128, 0.2) !important;
+  --el-empty-fill-color-3: rgba(217, 149, 128, 0.32) !important;
+  --el-empty-fill-color-4: rgba(217, 149, 128, 0.38) !important;
+  --el-empty-fill-color-5: rgba(217, 149, 128, 0.3) !important;
+  --el-empty-fill-color-6: rgba(217, 149, 128, 0.46) !important;
+  --el-empty-fill-color-7: rgba(217, 149, 128, 0.36) !important;
+  --el-empty-fill-color-8: rgba(217, 149, 128, 0.55) !important;
+  --el-empty-fill-color-9: rgba(217, 149, 128, 0.65) !important;
+
+  .el-empty__image {
+    opacity: 0.75;
+  }
+}
+
+// ============================================================
+// Reduced Motion（用户系统级偏好：关闭动画）
+// ============================================================
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

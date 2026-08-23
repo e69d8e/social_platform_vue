@@ -107,24 +107,17 @@ const formatTime = (timeStr) => {
       >
         <div class="avatar-wrap">
           <el-avatar :src="item.otherUserAvatar" :size="50" />
-          <span
-            v-if="item.unreadCount > 0"
-            class="unread-dot"
-          />
+          <span v-if="item.unreadCount > 0" class="unread-dot" />
         </div>
         <div class="conversation-info">
           <div class="conversation-top">
-            <span class="conversation-name">{{
-              item.otherUserNickname
-            }}</span>
+            <span class="conversation-name">{{ item.otherUserNickname }}</span>
             <span class="conversation-time">{{
               formatTime(item.lastMessageTime)
             }}</span>
           </div>
           <div class="conversation-bottom">
-            <span class="conversation-last">{{
-              item.lastMessage
-            }}</span>
+            <span class="conversation-last">{{ item.lastMessage }}</span>
             <el-badge
               v-if="item.unreadCount > 0"
               :value="item.unreadCount"

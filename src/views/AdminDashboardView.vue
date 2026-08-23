@@ -70,13 +70,20 @@ const summaryCards = computed(() => [
   { label: "评论总数", value: summary.value.totalComments, icon: ChatDotRound },
   { label: "点赞总数", value: summary.value.totalLikes, icon: Star },
   { label: "浏览总数", value: summary.value.totalViews, icon: View },
-  { label: "今日新增用户", value: summary.value.todayNewUsers, icon: UserFilled },
+  {
+    label: "今日新增用户",
+    value: summary.value.todayNewUsers,
+    icon: UserFilled,
+  },
   { label: "今日新增帖子", value: summary.value.todayPosts, icon: Edit },
-  { label: "今日活跃用户", value: summary.value.todayActiveUsers, icon: TrendCharts },
+  {
+    label: "今日活跃用户",
+    value: summary.value.todayActiveUsers,
+    icon: TrendCharts,
+  },
 ]);
 
-const formatCount = (value) =>
-  Number(value ?? 0).toLocaleString("zh-CN");
+const formatCount = (value) => Number(value ?? 0).toLocaleString("zh-CN");
 
 onMounted(fetchData);
 
@@ -84,15 +91,11 @@ const handleDaysChange = () => {
   fetchData();
 };
 
-const textColor = computed(() =>
-  themeStore.darkMode ? "#faf9f5" : "#141413"
-);
+const textColor = computed(() => (themeStore.darkMode ? "#faf9f5" : "#141413"));
 const subTextColor = computed(() =>
-  themeStore.darkMode ? "#a09d96" : "#6c6a64"
+  themeStore.darkMode ? "#a09d96" : "#6c6a64",
 );
-const lineColor = computed(() =>
-  themeStore.darkMode ? "#333230" : "#e6dfd8"
-);
+const lineColor = computed(() => (themeStore.darkMode ? "#333230" : "#e6dfd8"));
 
 const baseOption = computed(() => ({
   tooltip: { trigger: "axis" },
@@ -116,7 +119,11 @@ const baseOption = computed(() => ({
 
 const postsOption = computed(() => ({
   ...baseOption.value,
-  title: { text: "每日发帖数量", left: "center", textStyle: { color: textColor.value, fontSize: 15 } },
+  title: {
+    text: "每日发帖数量",
+    left: "center",
+    textStyle: { color: textColor.value, fontSize: 15 },
+  },
   series: [
     {
       type: "line",
@@ -135,7 +142,11 @@ const postsOption = computed(() => ({
 
 const usersOption = computed(() => ({
   ...baseOption.value,
-  title: { text: "用户增长（按周）", left: "center", textStyle: { color: textColor.value, fontSize: 15 } },
+  title: {
+    text: "用户增长（按周）",
+    left: "center",
+    textStyle: { color: textColor.value, fontSize: 15 },
+  },
   series: [
     {
       type: "line",
@@ -154,7 +165,11 @@ const usersOption = computed(() => ({
 
 const activeOption = computed(() => ({
   ...baseOption.value,
-  title: { text: "每日活跃用户", left: "center", textStyle: { color: textColor.value, fontSize: 15 } },
+  title: {
+    text: "每日活跃用户",
+    left: "center",
+    textStyle: { color: textColor.value, fontSize: 15 },
+  },
   series: [
     {
       type: "line",
@@ -186,11 +201,7 @@ const activeOption = computed(() => ({
     </div>
 
     <div class="summary-grid">
-      <div
-        v-for="card in summaryCards"
-        :key="card.label"
-        class="summary-card"
-      >
+      <div v-for="card in summaryCards" :key="card.label" class="summary-card">
         <div class="summary-icon">
           <el-icon :size="20"><component :is="card.icon" /></el-icon>
         </div>

@@ -3,10 +3,16 @@ import PostCard from "@/components/PostCard.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import LoadStatus from "@/components/LoadStatus.vue";
+import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import { getFollowPostsApi } from "@/api/postApi";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 
-const { items: posts, loading, loadingMore, noMore } = useInfiniteScroll({
+const {
+  items: posts,
+  loading,
+  loadingMore,
+  noMore,
+} = useInfiniteScroll({
   fetchPage: async (cursor) => {
     const res = await getFollowPostsApi({
       lastId: cursor.lastId,
@@ -26,13 +32,18 @@ const { items: posts, loading, loadingMore, noMore } = useInfiniteScroll({
   <div class="follow-page" v-loading="loading">
     <PageHeader title="我的关注" />
 
-    <el-empty v-if="posts.length === 0 && !loading" description="关注的人还没有发帖" />
+    <SkeletonGrid v-if="loading && posts.length === 0" :count="8" />
+
+    <el-empty v-else-if="posts.length === 0" description="关注的人还没有发帖">
+      <el-button type="primary" round @click="$router.push('/home')"
+        >去首页逛逛</el-button
+      >
+    </el-empty>
 
     <CardGrid v-else :items="posts">
-      <template #item="{ item }">
+      <template #item="{ item, index }">
         <PostCard
           :id="item.id"
-          :img-url="item.imgUrl"
           :title="item.title"
           :cover="item.cover"
           :content="item.content"
@@ -40,11 +51,16 @@ const { items: posts, loading, loadingMore, noMore } = useInfiniteScroll({
           :liked="item.liked"
           :time="item.createTime"
           :view-count="item.viewCount"
+          :delay="index < 12 ? index * 40 : 0"
         />
       </template>
     </CardGrid>
 
-    <LoadStatus :loading="loadingMore" :no-more="noMore" :has-items="posts.length > 0" />
+    <LoadStatus
+      :loading="loadingMore"
+      :no-more="noMore"
+      :has-items="posts.length > 0"
+    />
   </div>
 </template>
 

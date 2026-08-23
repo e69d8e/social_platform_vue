@@ -1,7 +1,13 @@
 <script setup>
 import { RouterView } from "vue-router";
+import BackToTop from "@/components/BackToTop.vue";
 </script>
 
 <template>
-  <RouterView />
+  <RouterView v-slot="{ Component, route }">
+    <Transition name="page" mode="out-in">
+      <component :is="Component" :key="route.path" />
+    </Transition>
+  </RouterView>
+  <BackToTop />
 </template>

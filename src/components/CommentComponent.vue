@@ -6,6 +6,7 @@ import { useUserStore } from "@/stores/user";
 import { Delete } from "@element-plus/icons-vue";
 import { deleteCommentApi } from "@/api/reviewerApi";
 import { debounce } from "lodash-es";
+import formatRelativeTime from "@/utils/formatTime";
 
 const userStore = useUserStore();
 const content = ref("");
@@ -22,7 +23,10 @@ const noMore = ref(false);
 const getComments = async () => {
   if (noMore.value) return;
   const timestamp = lastId.value || Date.now();
-  const res = await getCommentApi(props.postId, { lastId: timestamp, offset: offset.value });
+  const res = await getCommentApi(props.postId, {
+    lastId: timestamp,
+    offset: offset.value,
+  });
   const list = res.data.data.list;
 
   if (list.length === 0) {
@@ -33,9 +37,14 @@ const getComments = async () => {
   const temp = ref([]);
   for (let i = 0; i < list.length; i++) {
     const item = list[i];
-    if (comments.value.some((comment) => {
-      if (comment.id === item.id) { comment.children = item.children; return true; }
-    })) {
+    if (
+      comments.value.some((comment) => {
+        if (comment.id === item.id) {
+          comment.children = item.children;
+          return true;
+        }
+      })
+    ) {
       continue;
     }
     temp.value.push(item);
@@ -55,14 +64,20 @@ const loading = ref(false);
 const loadMore = async () => {
   if (loading.value || noMore.value) return;
   loading.value = true;
-  try { await getComments(); } finally { loading.value = false; }
+  try {
+    await getComments();
+  } finally {
+    loading.value = false;
+  }
 };
 
 const debouncedScrollHandler = debounce(() => {
   if (loading.value || noMore.value) return;
-  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+  const scrollTop =
+    document.documentElement.scrollTop || document.body.scrollTop;
   const clientHeight = document.documentElement.clientHeight;
-  const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+  const scrollHeight =
+    document.documentElement.scrollHeight || document.body.scrollHeight;
   if (scrollTop + clientHeight >= scrollHeight - 100) loadMore();
 }, 200);
 
@@ -80,7 +95,9 @@ const replyContext = ref({ parentId: 0, replyUserId: null, replyUserName: "" });
 const reply = (parent, child) => {
   replyContext.value.parentId = parent.id;
   replyContext.value.replyUserId = child ? child.user.id : parent.user.id;
-  replyContext.value.replyUserName = child ? child.user.nickname : parent.user.nickname;
+  replyContext.value.replyUserName = child
+    ? child.user.nickname
+    : parent.user.nickname;
 };
 
 const clearReply = () => {
@@ -96,7 +113,10 @@ const resetComments = async () => {
 };
 
 const submitComment = async () => {
-  if (!content.value.trim()) { ElMessage.warning("评论不能为空"); return; }
+  if (!content.value.trim()) {
+    ElMessage.warning("评论不能为空");
+    return;
+  }
   try {
     const res = await addCommentApi({
       postId: props.postId,
@@ -130,31 +150,50 @@ const deleteComment = async (id) => {
 
 <template>
   <div class="comment-section" v-loading="loading">
-    <h3 class="comment-title">评论 ({{ comments.length }})</h3>
+    <h3 class="comment-title">
+      评论
+      <span class="comment-count">{{ comments.length }}</span>
+    </h3>
 
     <!-- 输入区域 -->
     <div class="comment-input-card">
       <div class="comment-input-row">
-        <el-avatar :size="40" :src="userStore.userInfo.avatar" class="input-avatar" />
+        <el-avatar
+          :size="40"
+          :src="userStore.userInfo.avatar"
+          class="input-avatar"
+        />
         <el-input
           v-model="content"
           type="textarea"
           :rows="2"
-          :placeholder="replyContext.replyUserName ? `回复 @${replyContext.replyUserName}` : '写下你的评论...'"
+          :placeholder="
+            replyContext.replyUserName
+              ? `回复 @${replyContext.replyUserName}`
+              : '写下你的评论...'
+          "
           class="input-field"
         />
       </div>
       <div class="submit-bar">
-        <el-tag v-if="replyContext.replyUserName" closable @close="clearReply" size="small">
+        <el-tag
+          v-if="replyContext.replyUserName"
+          closable
+          @close="clearReply"
+          size="small"
+        >
           回复 @{{ replyContext.replyUserName }}
         </el-tag>
         <span v-else></span>
-        <el-button type="primary" size="small" @click="submitComment">发表评论</el-button>
+        <el-button type="primary" size="small" @click="submitComment"
+          >发表评论</el-button
+        >
       </div>
     </div>
 
     <!-- 评论列表 -->
     <div v-if="comments.length === 0 && !loading" class="empty-comments">
+      <span class="empty-glyph" aria-hidden="true">评</span>
       <span>暂无评论，来说点什么吧</span>
     </div>
 
@@ -163,7 +202,7 @@ const deleteComment = async (id) => {
       <div class="comment-main">
         <div class="comment-header">
           <span class="username">{{ item.user.nickname }}</span>
-          <span class="time">{{ item.createTime }}</span>
+          <span class="time">{{ formatRelativeTime(item.createTime) }}</span>
         </div>
         <div class="comment-content">{{ item.content }}</div>
         <div class="comment-actions">
@@ -180,10 +219,19 @@ const deleteComment = async (id) => {
         </div>
 
         <!-- 子评论 -->
-        <div class="child-comments" v-if="item.children && item.children.length">
-          <div class="child-item" v-for="child in item.children" :key="child.id">
+        <div
+          class="child-comments"
+          v-if="item.children && item.children.length"
+        >
+          <div
+            class="child-item"
+            v-for="child in item.children"
+            :key="child.id"
+          >
             <span class="username">{{ child.user.nickname }}</span>
-            <span class="reply-text">回复 @{{ child.replyUser.nickname }}：</span>
+            <span class="reply-text"
+              >回复 @{{ child.replyUser.nickname }}：</span
+            >
             <span>{{ child.content }}</span>
             <span class="reply-btn" @click="reply(item, child)">回复</span>
             <el-popconfirm
@@ -204,15 +252,44 @@ const deleteComment = async (id) => {
 
 <style lang="scss" scoped>
 .comment-section {
-  margin-top: 32px;
+  margin-top: 40px;
 
   .comment-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    padding: 0 0 12px 14px;
+    margin: 0 0 16px;
     font-size: 17px;
     font-weight: 600;
     color: var(--text-primary);
-    margin: 0 0 16px;
-    padding-bottom: 12px;
     border-bottom: 1px solid var(--border-light);
+
+    // 珊瑚段落标：呼应首页小节标题
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 5px;
+      width: 4px;
+      height: 17px;
+      border-radius: 2px;
+      background: var(--el-color-primary);
+    }
+
+    .comment-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: $radius-full;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-subtle);
+    }
   }
 }
 
@@ -231,6 +308,8 @@ const deleteComment = async (id) => {
 
   .input-avatar {
     flex-shrink: 0;
+    border: 2px solid var(--border-light);
+    box-sizing: content-box;
   }
 
   .input-field {
@@ -262,6 +341,8 @@ const deleteComment = async (id) => {
 
   .comment-avatar {
     flex-shrink: 0;
+    border: 2px solid var(--border-light);
+    box-sizing: content-box;
   }
 }
 
@@ -285,6 +366,7 @@ const deleteComment = async (id) => {
   .time {
     font-size: 12px;
     color: var(--text-placeholder);
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -351,9 +433,26 @@ const deleteComment = async (id) => {
 }
 
 .empty-comments {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   text-align: center;
-  padding: 32px 0;
+  padding: 40px 0;
   color: var(--text-placeholder);
   font-size: 14px;
+
+  .empty-glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+    font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+    font-size: 16px;
+  }
 }
 </style>

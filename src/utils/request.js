@@ -32,7 +32,9 @@ async function refreshToken() {
   const token = userStore.token?.refreshToken;
   if (!token) throw new Error("No refresh token");
 
-  const { data } = await axios.post(`${BASE_URL}/user/refresh`, { refreshToken: token });
+  const { data } = await axios.post(`${BASE_URL}/user/refresh`, {
+    refreshToken: token,
+  });
   if (data.code !== 1) throw new Error("刷新令牌失败");
 
   const { accessToken, refreshToken: newRefreshToken } = data.data;

@@ -251,9 +251,7 @@ onUnmounted(() => {
         :key="msg.id || msg.createTime"
         :class="[
           'message-row',
-          msg.senderId + '' === userStore.userInfo.id + ''
-            ? 'mine'
-            : 'other',
+          msg.senderId + '' === userStore.userInfo.id + '' ? 'mine' : 'other',
           idx >= messages.length - pageSize ? 'msg-new' : 'msg-old',
         ]"
       >

@@ -34,3 +34,6 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# Playwright CLI 测试产物
+.playwright-cli/

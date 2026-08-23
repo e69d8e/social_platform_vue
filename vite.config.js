@@ -13,6 +13,8 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     port: 5173,
+    // 后端 CORS 仅允许 5173 端口：端口被占用时直接报错，而不是静默换端口
+    strictPort: true,
   },
   define: {
     global: "window",

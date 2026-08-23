@@ -1,34 +1,54 @@
 <script setup>
 import { likeApi } from "@/api/postApi";
 import { ref, computed, watch } from "vue";
+import { useRouter } from "vue-router";
 import { throttle } from "lodash-es";
 import formattedCount from "@/utils/formattedCount";
+import { formatExactTime } from "@/utils/formatTime";
+import pickGlyphChar from "@/utils/glyph";
 import { Star, View } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 
 const props = defineProps({
   id: { type: String, default: "" },
-  title: { type: String, default: "title" },
+  title: { type: String, default: "" },
   cover: { type: String },
   liked: { type: Boolean, default: false },
   content: { type: String, default: "" },
   likeCount: { type: Number, default: 0 },
-  time: { type: String, default: "2023-05-05 00:00:00" },
+  time: { type: String, default: "" },
   viewCount: { type: Number, default: 0 },
+  // 入场动画延迟（ms），首页网格用它做级联错峰
+  delay: { type: Number, default: 0 },
 });
 
+const router = useRouter();
+
+// ---- 点赞（乐观更新 + 失败回滚） ----
 const likeCount = ref(props.likeCount);
 const liked = ref(props.liked);
+// 每次成功切到「已点赞」时 +1，触发图标重挂载从而重放心跳动画
+const popTick = ref(0);
 
-// 同步 prop 变化到本地状态
-watch(() => props.liked, (val) => { liked.value = val; });
-watch(() => props.likeCount, (val) => { likeCount.value = val; });
+watch(
+  () => props.liked,
+  (val) => {
+    liked.value = val;
+  },
+);
+watch(
+  () => props.likeCount,
+  (val) => {
+    likeCount.value = val;
+  },
+);
 
 const handleLike = async () => {
   const oldLiked = liked.value;
   const oldCount = likeCount.value;
   liked.value = !liked.value;
   likeCount.value += liked.value ? 1 : -1;
+  if (liked.value) popTick.value += 1;
   try {
     const res = await likeApi(props.id);
     if (res.data.code !== 1) throw new Error("操作失败");
@@ -41,6 +61,7 @@ const handleLike = async () => {
 
 const like = throttle(handleLike, 800);
 
+// ---- 纯文本摘要 ----
 const htmlToText = (html) => {
   if (!html) return "";
   const formattedHtml = html
@@ -54,151 +75,312 @@ const htmlToText = (html) => {
 };
 
 const textContent = computed(() => htmlToText(props.content));
+
+// 文本卡水印字：取标题首个非符号字符，形似书页章纹
+const glyph = computed(() => pickGlyphChar(props.title));
+
+const timeText = computed(() => formatExactTime(props.time));
+
+// ---- 封面加载状态：淡入 + 失败回退纯文本卡 ----
+const coverLoaded = ref(false);
+const coverFailed = ref(false);
+
+watch(
+  () => props.cover,
+  () => {
+    coverLoaded.value = false;
+    coverFailed.value = false;
+  },
+);
+
+// 封面加载失败时回退为纯文本卡片（章纹水印布局）
+const hasCover = computed(() => Boolean(props.cover) && !coverFailed.value);
+
+const openPost = () => router.push(`/post/${props.id}`);
 </script>
 
 <template>
-  <div class="postcard" @click="$router.push(`/post/${props.id}`)">
-    <el-card shadow="hover" class="card">
-      <template #header>
-        <div class="card-header">
-          <h4 class="card-title">{{ props.title }}</h4>
-          <div class="like" @click.stop="like">
-            <el-icon
-              size="18"
-              :color="liked ? 'var(--el-color-danger)' : ''"
-              ><Star
-            /></el-icon>
-            <span class="count">{{ formattedCount(likeCount) }}</span>
-          </div>
-        </div>
-        <div class="card-meta">
-          <span class="time">{{ props.time }}</span>
-          <div class="view">
-            <el-icon size="16"><View /></el-icon>
-            <span class="count">{{ formattedCount(props.viewCount) }}</span>
-          </div>
-        </div>
-      </template>
+  <div
+    class="postcard"
+    role="link"
+    tabindex="0"
+    :aria-label="`阅读帖子：${props.title}`"
+    :style="{ '--rise-delay': `${props.delay}ms` }"
+    @click="openPost"
+    @keydown.enter.prevent="openPost"
+  >
+    <article class="card">
+      <div v-if="hasCover" class="media">
+        <img
+          :src="props.cover"
+          :alt="props.title"
+          loading="lazy"
+          :class="{ loaded: coverLoaded }"
+          @load="coverLoaded = true"
+          @error="coverFailed = true"
+        />
+      </div>
 
-      <div v-if="props.cover" class="cover">
-        <img :src="props.cover" />
+      <div class="body">
+        <h4 class="title">{{ props.title }}</h4>
+
+        <p v-if="hasCover" class="excerpt">{{ textContent }}</p>
+
+        <div v-else class="text-wrap">
+          <span class="glyph" aria-hidden="true">{{ glyph }}</span>
+          <p class="excerpt text-content">{{ textContent }}</p>
+        </div>
+
+        <div class="meta">
+          <span class="time" :title="props.time">{{ timeText }}</span>
+          <div class="stats">
+            <span class="view">
+              <el-icon size="14"><View /></el-icon>
+              <span class="count">{{ formattedCount(props.viewCount) }}</span>
+            </span>
+            <button
+              class="like"
+              type="button"
+              :aria-pressed="liked"
+              :aria-label="liked ? '取消点赞' : '点赞'"
+              @click.stop="like"
+            >
+              <el-icon
+                :key="popTick"
+                :class="{ pop: popTick > 0 && liked }"
+                size="15"
+                :color="liked ? 'var(--el-color-danger)' : ''"
+              >
+                <Star />
+              </el-icon>
+              <span class="count" :class="{ active: liked }">
+                {{ formattedCount(likeCount) }}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div v-else class="text-content">
-        {{ textContent }}
-      </div>
-    </el-card>
+    </article>
   </div>
 </template>
 
 <style lang="scss" scoped>
 .postcard {
+  height: 100%;
   cursor: pointer;
+  border-radius: $radius-lg;
+  animation: fadeInUp 0.45s ease both;
+  animation-delay: var(--rise-delay, 0ms);
 
-  .card {
-    border-radius: $radius-lg;
-    overflow: hidden;
-    border: 1px solid var(--border-light);
-    box-shadow: var(--shadow-sm);
-    transition: all $transition-base;
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
 
-    &:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-    }
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: $radius-lg;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform $transition-base,
+    box-shadow $transition-base,
+    border-color $transition-base;
 
-    :deep(.el-card__header) {
-      padding: 14px 16px 8px;
-      border-bottom: none;
-    }
+  .postcard:hover &,
+  .postcard:focus-visible & {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-default);
+  }
 
-    :deep(.el-card__body) {
-      padding: 0 16px 16px;
+  // 按压反馈
+  .postcard:active & {
+    transform: translateY(-1px) scale(0.995);
+    transition-duration: 0.1s;
+  }
+}
+
+// ---- 封面（图卡） ----
+.media {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--bg-subtle);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0;
+    transition:
+      opacity 0.45s ease,
+      transform 0.45s ease;
+
+    // 图片加载完成后淡入，避免“碎图闪现”
+    &.loaded {
+      opacity: 1;
     }
   }
 
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .postcard:hover & img {
+    transform: scale(1.05);
   }
+}
 
-  .card-title {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-    margin-right: 8px;
+// ---- 卡片主体 ----
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  padding: 12px 14px 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color $transition-base;
+
+  .postcard:hover & {
+    color: var(--el-color-primary);
+  }
+}
+
+.excerpt {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// ---- 文本卡：章纹水印 + 长摘要 ----
+.text-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 150px;
+
+  .glyph {
+    position: absolute;
+    right: -16px;
+    bottom: -28px;
+    font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+    font-size: 120px;
+    line-height: 1;
+    font-weight: 700;
     color: var(--text-primary);
+    opacity: 0.05;
+    user-select: none;
+    pointer-events: none;
   }
 
-  .card-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 6px;
+  .text-content {
+    white-space: pre-wrap;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    min-height: 150px;
+  }
+}
 
-    .time {
-      font-size: 12px;
-      color: var(--text-placeholder);
-    }
+// ---- 底栏：时间 + 浏览 + 点赞 ----
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+
+  .time {
+    font-size: 12px;
+    color: var(--text-placeholder);
+    white-space: nowrap;
   }
 
-  .like,
-  .view {
+  .stats {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 10px;
     flex-shrink: 0;
   }
 
+  .view,
   .like {
-    cursor: pointer;
-    padding: 2px 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+  }
+
+  .count {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .like {
+    appearance: none;
+    background: none;
+    border: none;
+    margin: -2px;
+    padding: 4px 6px;
     border-radius: $radius-sm;
-    transition: all $transition-base;
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+      background $transition-fast,
+      transform $transition-fast;
 
     &:hover {
       background: var(--el-color-danger-light-9);
     }
-  }
 
-  .count {
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
+    &:active {
+      transform: scale(0.92);
+    }
 
-  .cover {
-    border-radius: $radius-md;
-    overflow: hidden;
+    :focus-visible &,
+    &:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 1px;
+    }
 
-    img {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      object-fit: cover;
-      display: block;
-      transition: transform 0.4s ease;
+    .count.active {
+      color: var(--el-color-danger);
+    }
+
+    .pop {
+      animation: heartBeat 0.5s ease;
     }
   }
+}
 
-  &:hover .cover img {
-    transform: scale(1.03);
+@media (prefers-reduced-motion: reduce) {
+  .postcard {
+    animation: none;
   }
 
-  .text-content {
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--text-secondary);
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    display: -webkit-box;
-    -webkit-line-clamp: 8;
-    line-clamp: 8;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 160px;
+  .media img {
+    transition: none;
   }
 }
 </style>

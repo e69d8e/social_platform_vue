@@ -14,13 +14,15 @@ const props = defineProps({
   bio: { type: String, default: "个性签名" },
   followed: { type: Boolean, default: false },
   count: { type: Number, default: 0 },
+  // 入场动画延迟（ms），列表网格用它做级联错峰
+  delay: { type: Number, default: 0 },
 });
 
 const fansCount = computed(() => formattedCount(props.count));
 </script>
 
 <template>
-  <div class="usercard">
+  <div class="usercard" :style="{ '--rise-delay': `${props.delay}ms` }">
     <el-card shadow="hover" class="card">
       <template #header>
         <div class="card-header">
@@ -50,6 +52,14 @@ const fansCount = computed(() => formattedCount(props.count));
 
 <style lang="scss" scoped>
 .usercard {
+  height: 100%;
+  animation: fadeInUp 0.4s ease both;
+  animation-delay: var(--rise-delay, 0ms);
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+
   .card {
     border-radius: $radius-lg;
     border: 1px solid var(--border-light);
@@ -79,6 +89,21 @@ const fansCount = computed(() => formattedCount(props.count));
     display: flex;
     align-items: center;
     gap: 12px;
+
+    :deep(.el-avatar) {
+      flex-shrink: 0;
+      border: 2px solid transparent;
+      // 双背景渐变环：padding-box 打底（盖住图片底）+ border-box 画渐变环
+      background-image:
+        linear-gradient(var(--bg-card), var(--bg-card)), var(--gradient-primary);
+      background-origin: padding-box, border-box;
+      background-clip: padding-box, border-box;
+      transition: transform $transition-base;
+
+      &:hover {
+        transform: scale(1.06);
+      }
+    }
   }
 
   .user-info {
@@ -107,16 +132,20 @@ const fansCount = computed(() => formattedCount(props.count));
   .fans-count {
     font-size: 12px;
     color: var(--el-color-primary);
-    font-weight: 500;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 
   .bio {
     font-size: 13px;
     color: var(--text-secondary);
-    white-space: nowrap;
+    line-height: 1.6;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.5;
   }
 }
 </style>

@@ -1,7 +1,12 @@
 <script setup>
 import { useRoute } from "vue-router";
 import { logoUrl } from "@/utils/request";
-import { loginApi, registerApi, getUserInfoApi, getSignInDaysApi } from "@/api/userApi";
+import {
+  loginApi,
+  registerApi,
+  getUserInfoApi,
+  getSignInDaysApi,
+} from "@/api/userApi";
 import { getSlideCaptchaApi, verifySlideCaptchaApi } from "@/api/captchaApi";
 import { useUserStore } from "@/stores/user";
 import { ref, reactive, watch, onMounted } from "vue";
@@ -94,7 +99,11 @@ const loadSlideCaptcha = async () => {
 
 const onSlideSuccess = async (detail) => {
   try {
-    const res = await verifySlideCaptchaApi(slideCaptchaId.value, detail.left, detail.timestamp);
+    const res = await verifySlideCaptchaApi(
+      slideCaptchaId.value,
+      detail.left,
+      detail.timestamp,
+    );
     if (res.data.code !== 1) {
       slideVerified.value = false;
       ElMessage.error(res.data.message || "验证失败");
@@ -143,8 +152,16 @@ const submitForm = (formEl) => {
         ruleForm.value.password = ruleForm.value.password.trim();
         loading.value = true;
         if (isLogin.value) {
-          const res = await loginApi(ruleForm.value.username, ruleForm.value.password, verifyToken.value);
-          if (res.data.code !== 1) { loading.value = false; resetSlideVerify(); return; }
+          const res = await loginApi(
+            ruleForm.value.username,
+            ruleForm.value.password,
+            verifyToken.value,
+          );
+          if (res.data.code !== 1) {
+            loading.value = false;
+            resetSlideVerify();
+            return;
+          }
           userStore.setToken(res.data.data);
           ElMessage.success(res.data.message);
           const userInfo = await getUserInfoApi();
@@ -154,7 +171,11 @@ const submitForm = (formEl) => {
           router.push("/");
         } else {
           const res = await registerApi(ruleForm.value, verifyToken.value);
-          if (res.data.code !== 1) { loading.value = false; resetSlideVerify(); return; }
+          if (res.data.code !== 1) {
+            loading.value = false;
+            resetSlideVerify();
+            return;
+          }
           ElMessage.success(res.data.message);
           isLogin.value = true;
           resetSlideVerify();
@@ -193,9 +214,12 @@ const resetForm = (formEl) => {
     <div class="login-card">
       <div class="logo">
         <el-image class="logo-img" :src="logoUrl" />
+        <div class="brand-name">Y社区</div>
       </div>
       <div class="title">{{ isLogin ? "欢迎登录" : "创建账号" }}</div>
-      <div class="subtitle">{{ isLogin ? "登录您的 Y社区 账号" : "注册一个新账号加入社区" }}</div>
+      <div class="subtitle">
+        {{ isLogin ? "登录您的 Y社区 账号" : "注册一个新账号加入社区" }}
+      </div>
 
       <el-form
         ref="ruleFormRef"
@@ -206,13 +230,29 @@ const resetForm = (formEl) => {
         class="form"
       >
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="ruleForm.username" autocomplete="off" placeholder="请输入用户名" />
+          <el-input
+            v-model="ruleForm.username"
+            autocomplete="off"
+            placeholder="请输入用户名"
+          />
         </el-form-item>
         <el-form-item label="密码" prop="password">
-          <el-input v-model="ruleForm.password" type="password" autocomplete="off" placeholder="请输入密码" show-password />
+          <el-input
+            v-model="ruleForm.password"
+            type="password"
+            autocomplete="off"
+            placeholder="请输入密码"
+            show-password
+          />
         </el-form-item>
         <el-form-item label="确认密码" prop="confirmPassword" v-if="!isLogin">
-          <el-input v-model="ruleForm.confirmPassword" type="password" autocomplete="off" placeholder="请再次输入密码" show-password />
+          <el-input
+            v-model="ruleForm.confirmPassword"
+            type="password"
+            autocomplete="off"
+            placeholder="请再次输入密码"
+            show-password
+          />
         </el-form-item>
 
         <div class="slide-verify-wrapper">
@@ -220,9 +260,14 @@ const resetForm = (formEl) => {
             <el-icon class="is-loading"><Loading /></el-icon>
             <span>验证码加载中…</span>
           </div>
-          <div v-else-if="captchaError || !slideCaptchaId" class="slide-verify-tip">
+          <div
+            v-else-if="captchaError || !slideCaptchaId"
+            class="slide-verify-tip"
+          >
             <span>验证码加载失败</span>
-            <el-button link type="primary" @click="loadSlideCaptcha">点击重试</el-button>
+            <el-button link type="primary" @click="loadSlideCaptcha"
+              >点击重试</el-button
+            >
           </div>
           <SlideVerify
             v-else
@@ -240,22 +285,37 @@ const resetForm = (formEl) => {
         <div class="switch-link">
           <template v-if="isLogin">
             <span>还没有账号？</span>
-            <el-link @click="toRegister" :underline="false" type="primary">去注册</el-link>
+            <el-link @click="toRegister" :underline="false" type="primary"
+              >去注册</el-link
+            >
           </template>
           <template v-else>
             <span>已有账号？</span>
-            <el-link @click="toLogin" :underline="false" type="primary">去登录</el-link>
+            <el-link @click="toLogin" :underline="false" type="primary"
+              >去登录</el-link
+            >
           </template>
         </div>
 
         <div class="agreement">
           <el-checkbox v-model="isCheck" />
-          <span class="agree-text" @click="isCheck = !isCheck">我已阅读并同意</span>
-          <el-link @click="router.push('/userAgreement')" :underline="false" type="primary">《用户协议》</el-link>
+          <span class="agree-text" @click="isCheck = !isCheck"
+            >我已阅读并同意</span
+          >
+          <el-link
+            @click="router.push('/userAgreement')"
+            :underline="false"
+            type="primary"
+            >《用户协议》</el-link
+          >
         </div>
 
         <el-form-item>
-          <el-button type="primary" @click="submitForm(ruleFormRef)" class="submit-btn">
+          <el-button
+            type="primary"
+            @click="submitForm(ruleFormRef)"
+            class="submit-btn"
+          >
             {{ isLogin ? "登录" : "注册" }}
           </el-button>
           <el-button @click="resetForm(ruleFormRef)">清空</el-button>
@@ -299,6 +359,26 @@ const resetForm = (formEl) => {
       height: 72px;
       border-radius: 50%;
       box-shadow: var(--shadow-md);
+      border: 3px solid transparent;
+      // 双背景渐变环：padding-box 打底（盖住图片底）+ border-box 画渐变环
+      background-image:
+        linear-gradient(var(--bg-card), var(--bg-card)), var(--gradient-primary);
+      background-origin: padding-box, border-box;
+      background-clip: padding-box, border-box;
+    }
+
+    // 品牌字标：楷体感 + 渐变字色，呼应全站章纹语言
+    .brand-name {
+      margin-top: 12px;
+      font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      text-indent: 0.3em;
+      background-image: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
   }
 
@@ -394,6 +474,16 @@ const resetForm = (formEl) => {
 @media (max-width: 480px) {
   .login-card {
     padding: 28px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-card {
+    animation: none;
+  }
+
+  .submit-btn {
+    transition: none;
   }
 }
 </style>

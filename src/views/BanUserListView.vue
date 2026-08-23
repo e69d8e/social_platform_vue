@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { getBanUsersApi, searchBanUsersApi } from "@/api/adminApi";
 import { usePageList } from "@/composables/usePageList";
 import UserCard from "@/components/UserCard.vue";
+import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
@@ -10,18 +11,28 @@ import SearchInput from "@/components/SearchInput.vue";
 
 const keyword = ref("");
 
-const { list: usersList, pageNum, pageSize, total, loading, pageChange, reset } =
-  usePageList({
-    pageSize: 12,
-    fetchPage: ({ pageNum, pageSize }) => {
-      const params = { pageNum, pageSize };
-      const kw = keyword.value.trim();
-      const req = kw
-        ? searchBanUsersApi({ ...params, keyword: kw })
-        : getBanUsersApi(params);
-      return req.then((res) => ({ data: res.data.data, total: res.data.total }));
-    },
-  });
+const {
+  list: usersList,
+  pageNum,
+  pageSize,
+  total,
+  loading,
+  pageChange,
+  reset,
+} = usePageList({
+  pageSize: 12,
+  fetchPage: ({ pageNum, pageSize }) => {
+    const params = { pageNum, pageSize };
+    const kw = keyword.value.trim();
+    const req = kw
+      ? searchBanUsersApi({ ...params, keyword: kw })
+      : getBanUsersApi(params);
+    return req.then((res) => ({
+      data: res.data.data,
+      total: Number(res.data.total ?? 0),
+    }));
+  },
+});
 
 const handleSearch = () => reset();
 </script>
@@ -36,13 +47,16 @@ const handleSearch = () => reset();
       @search="handleSearch"
     />
 
-    <el-empty
-      v-if="usersList.length === 0 && !loading"
-      description="暂无封禁用户"
+    <SkeletonGrid
+      v-if="loading && usersList.length === 0"
+      type="user"
+      :count="12"
     />
 
+    <el-empty v-else-if="usersList.length === 0" description="暂无封禁用户" />
+
     <CardGrid v-else :items="usersList">
-      <template #item="{ item }">
+      <template #item="{ item, index }">
         <UserCard
           :id="item.id"
           :avatar="item.avatar"
@@ -50,6 +64,7 @@ const handleSearch = () => reset();
           :bio="item.bio"
           :followed="item.followed"
           :count="item.count"
+          :delay="index < 12 ? index * 40 : 0"
         />
       </template>
     </CardGrid>

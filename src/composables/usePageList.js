@@ -9,7 +9,11 @@ import { ref, onMounted } from "vue";
  * @param {number} [options.pageSize=8]
  * @param {boolean} [options.immediate=true] 挂载后是否立即请求首页
  */
-export function usePageList({ fetchPage, pageSize = 8, immediate = true } = {}) {
+export function usePageList({
+  fetchPage,
+  pageSize = 8,
+  immediate = true,
+} = {}) {
   const list = ref([]);
   const pageNum = ref(1);
   const pageSizeRef = ref(pageSize);

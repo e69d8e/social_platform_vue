@@ -48,14 +48,36 @@ const attrs = useAttrs();
   }
 
   .page-title {
+    position: relative;
     font-size: 18px;
     font-weight: 600;
     color: var(--text-primary);
+    padding-left: 12px;
+
+    // 珊瑚段落标：呼应首页小节标题语法
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 16px;
+      border-radius: 2px;
+      background: var(--el-color-primary);
+    }
   }
 
   .total-count {
-    font-size: 13px;
-    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 12px 3px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light);
+    border-radius: $radius-full;
+    font-variant-numeric: tabular-nums;
   }
 }
 </style>

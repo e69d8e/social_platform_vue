@@ -214,46 +214,44 @@ watch(
                   class="search-input"
                   clearable
                 />
-                <el-button
-                  :icon="Search"
-                  @click="search"
-                  class="search-btn"
-                />
+                <el-button :icon="Search" @click="search" class="search-btn" />
               </div>
-              <div
-                v-show="historyVisible && historyList.length"
-                class="search-dropdown"
-                v-loading="historyLoading"
-              >
-                <div class="dropdown-header">
-                  <span>搜索历史</span>
-                  <el-button
-                    size="small"
-                    text
-                    type="danger"
-                    @click="clearAllHistory"
-                  >
-                    <el-icon><Delete /></el-icon>
-                    清空
-                  </el-button>
-                </div>
+              <transition name="dropdown">
                 <div
-                  v-for="item in historyList"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown.prevent="historySearch(item)"
+                  v-show="historyVisible && historyList.length"
+                  class="search-dropdown"
+                  v-loading="historyLoading"
                 >
-                  <span class="item-keyword">{{ item.keyword }}</span>
-                  <span class="item-type">{{
-                    item.type === 0 ? "帖子" : "用户"
-                  }}</span>
-                  <el-icon
-                    class="item-close"
-                    @mousedown.stop="deleteHistoryItem(item.id)"
-                    ><Close
-                  /></el-icon>
+                  <div class="dropdown-header">
+                    <span>搜索历史</span>
+                    <el-button
+                      size="small"
+                      text
+                      type="danger"
+                      @click="clearAllHistory"
+                    >
+                      <el-icon><Delete /></el-icon>
+                      清空
+                    </el-button>
+                  </div>
+                  <div
+                    v-for="item in historyList"
+                    :key="item.id"
+                    class="dropdown-item"
+                    @mousedown.prevent="historySearch(item)"
+                  >
+                    <span class="item-keyword">{{ item.keyword }}</span>
+                    <span class="item-type">{{
+                      item.type === 0 ? "帖子" : "用户"
+                    }}</span>
+                    <el-icon
+                      class="item-close"
+                      @mousedown.stop="deleteHistoryItem(item.id)"
+                      ><Close
+                    /></el-icon>
+                  </div>
                 </div>
-              </div>
+              </transition>
             </div>
           </div>
 
@@ -283,6 +281,7 @@ watch(
             <template v-if="userStore.userInfo.username">
               <el-badge
                 v-if="unreadCount > 0"
+                :key="unreadCount"
                 :value="unreadCount"
                 :max="99"
                 class="msg-badge"
@@ -358,7 +357,11 @@ watch(
         <el-row>
           <el-col :xs="0" :sm="1" :md="1" :lg="2" :xl="3" />
           <el-col :xs="24" :sm="22" :md="22" :lg="20" :xl="18">
-            <router-view />
+            <router-view v-slot="{ Component, route }">
+              <Transition name="page" mode="out-in">
+                <component :is="Component" :key="route.path" />
+              </Transition>
+            </router-view>
           </el-col>
           <el-col :xs="0" :sm="1" :md="1" :lg="2" :xl="3" />
         </el-row>
@@ -502,7 +505,8 @@ watch(
       transition: all var(--transition-base);
 
       &:focus-within {
-        box-shadow: 0 0 0 2px var(--el-color-primary) inset,
+        box-shadow:
+          0 0 0 2px var(--el-color-primary) inset,
           var(--glow-primary);
       }
     }
@@ -609,6 +613,11 @@ watch(
     gap: 6px;
     flex-shrink: 0;
 
+    // 未读徽标数字变化时的小弹跳
+    .msg-badge :deep(.el-badge__content) {
+      animation: badge-pop 0.35s ease;
+    }
+
     .publish-btn {
       background: var(--gradient-primary);
       border: none;
@@ -678,6 +687,21 @@ watch(
     padding: 0;
     min-height: calc(100vh - 70px);
     background: var(--bg-page);
+  }
+}
+
+// 未读徽标数字变化时的小弹跳
+@keyframes badge-pop {
+  0% {
+    transform: scale(0.5);
+  }
+
+  60% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
   }
 }
 

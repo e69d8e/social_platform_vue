@@ -1,12 +1,18 @@
 <script setup>
 import { ref, onMounted, shallowRef, onBeforeUnmount } from "vue";
-import { getPostCategoryApi, getPostIdApi, publishPostApi } from "@/api/postApi";
+import {
+  getPostCategoryApi,
+  getPostIdApi,
+  publishPostApi,
+} from "@/api/postApi";
 import { deletePostImgApi, uploadPostImgApi } from "@/api/uploadApi";
 import { useRouter } from "vue-router";
 import "@wangeditor/editor/dist/css/style.css";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 // import { ElMessage, ElMessageBox } from "element-plus";
 import PageHeader from "@/components/PageHeader.vue";
+import ImageCropper from "@/components/ImageCropper.vue";
+import compressImage from "@/utils/compressImage";
 import { Plus } from "@element-plus/icons-vue";
 
 const router = useRouter();
@@ -33,14 +39,14 @@ onMounted(async () => {
 const imageUrl = ref("");
 const file = ref();
 const hasUploadedImg = ref(false);
+const cropperVisible = ref(false);
+const cropperFile = ref(null);
 let oldObjectUrl = null;
 
 const beforeUpload = (rawFile) => {
+  // 大小校验放在裁切压缩之后，这里只校验格式
   if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
     ElMessage.error("上传图片格式应为 jpg 或 png!");
-    return false;
-  } else if (rawFile.size / 1024 / 1024 > 8) {
-    ElMessage.error("图片大小不能超过 8MB!");
     return false;
   }
   return true;
@@ -58,7 +64,8 @@ const publicPost = async () => {
     cover: url ? url.data.data : null,
     title: title.value,
     content: valueHtml.value,
-    categoryId: categoryId.value,
+    // 未选择分类时传 null，后端默认归入“其他”分类
+    categoryId: categoryId.value === "" ? null : categoryId.value,
   });
   dialogConfirmVisible.value = false;
   loading.value = false;
@@ -82,20 +89,57 @@ editorConfig.MENU_CONF = {};
 editorConfig.MENU_CONF["uploadImage"] = {
   maxNumberOfFiles: 1,
   async customUpload(file, insertFn) {
-    const res = await uploadPostImgApi(file, id.value);
-    const url = res.data.data;
-    if (url) {
-      hasUploadedImg.value = true;
-      insertFn(url, "图片描述", url);
+    try {
+      const compressed = await compressImage(file);
+      if (compressed.size / 1024 / 1024 > 8) {
+        ElMessage.error("图片压缩后仍超过 8MB，请更换图片");
+        return;
+      }
+      const res = await uploadPostImgApi(compressed, id.value);
+      const url = res.data.data;
+      if (url) {
+        hasUploadedImg.value = true;
+        insertFn(url, "图片描述", url);
+      }
+    } catch {
+      ElMessage.error("图片上传失败，请重试");
     }
   },
 };
 
 const handleCoverChange = (uploadFile) => {
-  if (oldObjectUrl) URL.revokeObjectURL(oldObjectUrl);
-  imageUrl.value = URL.createObjectURL(uploadFile.raw);
-  oldObjectUrl = imageUrl.value;
-  file.value = uploadFile.raw;
+  const raw = uploadFile.raw;
+  if (!raw) return;
+
+  // auto-upload=false 时 before-upload 不一定触发，这里只兜底校验格式
+  if (!["image/jpeg", "image/png"].includes(raw.type)) {
+    ElMessage.error("上传图片格式应为 jpg 或 png!");
+    return;
+  }
+
+  cropperFile.value = raw;
+  cropperVisible.value = true;
+};
+
+// 封面裁切完成：先压缩再校验大小（针对压缩结果），通过后替换待上传文件
+const onCoverCropped = async (croppedFile) => {
+  try {
+    const compressed = await compressImage(croppedFile, {
+      maxWidth: 1600,
+      maxHeight: 960,
+      quality: 0.85,
+    });
+    if (compressed.size / 1024 / 1024 > 8) {
+      ElMessage.error("图片压缩后仍超过 8MB，请更换图片");
+      return;
+    }
+    if (oldObjectUrl) URL.revokeObjectURL(oldObjectUrl);
+    imageUrl.value = URL.createObjectURL(compressed);
+    oldObjectUrl = imageUrl.value;
+    file.value = compressed;
+  } catch {
+    ElMessage.error("图片处理失败，请重新选择");
+  }
 };
 
 const handleRemoveCover = () => {
@@ -168,7 +212,7 @@ const handleBackClick = async () => {
       <div class="section">
         <div class="section-label">上传封面</div>
         <div class="section-hint">
-          图片比例为 5:3，格式为 jpg/png，大小小于 8MB
+          图片比例为 5:3，格式为 jpg/png，自动压缩后不超过 8MB
         </div>
         <div class="cover-area">
           <div class="cover-preview-box" :class="{ 'has-image': imageUrl }">
@@ -254,6 +298,14 @@ const handleBackClick = async () => {
         <el-button type="primary" @click="publicPost">确认</el-button>
       </template>
     </el-dialog>
+
+    <ImageCropper
+      v-model="cropperVisible"
+      :file="cropperFile"
+      title="裁切封面"
+      :aspect-ratio="5 / 3"
+      @confirm="onCoverCropped"
+    />
   </div>
 </template>
 

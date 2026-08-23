@@ -117,6 +117,10 @@ const router = createRouter({
       component: () => import("@/views/ChatView.vue"),
     },
   ],
+  // 跳转后回到顶部：列表页之间不继承滚动位置，新页面从顶部读起
+  scrollBehavior() {
+    return { top: 0 };
+  },
 });
 
 // 路由守卫：校验页面权限

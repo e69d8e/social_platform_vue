@@ -11,6 +11,8 @@ import {
 import { uploadAvatar } from "@/api/uploadApi";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import PageHeader from "@/components/PageHeader.vue";
+import ImageCropper from "@/components/ImageCropper.vue";
+import compressImage from "@/utils/compressImage";
 import formattedCount from "@/utils/formattedCount";
 import { Male, Female, Plus } from "@element-plus/icons-vue";
 
@@ -30,6 +32,8 @@ const ruleFormRef = ref();
 const passwordFormRef = ref();
 const dialogFormVisible = ref(false);
 const dialogVisible = ref(false);
+const cropperVisible = ref(false);
+const cropperFile = ref(null);
 
 const ruleForm = reactive({ ...userStore.userInfo });
 
@@ -68,12 +72,9 @@ const rules = reactive({
 });
 
 const beforeAvatarUpload = (rawFile) => {
+  // 大小校验放在裁切压缩之后，这里只校验格式
   if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
     ElMessage.error("图像格式应为 jpeg/png");
-    return false;
-  }
-  if (rawFile.size / 1024 / 1024 > 2) {
-    ElMessage.error("头像大小不能超过 2MB");
     return false;
   }
   return true;
@@ -83,20 +84,35 @@ const handleAvatarChange = (uploadFile) => {
   const raw = uploadFile.raw;
   if (!raw) return;
 
-  // auto-upload=false 时 before-upload 不一定触发，这里兜底校验
+  // auto-upload=false 时 before-upload 不一定触发，这里只兜底校验格式
   if (!["image/jpeg", "image/png"].includes(raw.type)) {
     ElMessage.error("图像格式应为 jpeg/png");
     return;
   }
-  if (raw.size / 1024 / 1024 > 2) {
-    ElMessage.error("头像大小不能超过 2MB");
-    return;
-  }
 
-  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
-  previewUrl.value = URL.createObjectURL(raw);
-  imageUrl.value = previewUrl.value;
-  file.value = raw;
+  cropperFile.value = raw;
+  cropperVisible.value = true;
+};
+
+// 头像裁切完成：先压缩再校验大小（针对压缩结果），通过后替换待上传文件
+const onAvatarCropped = async (croppedFile) => {
+  try {
+    const compressed = await compressImage(croppedFile, {
+      maxWidth: 512,
+      maxHeight: 512,
+      quality: 0.85,
+    });
+    if (compressed.size / 1024 / 1024 > 2) {
+      ElMessage.error("头像压缩后仍超过 2MB，请更换图片");
+      return;
+    }
+    file.value = compressed;
+    if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+    previewUrl.value = URL.createObjectURL(compressed);
+    imageUrl.value = previewUrl.value;
+  } catch {
+    ElMessage.error("图片处理失败，请重新选择");
+  }
 };
 
 const submitForm = async (formEl) => {
@@ -297,7 +313,11 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
         label-position="top"
       >
         <el-form-item label="昵称" prop="nickname">
-          <el-input v-model="ruleForm.nickname" maxlength="16" show-word-limit />
+          <el-input
+            v-model="ruleForm.nickname"
+            maxlength="16"
+            show-word-limit
+          />
         </el-form-item>
         <el-form-item label="性别" prop="gender">
           <el-radio-group v-model="ruleForm.gender">
@@ -384,6 +404,14 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
         >
       </template>
     </el-dialog>
+
+    <ImageCropper
+      v-model="cropperVisible"
+      :file="cropperFile"
+      title="裁切头像"
+      :aspect-ratio="1"
+      @confirm="onAvatarCropped"
+    />
   </div>
 </template>
 
