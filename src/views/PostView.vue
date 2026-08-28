@@ -31,8 +31,7 @@ import { ElMessage } from "element-plus";
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
-const commentRef = ref(null);
-const srcList = computed(() => [post.value.cover]);
+
 const post = ref({
   id: "",
   title: "",
@@ -51,6 +50,39 @@ const post = ref({
 const dialogVisible = ref(false);
 const loading = ref(true);
 const deleteLoading = ref(false);
+
+// ---- 图片大图预览逻辑 ----
+const viewerVisible = ref(false);
+const viewerIndex = ref(0);
+
+const contentImageList = computed(() => {
+  if (!sanitizedContent.value) return [];
+  const urls = [];
+  const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+  let match;
+  while ((match = imgRegex.exec(sanitizedContent.value)) !== null) {
+    if (match[1]) urls.push(match[1]);
+  }
+  return urls;
+});
+
+const allImages = computed(() => {
+  const list = [];
+  if (post.value.cover) list.push(post.value.cover);
+  list.push(...contentImageList.value);
+  return list;
+});
+
+const handleContentClick = (e) => {
+  const target = e.target;
+  if (target && target.tagName === "IMG") {
+    const src = target.getAttribute("src");
+    if (!src) return;
+    const index = allImages.value.indexOf(src);
+    viewerIndex.value = index >= 0 ? index : 0;
+    viewerVisible.value = true;
+  }
+};
 
 const getPost = async (id) => {
   try {
@@ -243,7 +275,8 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
 
       <div v-if="post.cover" class="cover">
         <el-image
-          :preview-src-list="srcList"
+          :preview-src-list="allImages"
+          :initial-preview-index="0"
           :src="post.cover"
           fit="cover"
           class="cover-img"
@@ -252,7 +285,11 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
 
       <div class="rule"></div>
 
-      <div class="content" v-html="sanitizedContent"></div>
+      <div
+        class="content"
+        v-html="sanitizedContent"
+        @click="handleContentClick"
+      ></div>
 
       <!-- 章纹收尾：读完一章的落款 -->
       <footer class="paper-end">
@@ -273,6 +310,16 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
     </el-dialog>
 
     <CommentComponent :post-id="route.params.id" />
+
+    <!-- 帖子正文图片大图全屏预览 -->
+    <el-image-viewer
+      v-if="viewerVisible"
+      :url-list="allImages"
+      :initial-index="viewerIndex"
+      :teleported="true"
+      :hide-on-click-modal="true"
+      @close="viewerVisible = false"
+    />
   </div>
 </template>
 
@@ -553,6 +600,17 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
         border-radius: var(--radius-lg);
         margin: 16px 0;
         box-shadow: var(--shadow-sm);
+        cursor: zoom-in;
+        transition: transform var(--transition-base), box-shadow var(--transition-base), opacity var(--transition-base);
+
+        &:hover {
+          opacity: 0.94;
+          box-shadow: var(--shadow-md);
+        }
+
+        &:active {
+          transform: scale(0.99);
+        }
       }
 
       :deep(blockquote) {

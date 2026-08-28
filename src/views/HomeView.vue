@@ -68,6 +68,8 @@ const {
         <template #item="{ item, index }">
           <PostCard
             :id="item.id"
+            :user-id="item.userId"
+            :username="item.username"
             :title="item.title"
             :content="item.content"
             :cover="item.cover"

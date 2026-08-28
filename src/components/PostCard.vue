@@ -6,11 +6,13 @@ import { throttle } from "lodash-es";
 import formattedCount from "@/utils/formattedCount";
 import { formatExactTime } from "@/utils/formatTime";
 import pickGlyphChar from "@/utils/glyph";
-import { Star, View } from "@element-plus/icons-vue";
+import { Star, View, User } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 
 const props = defineProps({
   id: { type: String, default: "" },
+  userId: { type: [String, Number], default: "" },
+  username: { type: String, default: "" },
   title: { type: String, default: "" },
   cover: { type: String },
   liked: { type: Boolean, default: false },
@@ -97,6 +99,12 @@ watch(
 const hasCover = computed(() => Boolean(props.cover) && !coverFailed.value);
 
 const openPost = () => router.push(`/post/${props.id}`);
+const openUser = (e) => {
+  e?.stopPropagation?.();
+  if (props.userId) {
+    router.push(`/user/${props.userId}`);
+  }
+};
 </script>
 
 <template>
@@ -132,7 +140,19 @@ const openPost = () => router.push(`/post/${props.id}`);
         </div>
 
         <div class="meta">
-          <span class="time" :title="props.time">{{ timeText }}</span>
+          <div class="meta-left">
+            <span
+              v-if="props.username"
+              class="author"
+              :class="{ clickable: Boolean(props.userId) }"
+              :title="props.userId ? `查看 @${props.username} 的主页` : `@${props.username}`"
+              @click.stop="openUser"
+            >
+              <el-icon size="12"><User /></el-icon>
+              <span class="author-name">@{{ props.username }}</span>
+            </span>
+            <span class="time" :title="props.time">{{ timeText }}</span>
+          </div>
           <div class="stats">
             <span class="view">
               <el-icon size="14"><View /></el-icon>
@@ -304,7 +324,7 @@ const openPost = () => router.push(`/post/${props.id}`);
   }
 }
 
-// ---- 底栏：时间 + 浏览 + 点赞 ----
+// ---- 底栏：作者 + 时间 + 浏览 + 点赞 ----
 .meta {
   display: flex;
   align-items: center;
@@ -314,10 +334,47 @@ const openPost = () => router.push(`/post/${props.id}`);
   padding-top: 6px;
   border-top: 1px solid var(--border-light);
 
+  .meta-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .author {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    max-width: 96px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--transition-fast);
+
+    &.clickable {
+      cursor: pointer;
+
+      &:hover {
+        color: var(--el-color-primary);
+      }
+    }
+
+    .author-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   .time {
     font-size: 11.5px;
     color: var(--text-placeholder);
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .stats {

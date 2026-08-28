@@ -12,6 +12,8 @@ const props = defineProps({
   round: { type: Boolean, default: true },
 });
 
+const emit = defineEmits(["change"]);
+
 const userStore = useUserStore();
 const followed = ref(props.followed);
 const followLoading = ref(false);

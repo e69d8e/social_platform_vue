@@ -13,7 +13,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import PageHeader from "@/components/PageHeader.vue";
 import ImageCropper from "@/components/ImageCropper.vue";
 import compressImage from "@/utils/compressImage";
-import { Plus, Delete, Picture } from "@element-plus/icons-vue";
+import { Plus, Delete } from "@element-plus/icons-vue";
 
 const router = useRouter();
 

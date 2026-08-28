@@ -55,7 +55,10 @@ const handleSearch = () => reset();
       <template #item="{ item, index }">
         <PostCard
           :id="item.id"
+          :user-id="item.userId"
+          :username="item.username"
           :title="item.title"
+          :cover="item.cover"
           :content="item.content"
           :liked="item.liked"
           :like-count="item.likeCount"
