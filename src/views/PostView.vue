@@ -79,9 +79,13 @@ const handleContentClick = (e) => {
     const src = target.getAttribute("src");
     if (!src) return;
     const index = allImages.value.indexOf(src);
-    viewerIndex.value = index >= 0 ? index : 0;
-    viewerVisible.value = true;
+    openViewer(index >= 0 ? index : 0);
   }
+};
+
+const openViewer = (index = 0) => {
+  viewerIndex.value = index;
+  viewerVisible.value = true;
 };
 
 const getPost = async (id) => {
@@ -273,13 +277,12 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
         </div>
       </header>
 
-      <div v-if="post.cover" class="cover">
+      <div v-if="post.cover" class="cover" @click="openViewer(0)">
         <el-image
-          :preview-src-list="allImages"
-          :initial-preview-index="0"
           :src="post.cover"
           fit="cover"
           class="cover-img"
+          alt="文章封面"
         />
       </div>
 
@@ -558,6 +561,13 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       border-radius: var(--radius-xl);
       overflow: hidden;
       box-shadow: var(--shadow-sm);
+      cursor: zoom-in;
+      transition: all var(--transition-base);
+
+      &:hover {
+        opacity: 0.95;
+        box-shadow: var(--shadow-md);
+      }
 
       .cover-img {
         width: 100%;
