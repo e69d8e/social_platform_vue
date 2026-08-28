@@ -13,8 +13,10 @@ const props = defineProps({
   title: { type: String, default: "裁切图片" },
   // 待裁切的图片：本地 File/Blob 或图片地址
   file: { type: [File, Blob, String], default: null },
-  // 裁切框宽高比（宽 / 高），例如头像为 1，5:3 封面为 5 / 3
+  // 裁切框宽高比（宽 / 高），0 表示自由裁切，头像为 1，5:3 封面为 5 / 3
   aspectRatio: { type: Number, default: 1 },
+  // 是否允许用户在弹窗中切换常用比例（自由/原图/1:1/4:3/16:9）
+  allowRatioChange: { type: Boolean, default: false },
   // 输出格式：auto（png 保持 png，其余转 jpeg）/ jpeg / png
   outputType: { type: String, default: "auto" },
 });
@@ -34,6 +36,9 @@ const failed = ref(false);
 const zoom = ref(1);
 const stageW = ref(0);
 const stageH = ref(0);
+
+// 当前生效的比例：0 表示自由
+const currentRatio = ref(props.aspectRatio);
 
 // 当前显示图片的自然尺寸（旋转后与旋转前可能不同）
 const nat = reactive({ w: 0, h: 0 });
@@ -75,32 +80,45 @@ const clampCrop = () => {
   const bw = bboxW.value;
   const bh = bboxH.value;
   if (!bw || !bh) return;
-  if (crop.w > bw) {
-    crop.w = bw;
-    crop.h = bw / props.aspectRatio;
-  }
-  if (crop.h > bh) {
-    crop.h = bh;
-    crop.w = bh * props.aspectRatio;
+  const r = currentRatio.value;
+  if (r > 0) {
+    if (crop.w > bw) {
+      crop.w = bw;
+      crop.h = bw / r;
+    }
+    if (crop.h > bh) {
+      crop.h = bh;
+      crop.w = bh * r;
+    }
+  } else {
+    crop.w = Math.min(crop.w, bw);
+    crop.h = Math.min(crop.h, bh);
   }
   crop.x = Math.min(Math.max(crop.x, bboxX.value), bboxX.value + bw - crop.w);
   crop.y = Math.min(Math.max(crop.y, bboxY.value), bboxY.value + bh - crop.h);
 };
 
-// 初始裁切框：占舞台较小边的 72%，居中
+// 初始裁切框
 const initCrop = () => {
   const bw = bboxW.value;
   const bh = bboxH.value;
   if (!bw || !bh) return;
-  let w = Math.min(stageW.value, stageH.value) * 0.72;
-  let h = w / props.aspectRatio;
-  if (w > bw) {
-    w = bw;
-    h = w / props.aspectRatio;
-  }
-  if (h > bh) {
-    h = bh;
-    w = h * props.aspectRatio;
+  const r = currentRatio.value;
+  let w = Math.min(stageW.value, stageH.value) * 0.75;
+  let h;
+  if (r > 0) {
+    h = w / r;
+    if (w > bw) {
+      w = bw;
+      h = w / r;
+    }
+    if (h > bh) {
+      h = bh;
+      w = h * r;
+    }
+  } else {
+    w = Math.min(bw * 0.85, stageW.value * 0.8);
+    h = Math.min(bh * 0.85, stageH.value * 0.8);
   }
   crop.w = w;
   crop.h = h;
@@ -108,6 +126,21 @@ const initCrop = () => {
   crop.y = bboxY.value + (bh - h) / 2;
   clampCrop();
 };
+
+const changeRatio = (val) => {
+  if (val === -1) {
+    // 原图比例
+    currentRatio.value = nat.w && nat.h ? nat.w / nat.h : 1;
+  } else {
+    currentRatio.value = val;
+  }
+  initCrop();
+};
+
+const isOriginalRatio = computed(() => {
+  if (!nat.w || !nat.h || currentRatio.value <= 0) return false;
+  return Math.abs(currentRatio.value - nat.w / nat.h) < 0.01;
+});
 
 const setZoom = (value) => {
   zoom.value = Math.min(MAX_ZOOM, Math.max(1, value));
@@ -181,7 +214,7 @@ const onPointerMove = (e) => {
 
 const resizeBy = (dx, dy) => {
   const { sx, sy } = drag;
-  const ratio = props.aspectRatio;
+  const r = currentRatio.value;
   const bw = bboxW.value;
   const bh = bboxH.value;
   // 锚定对角，可放大的最大宽高
@@ -193,7 +226,19 @@ const resizeBy = (dx, dy) => {
     sy === 1
       ? bboxY.value + bh - startRect.y
       : startRect.y + startRect.h - bboxY.value;
-  const minW = Math.min(MIN_CROP * ratio, maxW);
+
+  if (r <= 0) {
+    // 自由宽高比裁切
+    const w = Math.min(Math.max(startRect.w + dx * sx, MIN_CROP), maxW);
+    const h = Math.min(Math.max(startRect.h + dy * sy, MIN_CROP), maxH);
+    crop.w = w;
+    crop.h = h;
+    if (sx === -1) crop.x = startRect.x + startRect.w - w;
+    if (sy === -1) crop.y = startRect.y + startRect.h - h;
+    return;
+  }
+
+  const minW = Math.min(MIN_CROP * r, maxW);
   const minH = Math.min(MIN_CROP, maxH);
   const rawW = startRect.w + dx * sx;
   const rawH = startRect.h + dy * sy;
@@ -205,25 +250,25 @@ const resizeBy = (dx, dy) => {
   let h;
   if (driveByWidth) {
     w = Math.min(Math.max(rawW, minW), maxW);
-    h = w / ratio;
+    h = w / r;
     if (h > maxH) {
       h = maxH;
-      w = h * ratio;
+      w = h * r;
     }
-    if (h < minH) {
+    if (h < minW) {
       h = minH;
-      w = h * ratio;
+      w = h * r;
     }
   } else {
     h = Math.min(Math.max(rawH, minH), maxH);
-    w = h * ratio;
+    w = h * r;
     if (w > maxW) {
       w = maxW;
-      h = w / ratio;
+      h = w / r;
     }
-    if (w < minW) {
+    if (h < minW) {
       w = minW;
-      h = w / ratio;
+      h = w / r;
     }
   }
   crop.w = w;
@@ -395,13 +440,12 @@ const handleConfirm = () => {
   );
 };
 
-// ---------------- 生命周期 ----------------
-
 const handleOpen = async () => {
   loading.value = true;
   failed.value = false;
   zoom.value = 1;
   angle = 0;
+  currentRatio.value = props.aspectRatio;
   await nextTick();
   try {
     sourceUrl = await resolveSourceUrl();
@@ -503,6 +547,53 @@ const boxStyle = computed(() => ({
         </div>
         <div v-else-if="failed" class="stage-tip">
           <span>图片加载失败，请重新选择</span>
+        </div>
+      </div>
+
+      <!-- 比例切换条 -->
+      <div v-if="allowRatioChange" class="ratio-bar">
+        <span class="ratio-label">裁切比例：</span>
+        <div class="ratio-options">
+          <button
+            type="button"
+            class="ratio-pill"
+            :class="{ active: currentRatio === 0 }"
+            @click="changeRatio(0)"
+          >
+            自由
+          </button>
+          <button
+            type="button"
+            class="ratio-pill"
+            :class="{ active: isOriginalRatio }"
+            @click="changeRatio(-1)"
+          >
+            原图
+          </button>
+          <button
+            type="button"
+            class="ratio-pill"
+            :class="{ active: Math.abs(currentRatio - 1) < 0.01 && !isOriginalRatio }"
+            @click="changeRatio(1)"
+          >
+            1:1
+          </button>
+          <button
+            type="button"
+            class="ratio-pill"
+            :class="{ active: Math.abs(currentRatio - 4 / 3) < 0.01 }"
+            @click="changeRatio(4 / 3)"
+          >
+            4:3
+          </button>
+          <button
+            type="button"
+            class="ratio-pill"
+            :class="{ active: Math.abs(currentRatio - 16 / 9) < 0.01 }"
+            @click="changeRatio(16 / 9)"
+          >
+            16:9
+          </button>
         </div>
       </div>
 
@@ -660,11 +751,55 @@ const boxStyle = computed(() => ({
     }
   }
 
+  .ratio-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 0 2px;
+
+    .ratio-label {
+      font-size: 12.5px;
+      color: var(--el-text-color-secondary);
+      flex-shrink: 0;
+    }
+
+    .ratio-options {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+
+      .ratio-pill {
+        padding: 3px 10px;
+        font-size: 12px;
+        border-radius: var(--radius-sm, 6px);
+        border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+        background: var(--bg-subtle, #f5f5f5);
+        color: var(--text-secondary, #666);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+
+        &:hover {
+          color: var(--el-color-primary, #cc6d4e);
+          border-color: var(--el-color-primary, #cc6d4e);
+        }
+
+        &.active {
+          background: var(--el-color-primary, #cc6d4e);
+          border-color: var(--el-color-primary, #cc6d4e);
+          color: #ffffff;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
   .toolbar {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 14px;
+    margin-top: 12px;
 
     .zoom-slider {
       flex: 1;

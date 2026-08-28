@@ -12,6 +12,8 @@ const {
   loading,
   loadingMore,
   noMore,
+  isError,
+  retry,
 } = useInfiniteScroll({
   fetchPage: async (cursor) => {
     const res = await getFollowPostsApi({
@@ -59,7 +61,9 @@ const {
     <LoadStatus
       :loading="loadingMore"
       :no-more="noMore"
+      :is-error="isError"
       :has-items="posts.length > 0"
+      @retry="retry"
     />
   </div>
 </template>

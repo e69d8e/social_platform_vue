@@ -1,5 +1,5 @@
 <script setup>
-import { Loading } from "@element-plus/icons-vue";
+import { Loading, RefreshRight } from "@element-plus/icons-vue";
 
 defineProps({
   /** 是否正在加载更多 */
@@ -8,7 +8,11 @@ defineProps({
   noMore: { type: Boolean, default: false },
   /** 列表有内容时才显示“已经到底了” */
   hasItems: { type: Boolean, default: true },
+  /** 是否加载失败 */
+  isError: { type: Boolean, default: false },
 });
+
+defineEmits(["retry"]);
 </script>
 
 <template>
@@ -16,6 +20,18 @@ defineProps({
     <div v-if="loading" class="loading-more">
       <el-icon class="loading-icon"><Loading /></el-icon>
       <span>加载中...</span>
+    </div>
+    <div v-else-if="isError" class="load-error">
+      <span>加载失败</span>
+      <el-button
+        text
+        type="primary"
+        size="small"
+        :icon="RefreshRight"
+        @click="$emit('retry')"
+      >
+        点击重试
+      </el-button>
     </div>
     <div v-else-if="noMore && hasItems" class="no-more">
       <span>— 已经到底了 —</span>

@@ -273,7 +273,7 @@ const formattedCreateTime = computed(() => {
     margin: 10px 0;
     padding: 4px 12px;
     background: var(--el-color-danger-light-9);
-    border-radius: $radius-full;
+    border-radius: var(--radius-full);
   }
 
   .follow-action {
@@ -316,7 +316,7 @@ const formattedCreateTime = computed(() => {
     margin: 16px 0;
     padding: 12px 16px;
     background: var(--bg-subtle);
-    border-radius: $radius-md;
+    border-radius: var(--radius-md);
 
     .label {
       font-size: 12px;
@@ -341,7 +341,7 @@ const formattedCreateTime = computed(() => {
     margin: 16px 0;
 
     :deep(.el-button) {
-      border-radius: $radius-full;
+      border-radius: var(--radius-full);
     }
   }
 

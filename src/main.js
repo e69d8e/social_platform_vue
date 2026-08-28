@@ -1,3 +1,4 @@
+import "element-plus/dist/index.css";
 import "./styles/global.scss";
 import "element-plus/theme-chalk/dark/css-vars.css";
 

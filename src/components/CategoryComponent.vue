@@ -124,34 +124,36 @@ onMounted(getCategoryList);
 
 <style lang="scss" scoped>
 .category {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 
   .category-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 2px 12px;
+    padding: 4px 2px 14px;
 
     .category-title {
       font-size: 16px;
       font-weight: 600;
+      letter-spacing: -0.01em;
       color: var(--text-ink);
       padding-left: 12px;
-      border-left: 3px solid var(--el-color-primary);
+      border-left: 3.5px solid var(--el-color-primary);
     }
 
     .category-count {
       font-size: 12px;
-      padding: 1px 8px;
-      border-radius: $radius-full;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
       background: var(--el-color-primary-light-9);
       color: var(--el-color-primary);
+      font-weight: 500;
     }
   }
 
   .category-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
     gap: 10px;
   }
 
@@ -159,18 +161,24 @@ onMounted(getCategoryList);
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 12px;
+    padding: 8px 12px;
     background: var(--bg-card);
     border: 1px solid var(--border-light);
-    border-radius: $radius-lg;
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: all $transition-base;
+    transition: all var(--transition-base);
     overflow: hidden;
+    user-select: none;
+    box-shadow: var(--shadow-xs);
 
     &:hover {
       transform: translateY(-2px);
       box-shadow: var(--shadow-sm);
       border-color: var(--cat-color, var(--el-color-primary));
+    }
+
+    &:active {
+      transform: translateY(0);
     }
 
     .chip-icon {
@@ -179,16 +187,18 @@ onMounted(getCategoryList);
       justify-content: center;
       width: 24px;
       height: 24px;
-      border-radius: $radius-sm;
-      font-size: 13px;
-      font-weight: 600;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 700;
       color: #fff;
       background: var(--cat-color, var(--el-color-primary));
       flex-shrink: 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
     }
 
     .chip-name {
-      font-size: 14px;
+      font-size: 13.5px;
+      font-weight: 500;
       color: var(--text-body);
       white-space: nowrap;
       overflow: hidden;
@@ -203,10 +213,10 @@ onMounted(getCategoryList);
       &.active {
         background: var(--gradient-primary);
         border-color: transparent;
-        box-shadow: var(--shadow-sm);
+        box-shadow: var(--glow-primary);
 
         .icon-all {
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.25);
         }
 
         .chip-name {
@@ -219,7 +229,7 @@ onMounted(getCategoryList);
 
   .chip-skeleton {
     height: 42px;
-    border-radius: $radius-lg;
+    border-radius: var(--radius-lg);
     background: linear-gradient(
       90deg,
       var(--bg-subtle) 25%,
@@ -239,7 +249,7 @@ onMounted(getCategoryList);
     color: var(--text-secondary);
     background: var(--bg-card);
     border: 1px dashed var(--border-default);
-    border-radius: $radius-lg;
+    border-radius: var(--radius-lg);
   }
 }
 </style>

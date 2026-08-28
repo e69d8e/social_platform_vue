@@ -9,8 +9,16 @@ import {
 } from "@/api/messageApi";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { connect, disconnect } from "@/utils/websocket";
-import { ArrowLeft, Position, Loading } from "@element-plus/icons-vue";
+import {
+  ArrowLeft,
+  Position,
+  Loading,
+  ArrowDownBold,
+  DocumentCopy,
+} from "@element-plus/icons-vue";
 import { debounce } from "lodash-es";
+import formatRelativeTime from "@/utils/formatTime";
+import { ElMessage } from "element-plus";
 
 const route = useRoute();
 const router = useRouter();
@@ -22,6 +30,7 @@ const sending = ref(false);
 const loadingHistory = ref(false);
 const historyFinished = ref(false);
 const appendingOld = ref(false);
+const isNearBottom = ref(true);
 const pageNum = ref(1);
 const pageSize = 20;
 
@@ -102,12 +111,36 @@ const markAsRead = async () => {
   }
 };
 
+const autoResize = () => {
+  const el = textareaRef.value;
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${Math.min(Math.max(el.scrollHeight, 36), 120)}px`;
+};
+
+watch(inputMessage, autoResize);
+
 const sendMessage = async () => {
   const content = inputMessage.value.trim();
   if (!content || sending.value) return;
 
   sending.value = true;
   inputMessage.value = "";
+  autoResize();
+
+  // 乐观更新：立即将消息推入界面，无需等待并重拉整个列表
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const tempMsg = {
+    id: `temp_${Date.now()}`,
+    senderId: userStore.userInfo.id,
+    content,
+    createTime: timeStr,
+    status: "sending",
+  };
+  messages.value.push(tempMsg);
+  scrollToBottom("smooth");
 
   try {
     const res = await sendMessageApi({
@@ -115,20 +148,19 @@ const sendMessage = async () => {
       content,
     });
     if (res.data.code === 1) {
+      tempMsg.status = "sent";
+      if (res.data.data?.id) tempMsg.id = res.data.data.id;
       if (isNewChat) {
         router.replace("/conversations");
         return;
       }
-      pageNum.value = 1;
-      historyFinished.value = false;
-      await loadHistory();
     } else {
+      tempMsg.status = "failed";
       ElMessage.error(res.data.message || "发送失败");
-      inputMessage.value = content;
     }
   } catch {
+    tempMsg.status = "failed";
     ElMessage.error("发送失败，请重试");
-    inputMessage.value = content;
   } finally {
     sending.value = false;
   }
@@ -151,8 +183,11 @@ const onWsMessage = (body) => {
         senderId: data.senderId,
         content: data.content,
         createTime: data.createTime,
+        status: "sent",
       });
-      scrollToBottom();
+      if (isNearBottom.value) {
+        scrollToBottom();
+      }
       markAsRead();
     }
   } catch {
@@ -163,19 +198,23 @@ const onWsMessage = (body) => {
 const onContainerScroll = debounce(() => {
   const container = messagesContainer.value;
   if (!container) return;
+  isNearBottom.value =
+    container.scrollHeight - container.scrollTop - container.clientHeight < 120;
   if (container.scrollTop <= 10) {
     loadHistory();
   }
-}, 300);
+}, 200);
 
-watch(
-  () => messages.value.length,
-  () => {
-    if (!appendingOld.value && messages.value.length <= pageSize) {
-      scrollToBottom();
-    }
-  },
-);
+const copyMessage = (text) => {
+  navigator.clipboard?.writeText(text).then(
+    () => {
+      ElMessage.success("已复制到剪贴板");
+    },
+    () => {
+      ElMessage.error("复制失败");
+    },
+  );
+};
 
 onMounted(async () => {
   await loadOtherUserInfo();
@@ -268,15 +307,42 @@ onUnmounted(() => {
           class="msg-avatar"
         />
         <div class="bubble-wrap">
-          <div class="bubble">
-            <p>{{ msg.content }}</p>
+          <div class="bubble-container">
+            <div class="bubble">
+              <p>{{ msg.content }}</p>
+            </div>
+            <button
+              class="copy-msg-btn"
+              type="button"
+              title="复制内容"
+              @click.stop="copyMessage(msg.content)"
+            >
+              <el-icon :size="13"><DocumentCopy /></el-icon>
+            </button>
           </div>
-          <span class="msg-time">{{ msg.createTime }}</span>
+          <div class="msg-meta-line">
+            <el-icon v-if="msg.status === 'sending'" class="is-loading sending-icon"><Loading /></el-icon>
+            <span v-else-if="msg.status === 'failed'" class="failed-tag">发送失败</span>
+            <span class="msg-time">{{ formatRelativeTime(msg.createTime) }}</span>
+          </div>
         </div>
       </div>
 
       <div ref="messagesEnd" />
     </div>
+
+    <!-- 回到底部悬浮按钮 -->
+    <Transition name="fade">
+      <button
+        v-show="!isNearBottom"
+        class="floating-bottom-btn"
+        type="button"
+        title="查看最新消息"
+        @click="scrollToBottom('smooth')"
+      >
+        <el-icon :size="16"><ArrowDownBold /></el-icon>
+      </button>
+    </Transition>
 
     <!-- 输入区域 -->
     <div class="input-bar">
@@ -285,7 +351,7 @@ onUnmounted(() => {
           ref="textareaRef"
           v-model="inputMessage"
           @keydown="handleKeyDown"
-          placeholder="说点什么..."
+          placeholder="说点什么...（Enter 发送，Shift+Enter 换行）"
           :disabled="sending"
           rows="1"
         />
@@ -480,6 +546,46 @@ onUnmounted(() => {
   align-items: flex-end;
 }
 
+.bubble-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover .copy-msg-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.mine .bubble-container {
+  flex-direction: row-reverse;
+}
+
+.copy-msg-btn {
+  appearance: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  opacity: 0;
+  pointer-events: none;
+  transition: all $transition-fast;
+  box-shadow: var(--shadow-xs);
+
+  &:hover {
+    color: var(--el-color-primary);
+    border-color: var(--el-color-primary-light-5);
+    transform: scale(1.1);
+  }
+}
+
 .bubble {
   padding: 10px 14px;
   border-radius: 18px;
@@ -515,11 +621,53 @@ onUnmounted(() => {
   border-bottom-left-radius: 6px;
 }
 
-.msg-time {
-  font-size: 11px;
-  color: var(--chat-text-placeholder);
+.msg-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-top: 4px;
   padding: 0 4px;
+}
+
+.sending-icon {
+  font-size: 12px;
+  color: var(--text-placeholder);
+}
+
+.failed-tag {
+  font-size: 11px;
+  color: var(--el-color-danger);
+}
+
+.msg-time {
+  font-size: 11px;
+  color: var(--text-placeholder);
+}
+
+/* 回到底部悬浮按钮 */
+.floating-bottom-btn {
+  position: absolute;
+  right: 24px;
+  bottom: 84px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  background: var(--chat-white);
+  color: var(--chat-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all $transition-base;
+
+  &:hover {
+    color: var(--el-color-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
 }
 
 /* ---- 底部输入栏 ---- */
@@ -528,6 +676,7 @@ onUnmounted(() => {
   border-top: 1px solid var(--chat-border);
   flex-shrink: 0;
   box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.03);
+  position: relative;
 }
 
 .input-inner {

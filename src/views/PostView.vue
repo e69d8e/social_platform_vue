@@ -23,12 +23,15 @@ import {
   View,
   Delete,
   RemoveFilled,
+  Share,
+  ChatDotRound,
 } from "@element-plus/icons-vue";
-// import { ElMessage } from "element-plus";
+import { ElMessage } from "element-plus";
 
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
+const commentRef = ref(null);
 const srcList = computed(() => [post.value.cover]);
 const post = ref({
   id: "",
@@ -47,6 +50,7 @@ const post = ref({
 });
 const dialogVisible = ref(false);
 const loading = ref(true);
+const deleteLoading = ref(false);
 
 const getPost = async (id) => {
   try {
@@ -85,7 +89,23 @@ const toggleLike = throttle(async () => {
   }
 }, 800);
 
+const copyPostLink = () => {
+  const url = window.location.href;
+  navigator.clipboard?.writeText(url).then(
+    () => ElMessage.success("链接已复制，去分享给好友吧！"),
+    () => ElMessage.error("复制链接失败"),
+  );
+};
+
+const scrollToComments = () => {
+  const el = document.querySelector(".comment-section");
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+};
+
 const deletePost = async () => {
+  deleteLoading.value = true;
   try {
     const res = await deletePostApi(post.value.id);
     if (res.data.code === 1) ElMessage.success(res.data.message);
@@ -93,6 +113,8 @@ const deletePost = async () => {
     router.back();
   } catch {
     ElMessage.error("删除失败，请重试");
+  } finally {
+    deleteLoading.value = false;
   }
 };
 
@@ -181,6 +203,24 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               <span>{{ viewCount }} 浏览</span>
             </span>
             <button
+              class="action-pill"
+              type="button"
+              title="复制帖子链接"
+              @click="copyPostLink"
+            >
+              <el-icon size="15"><Share /></el-icon>
+              <span>分享</span>
+            </button>
+            <button
+              class="action-pill"
+              type="button"
+              title="查看评论"
+              @click="scrollToComments"
+            >
+              <el-icon size="15"><ChatDotRound /></el-icon>
+              <span>评论</span>
+            </button>
+            <button
               class="like-pill"
               :class="{ liked: post.liked }"
               type="button"
@@ -222,10 +262,13 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       </footer>
     </article>
 
-    <el-dialog v-model="dialogVisible" title="确认删除?" width="400" center>
+    <el-dialog v-model="dialogVisible" title="确认删除作品?" width="400" center>
+      <p style="text-align: center; color: var(--text-secondary); margin-bottom: 8px;">
+        删除后作品将无法恢复，确定继续吗？
+      </p>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="deletePost">确认</el-button>
+        <el-button type="danger" :loading="deleteLoading" @click="deletePost">确认删除</el-button>
       </template>
     </el-dialog>
 
@@ -249,12 +292,12 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
     overflow: hidden;
     background: var(--bg-card);
     border: 1px solid var(--border-light);
-    border-radius: $radius-xl;
+    border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
     padding: 40px 48px 36px;
     animation: fadeInUp 0.4s ease both;
 
-    // 标题首字章纹，藏在纸面右上角（与首页文本卡同源）
+    // 标题首字章纹，藏在纸面右上角
     .paper-glyph {
       position: absolute;
       top: 8px;
@@ -268,245 +311,306 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       user-select: none;
       pointer-events: none;
     }
-  }
 
-  .paper-head {
-    position: relative;
+    .paper-head {
+      position: relative;
 
-    .category-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 12px;
-      margin-bottom: 14px;
-      font-size: 12px;
-      color: var(--el-color-primary);
-      background: var(--el-color-primary-light-9);
-      border: 1px solid var(--el-color-primary-light-7);
-      border-radius: $radius-full;
-
-      &::before {
-        content: "";
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: var(--el-color-primary);
-      }
-    }
-
-    .title {
-      margin: 0 0 20px;
-      font-size: 27px;
-      font-weight: 700;
-      line-height: 1.42;
-      letter-spacing: 0.01em;
-      color: var(--text-primary);
-      word-break: break-word;
-    }
-  }
-
-  // ---- 署名行 ----
-  .byline {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-bottom: 6px;
-  }
-
-  .author {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-
-    .author-avatar {
-      flex-shrink: 0;
-      border: 2px solid transparent;
-      background-image: var(--gradient-primary);
-      background-origin: border-box;
-      background-clip: padding-box, border-box;
-      cursor: pointer;
-    }
-
-    .author-col {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-    }
-
-    .nickname {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      cursor: pointer;
-      transition: color $transition-base;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-
-      &:hover {
+      .category-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 14px;
+        margin-bottom: 16px;
+        font-size: 12.5px;
+        font-weight: 500;
         color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
+        border: 1px solid var(--el-color-primary-light-7);
+        border-radius: var(--radius-full);
+
+        &::before {
+          content: "";
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--el-color-primary);
+        }
+      }
+
+      .title {
+        margin: 0 0 20px;
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.35;
+        letter-spacing: -0.02em;
+        color: var(--text-ink);
+        word-break: break-word;
+      }
+
+      // ---- 署名行 ----
+      .byline {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border-light);
+
+        .author {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+
+          .author-avatar {
+            flex-shrink: 0;
+            border: 2px solid var(--border-light);
+            cursor: pointer;
+            transition: transform var(--transition-base);
+
+            &:hover {
+              transform: scale(1.05);
+            }
+          }
+
+          .author-col {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+          }
+
+          .nickname {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: color var(--transition-base);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            &:hover {
+              color: var(--el-color-primary);
+            }
+          }
+
+          .publish-time {
+            font-size: 12px;
+            color: var(--text-placeholder);
+          }
+
+          .admin-icon {
+            font-size: 20px;
+            color: var(--el-color-danger);
+            cursor: pointer;
+            transition:
+              transform var(--transition-fast),
+              opacity var(--transition-fast);
+
+            &:hover {
+              opacity: 0.7;
+              transform: scale(1.1);
+            }
+          }
+        }
+
+        // ---- 浏览 + 点赞胶囊 ----
+        .stats-bar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0;
+          padding-bottom: 4px;
+
+          .view-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+          }
+
+          .action-pill {
+            appearance: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-family: inherit;
+            color: var(--text-secondary);
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: all var(--transition-base);
+
+            &:hover {
+              border-color: var(--el-color-primary-light-7);
+              color: var(--el-color-primary);
+              background: var(--el-color-primary-light-9);
+            }
+
+            &:active {
+              transform: scale(0.95);
+            }
+          }
+
+          .like-pill {
+            appearance: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 18px;
+            font-size: 13px;
+            font-family: inherit;
+            color: var(--text-secondary);
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: all var(--transition-base);
+
+            &:hover {
+              border-color: var(--el-color-danger-light-7);
+              color: var(--el-color-danger);
+              background: var(--el-color-danger-light-9);
+            }
+
+            &.liked {
+              background: var(--el-color-danger);
+              border-color: var(--el-color-danger);
+              color: #fff;
+              box-shadow: 0 2px 10px rgba(194, 76, 76, 0.3);
+            }
+
+            &:active {
+              transform: scale(0.95);
+            }
+
+            &:focus-visible {
+              outline: 2px solid var(--border-focus);
+              outline-offset: 2px;
+            }
+
+            .pop {
+              animation: heartBeat 0.5s ease;
+            }
+          }
+        }
       }
     }
 
-    .publish-time {
-      font-size: 12px;
-      color: var(--text-placeholder);
-    }
+    // ---- 封面 ----
+    .cover {
+      margin: 20px 0 10px;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
 
-    .admin-icon {
-      font-size: 20px;
-      color: var(--el-color-danger);
-      cursor: pointer;
-      transition:
-        transform $transition-fast,
-        opacity $transition-fast;
-
-      &:hover {
-        opacity: 0.7;
-        transform: scale(1.1);
+      .cover-img {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        display: block;
+        object-fit: cover;
       }
     }
-  }
 
-  // ---- 浏览 + 点赞胶囊 ----
-  .stats-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-    padding-bottom: 4px;
-
-    .view-stat {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13px;
-      color: var(--text-muted);
-      font-variant-numeric: tabular-nums;
+    .rule {
+      border-top: 1px solid var(--border-light);
+      margin: 24px 0;
     }
 
-    .like-pill {
-      appearance: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 18px;
-      font-size: 13px;
-      font-family: inherit;
-      color: var(--text-secondary);
-      background: var(--bg-subtle);
-      border: 1px solid var(--border-light);
-      border-radius: $radius-full;
-      cursor: pointer;
-      transition: all $transition-base;
+    // ---- 正文排版 ----
+    .content {
+      overflow: hidden;
+      font-size: 16px;
+      line-height: 1.85;
+      color: var(--text-body);
+      letter-spacing: 0.01em;
 
-      &:hover {
-        border-color: var(--el-color-danger-light-7);
-        color: var(--el-color-danger);
-        background: var(--el-color-danger-light-9);
+      :deep(p) {
+        margin-bottom: 1.25em;
       }
 
-      &.liked {
-        background: var(--el-color-danger);
-        border-color: var(--el-color-danger);
-        color: #fff;
+      :deep(h1),
+      :deep(h2),
+      :deep(h3),
+      :deep(h4) {
+        color: var(--text-ink);
+        font-weight: 700;
+        margin: 1.6em 0 0.8em;
+        letter-spacing: -0.015em;
+      }
+
+      :deep(img) {
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-lg);
+        margin: 16px 0;
         box-shadow: var(--shadow-sm);
       }
 
-      &:active {
-        transform: scale(0.95);
+      :deep(blockquote) {
+        margin: 16px 0;
+        padding: 12px 18px;
+        border-left: 4px solid var(--el-color-primary);
+        background: var(--bg-subtle);
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        color: var(--text-secondary);
+        font-style: italic;
       }
 
-      &:focus-visible {
-        outline: 2px solid var(--border-focus);
-        outline-offset: 2px;
+      :deep(pre) {
+        background: var(--surface-dark-elevated);
+        color: var(--color-on-dark);
+        padding: 16px 20px;
+        border-radius: var(--radius-md);
+        overflow-x: auto;
+        margin: 16px 0;
+        font-size: 13.5px;
       }
 
-      .pop {
-        animation: heartBeat 0.5s ease;
+      :deep(a) {
+        color: var(--el-color-primary);
+        text-decoration: underline;
+        text-underline-offset: 3px;
       }
     }
-  }
 
-  // ---- 封面 ----
-  .cover {
-    margin: 16px 0 4px;
-    border-radius: $radius-lg;
-    overflow: hidden;
-
-    .cover-img {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      display: block;
-      object-fit: cover;
-    }
-  }
-
-  .rule {
-    border-top: 1px solid var(--border-light);
-    margin: 28px 0 24px;
-  }
-
-  // ---- 正文排版 ----
-  .content {
-    overflow: hidden;
-    font-size: 15.5px;
-    line-height: 1.9;
-    color: var(--text-body);
-    word-break: break-word;
-
-    :deep(p) {
-      margin: 0 0 1em;
-    }
-
-    :deep(p:last-child) {
-      margin-bottom: 0;
-    }
-
-    :deep(img) {
-      max-width: 100%;
-      border-radius: $radius-md;
-    }
-
-    :deep(a) {
-      color: var(--el-color-primary);
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-  }
-
-  // ---- 章纹收尾 ----
-  .paper-end {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin-top: 40px;
-
-    .end-rule {
-      width: 64px;
-      height: 1px;
-      background: var(--border-light);
-    }
-
-    .end-seal {
+    // ---- 章纹收尾 ----
+    .paper-end {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 44px;
-      height: 44px;
-      border-radius: $radius-sm;
-      background-image: var(--gradient-primary);
-      box-shadow: var(--shadow-sm);
-      font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
-      font-size: 24px;
-      font-weight: 700;
-      color: #fff;
-      user-select: none;
+      gap: 16px;
+      margin-top: 40px;
+
+      .end-rule {
+        width: 64px;
+        height: 1px;
+        background: var(--border-light);
+      }
+
+      .end-seal {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-sm);
+        background-image: var(--gradient-primary);
+        box-shadow: var(--shadow-sm);
+        font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+        font-size: 24px;
+        font-weight: 700;
+        color: #fff;
+        user-select: none;
+      }
     }
   }
 }
@@ -528,7 +632,7 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       font-size: 21px;
     }
 
-    .byline {
+    .paper-head .byline {
       flex-direction: column;
       align-items: flex-start;
       gap: 12px;

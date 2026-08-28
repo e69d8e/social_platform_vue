@@ -1,15 +1,19 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import { addCommentApi, getCommentApi } from "@/api/commentApi";
 import { useUserStore } from "@/stores/user";
-import { Delete } from "@element-plus/icons-vue";
+import { Delete, ArrowDown, ArrowUp, Loading } from "@element-plus/icons-vue";
 import { deleteCommentApi } from "@/api/reviewerApi";
 import { debounce } from "lodash-es";
 import formatRelativeTime from "@/utils/formatTime";
 
 const userStore = useUserStore();
 const content = ref("");
+const inputCardRef = ref(null);
+const textareaRef = ref(null);
+const submitting = ref(false);
+const deletingId = ref(null);
 
 const props = defineProps({
   postId: { type: String, default: "" },
@@ -19,6 +23,25 @@ const comments = ref([]);
 const lastId = ref("");
 const offset = ref(0);
 const noMore = ref(false);
+const expandedParentIds = ref(new Set());
+
+const toggleExpandReplies = (parentId) => {
+  if (expandedParentIds.value.has(parentId)) {
+    expandedParentIds.value.delete(parentId);
+  } else {
+    expandedParentIds.value.add(parentId);
+  }
+};
+
+const isExpanded = (parentId) => expandedParentIds.value.has(parentId);
+
+const getVisibleChildren = (item) => {
+  if (!item.children) return [];
+  if (item.children.length <= 3 || isExpanded(item.id)) {
+    return item.children;
+  }
+  return item.children.slice(0, 3);
+};
 
 const getComments = async () => {
   if (noMore.value) return;
@@ -34,7 +57,7 @@ const getComments = async () => {
     return;
   }
 
-  const temp = ref([]);
+  const temp = [];
   for (let i = 0; i < list.length; i++) {
     const item = list[i];
     if (
@@ -47,10 +70,9 @@ const getComments = async () => {
     ) {
       continue;
     }
-    temp.value.push(item);
+    temp.push(item);
   }
-  comments.value = [...comments.value, ...temp.value];
-  temp.value = [];
+  comments.value = [...comments.value, ...temp];
   lastId.value = res.data.data.minTime;
   offset.value = res.data.data.offset;
 };
@@ -98,6 +120,10 @@ const reply = (parent, child) => {
   replyContext.value.replyUserName = child
     ? child.user.nickname
     : parent.user.nickname;
+  nextTick(() => {
+    inputCardRef.value?.scrollIntoView({ behavior: "smooth", block: "center" });
+    textareaRef.value?.focus();
+  });
 };
 
 const clearReply = () => {
@@ -113,29 +139,41 @@ const resetComments = async () => {
 };
 
 const submitComment = async () => {
+  if (submitting.value) return;
   if (!content.value.trim()) {
     ElMessage.warning("评论不能为空");
     return;
   }
+  submitting.value = true;
   try {
     const res = await addCommentApi({
       postId: props.postId,
-      content: content.value,
+      content: content.value.trim(),
       parentId: replyContext.value.parentId,
       replyTo: replyContext.value.replyUserId,
     });
     if (res.data.code === 1) {
       ElMessage.success("评论成功");
+      content.value = "";
+      clearReply();
       await resetComments();
     }
   } catch {
     ElMessage.error("评论失败，请重试");
+  } finally {
+    submitting.value = false;
   }
-  content.value = "";
-  clearReply();
+};
+
+const handleKeyDown = (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    submitComment();
+  }
 };
 
 const deleteComment = async (id) => {
+  deletingId.value = id;
   try {
     const res = await deleteCommentApi(props.postId, id);
     if (res.data.code === 1) {
@@ -144,6 +182,8 @@ const deleteComment = async (id) => {
     }
   } catch {
     ElMessage.error("删除失败，请重试");
+  } finally {
+    deletingId.value = null;
   }
 };
 </script>
@@ -156,7 +196,7 @@ const deleteComment = async (id) => {
     </h3>
 
     <!-- 输入区域 -->
-    <div class="comment-input-card">
+    <div class="comment-input-card" ref="inputCardRef">
       <div class="comment-input-row">
         <el-avatar
           :size="40"
@@ -164,30 +204,42 @@ const deleteComment = async (id) => {
           class="input-avatar"
         />
         <el-input
+          ref="textareaRef"
           v-model="content"
           type="textarea"
           :rows="2"
+          maxlength="500"
+          show-word-limit
           :placeholder="
             replyContext.replyUserName
-              ? `回复 @${replyContext.replyUserName}`
-              : '写下你的评论...'
+              ? `回复 @${replyContext.replyUserName}（Ctrl+Enter 发送）`
+              : '写下你的评论...（Ctrl+Enter 发送）'
           "
           class="input-field"
+          @keydown="handleKeyDown"
         />
       </div>
       <div class="submit-bar">
-        <el-tag
-          v-if="replyContext.replyUserName"
-          closable
-          @close="clearReply"
+        <div class="reply-tag-wrap">
+          <el-tag
+            v-if="replyContext.replyUserName"
+            closable
+            @close="clearReply"
+            size="small"
+          >
+            回复 @{{ replyContext.replyUserName }}
+          </el-tag>
+          <span class="shortcut-tip">按 Ctrl+Enter 快捷发送</span>
+        </div>
+        <el-button
+          type="primary"
           size="small"
+          :loading="submitting"
+          :disabled="!content.trim() || submitting"
+          @click="submitComment"
         >
-          回复 @{{ replyContext.replyUserName }}
-        </el-tag>
-        <span v-else></span>
-        <el-button type="primary" size="small" @click="submitComment"
-          >发表评论</el-button
-        >
+          发表评论
+        </el-button>
       </div>
     </div>
 
@@ -213,7 +265,13 @@ const deleteComment = async (id) => {
             @confirm="deleteComment(item.id)"
           >
             <template #reference>
-              <el-button size="small" type="danger" :icon="Delete" circle />
+              <el-button
+                size="small"
+                type="danger"
+                :icon="deletingId === item.id ? Loading : Delete"
+                :loading="deletingId === item.id"
+                circle
+              />
             </template>
           </el-popconfirm>
         </div>
@@ -225,14 +283,14 @@ const deleteComment = async (id) => {
         >
           <div
             class="child-item"
-            v-for="child in item.children"
+            v-for="child in getVisibleChildren(item)"
             :key="child.id"
           >
             <span class="username">{{ child.user.nickname }}</span>
             <span class="reply-text"
               >回复 @{{ child.replyUser.nickname }}：</span
             >
-            <span>{{ child.content }}</span>
+            <span class="child-text">{{ child.content }}</span>
             <span class="reply-btn" @click="reply(item, child)">回复</span>
             <el-popconfirm
               v-if="userStore.userInfo.authority === 'REVIEWER'"
@@ -240,9 +298,28 @@ const deleteComment = async (id) => {
               @confirm="deleteComment(child.id)"
             >
               <template #reference>
-                <el-button size="small" type="danger" :icon="Delete" circle />
+                <el-button
+                  size="small"
+                  type="danger"
+                  :icon="deletingId === child.id ? Loading : Delete"
+                  :loading="deletingId === child.id"
+                  circle
+                />
               </template>
             </el-popconfirm>
+          </div>
+
+          <!-- 折叠 / 展开控制 -->
+          <div
+            v-if="item.children.length > 3"
+            class="expand-replies-btn"
+            @click="toggleExpandReplies(item.id)"
+          >
+            <span>{{ isExpanded(item.id) ? "收起回复" : `展开其余 ${item.children.length - 3} 条回复` }}</span>
+            <el-icon :size="12">
+              <ArrowUp v-if="isExpanded(item.id)" />
+              <ArrowDown v-else />
+            </el-icon>
           </div>
         </div>
       </div>
@@ -296,7 +373,7 @@ const deleteComment = async (id) => {
 .comment-input-card {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
-  border-radius: $radius-lg;
+  border-radius: var(--radius-lg);
   padding: 16px;
   margin-bottom: 24px;
   box-shadow: var(--shadow-xs);
@@ -321,6 +398,17 @@ const deleteComment = async (id) => {
     justify-content: space-between;
     align-items: center;
     margin-top: 12px;
+
+    .reply-tag-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .shortcut-tip {
+      font-size: 12px;
+      color: var(--text-placeholder);
+    }
   }
 }
 
@@ -329,14 +417,14 @@ const deleteComment = async (id) => {
   gap: 12px;
   padding: 16px 0;
   border-bottom: 1px solid var(--border-light);
-  transition: background $transition-fast;
+  transition: background var(--transition-fast);
 
   &:hover {
     background: var(--bg-subtle);
     margin: 0 -8px;
     padding-left: 8px;
     padding-right: 8px;
-    border-radius: $radius-md;
+    border-radius: var(--radius-md);
   }
 
   .comment-avatar {
@@ -375,6 +463,8 @@ const deleteComment = async (id) => {
   line-height: 1.7;
   color: var(--text-secondary);
   margin-bottom: 8px;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .comment-actions {
@@ -418,6 +508,11 @@ const deleteComment = async (id) => {
       margin: 0 4px;
     }
 
+    .child-text {
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
     .reply-btn {
       cursor: pointer;
       color: var(--text-muted);
@@ -428,6 +523,23 @@ const deleteComment = async (id) => {
       &:hover {
         color: var(--el-color-primary);
       }
+    }
+  }
+
+  .expand-replies-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--el-color-primary);
+    cursor: pointer;
+    user-select: none;
+    transition: opacity $transition-fast;
+
+    &:hover {
+      opacity: 0.8;
+      text-decoration: underline;
     }
   }
 }

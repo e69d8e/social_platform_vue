@@ -168,7 +168,7 @@ const openPost = () => router.push(`/post/${props.id}`);
 .postcard {
   height: 100%;
   cursor: pointer;
-  border-radius: $radius-lg;
+  border-radius: var(--radius-lg);
   animation: fadeInUp 0.45s ease both;
   animation-delay: var(--rise-delay, 0ms);
 
@@ -185,18 +185,18 @@ const openPost = () => router.push(`/post/${props.id}`);
   overflow: hidden;
   background: var(--bg-card);
   border: 1px solid var(--border-light);
-  border-radius: $radius-lg;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   transition:
-    transform $transition-base,
-    box-shadow $transition-base,
-    border-color $transition-base;
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
 
   .postcard:hover &,
   .postcard:focus-visible & {
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
-    border-color: var(--border-default);
+    border-color: var(--el-color-primary-light-7);
   }
 
   // 按压反馈
@@ -211,6 +211,7 @@ const openPost = () => router.push(`/post/${props.id}`);
   aspect-ratio: 16 / 10;
   overflow: hidden;
   background: var(--bg-subtle);
+  position: relative;
 
   img {
     width: 100%;
@@ -220,7 +221,7 @@ const openPost = () => router.push(`/post/${props.id}`);
     opacity: 0;
     transition:
       opacity 0.45s ease,
-      transform 0.45s ease;
+      transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 
     // 图片加载完成后淡入，避免“碎图闪现”
     &.loaded {
@@ -229,7 +230,7 @@ const openPost = () => router.push(`/post/${props.id}`);
   }
 
   .postcard:hover & img {
-    transform: scale(1.05);
+    transform: scale(1.04);
   }
 }
 
@@ -240,22 +241,22 @@ const openPost = () => router.push(`/post/${props.id}`);
   flex: 1;
   min-width: 0;
   gap: 8px;
-  padding: 12px 14px 12px;
+  padding: 14px 16px 12px;
 }
 
 .title {
   margin: 0;
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 600;
   line-height: 1.45;
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
+  letter-spacing: -0.015em;
+  color: var(--text-ink);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  transition: color $transition-base;
+  transition: color var(--transition-base);
 
   .postcard:hover & {
     color: var(--el-color-primary);
@@ -265,8 +266,8 @@ const openPost = () => router.push(`/post/${props.id}`);
 .excerpt {
   margin: 0;
   font-size: 13px;
-  line-height: 1.7;
-  color: var(--text-secondary);
+  line-height: 1.65;
+  color: var(--text-muted);
   word-break: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -283,10 +284,10 @@ const openPost = () => router.push(`/post/${props.id}`);
 
   .glyph {
     position: absolute;
-    right: -16px;
-    bottom: -28px;
+    right: -12px;
+    bottom: -24px;
     font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
-    font-size: 120px;
+    font-size: 110px;
     line-height: 1;
     font-weight: 700;
     color: var(--text-primary);
@@ -297,9 +298,9 @@ const openPost = () => router.push(`/post/${props.id}`);
 
   .text-content {
     white-space: pre-wrap;
-    -webkit-line-clamp: 8;
-    line-clamp: 8;
-    min-height: 150px;
+    -webkit-line-clamp: 7;
+    line-clamp: 7;
+    min-height: 140px;
   }
 }
 
@@ -310,9 +311,11 @@ const openPost = () => router.push(`/post/${props.id}`);
   justify-content: space-between;
   gap: 8px;
   margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-light);
 
   .time {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--text-placeholder);
     white-space: nowrap;
   }
@@ -320,7 +323,7 @@ const openPost = () => router.push(`/post/${props.id}`);
   .stats {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-shrink: 0;
   }
 
@@ -328,8 +331,9 @@ const openPost = () => router.push(`/post/${props.id}`);
   .like {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    color: var(--text-secondary);
+    gap: 3px;
+    color: var(--text-muted);
+    font-size: 12px;
   }
 
   .count {
@@ -342,16 +346,17 @@ const openPost = () => router.push(`/post/${props.id}`);
     background: none;
     border: none;
     margin: -2px;
-    padding: 4px 6px;
-    border-radius: $radius-sm;
+    padding: 3px 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-family: inherit;
     transition:
-      background $transition-fast,
-      transform $transition-fast;
+      background var(--transition-fast),
+      transform var(--transition-fast);
 
     &:hover {
       background: var(--el-color-danger-light-9);
+      color: var(--el-color-danger);
     }
 
     &:active {
@@ -366,6 +371,7 @@ const openPost = () => router.push(`/post/${props.id}`);
 
     .count.active {
       color: var(--el-color-danger);
+      font-weight: 600;
     }
 
     .pop {

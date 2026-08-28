@@ -15,6 +15,8 @@ const {
   loading,
   loadingMore,
   noMore,
+  isError,
+  retry,
 } = useInfiniteScroll({
   fetchPage: async (cursor) => {
     const res = await getIndexPostsApi({
@@ -39,7 +41,10 @@ const {
     </div>
 
     <div class="feed-head">
-      <span class="feed-title">推荐</span>
+      <div class="feed-head-left">
+        <span class="feed-title">推荐流</span>
+        <span class="feed-subtitle">探索最新创作与社区热门讨论</span>
+      </div>
     </div>
 
     <!-- 首屏骨架 -->
@@ -79,7 +84,9 @@ const {
     <LoadStatus
       :loading="loadingMore"
       :no-more="noMore"
+      :is-error="isError"
       :has-items="posts.length > 0"
+      @retry="retry"
     />
   </div>
 </template>
@@ -95,14 +102,29 @@ const {
   }
 
   .feed-head {
-    padding: 4px 2px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 4px 16px;
+
+    .feed-head-left {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
 
     .feed-title {
-      font-size: 16px;
-      font-weight: 600;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
       color: var(--text-ink);
       padding-left: 12px;
-      border-left: 3px solid var(--el-color-primary);
+      border-left: 3.5px solid var(--el-color-primary);
+    }
+
+    .feed-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
     }
   }
 }

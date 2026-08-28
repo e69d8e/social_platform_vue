@@ -145,11 +145,22 @@ img {
   padding: 16px 12px 40px;
 }
 
+// ---- Glass Panel ----
+.glass-panel {
+  background: var(--glass-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+}
+
 // ---- Form Card ----
 .form-card {
   background: var(--bg-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
   padding: 32px;
   transition: box-shadow var(--transition-base);
 }
@@ -158,13 +169,16 @@ img {
 .surface-card {
   background: var(--bg-card);
   border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
   transition:
     box-shadow var(--transition-base),
-    transform var(--transition-base);
+    transform var(--transition-base),
+    border-color var(--transition-base);
 
   &:hover {
     box-shadow: var(--shadow-md);
+    border-color: var(--border-default);
   }
 }
 
@@ -176,6 +190,7 @@ img {
   border-radius: var(--radius-md);
   font-weight: 500;
   transition: all var(--transition-base);
+  box-shadow: 0 2px 8px rgba(204, 109, 78, 0.2);
 
   &:hover {
     transform: translateY(-1px);
@@ -207,20 +222,22 @@ img {
   }
 
   &.active {
-    background: var(--el-color-primary);
+    background: var(--gradient-primary);
     color: var(--color-on-primary, #ffffff);
-    border-color: var(--el-color-primary);
+    border-color: transparent;
+    box-shadow: var(--shadow-xs);
   }
 }
 
 // ---- Page Title with Accent Bar ----
 .section-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--text-ink);
   padding-left: 12px;
-  border-left: 3px solid var(--el-color-primary);
+  border-left: 3.5px solid var(--el-color-primary);
   margin-bottom: 16px;
+  letter-spacing: -0.01em;
 }
 
 // ---- Empty State ----

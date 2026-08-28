@@ -23,12 +23,14 @@ export function useInfiniteScroll({
   const loading = ref(true);
   const loadingMore = ref(false);
   const noMore = ref(false);
+  const isError = ref(false);
   const cursor = ref({ lastId: Date.parse(new Date()), offset: 0 });
   const seenIds = new Set();
 
   const append = async () => {
     if (loadingMore.value || noMore.value) return;
     loadingMore.value = true;
+    isError.value = false;
     try {
       const res = (await fetchPage({ ...cursor.value })) ?? {};
       const list = res.list ?? [];
@@ -39,15 +41,20 @@ export function useInfiniteScroll({
       cursor.value.offset = res.offset ?? cursor.value.offset;
       if (list.length === 0 || newItems.length === 0) noMore.value = true;
     } catch (e) {
-      noMore.value = true;
+      isError.value = true;
       onError?.(e);
     } finally {
       loadingMore.value = false;
     }
   };
 
+  const retry = async () => {
+    isError.value = false;
+    await append();
+  };
+
   const checkAndLoad = () => {
-    if (loadingMore.value || noMore.value) return;
+    if (loadingMore.value || noMore.value || isError.value) return;
     const scrollTop =
       document.documentElement.scrollTop || document.body.scrollTop;
     const clientHeight = document.documentElement.clientHeight;
@@ -71,6 +78,7 @@ export function useInfiniteScroll({
       let fillAttempts = 0;
       while (
         !noMore.value &&
+        !isError.value &&
         fillAttempts < 10 &&
         document.documentElement.scrollHeight <= window.innerHeight + 100
       ) {
@@ -86,5 +94,5 @@ export function useInfiniteScroll({
     window.removeEventListener("scroll", handleScroll);
   });
 
-  return { items, loading, loadingMore, noMore, loadMore: append };
+  return { items, loading, loadingMore, noMore, isError, loadMore: append, retry };
 }

@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { getConversationsApi } from "@/api/messageApi";
 import { ArrowLeft, ChatDotRound, Loading } from "@element-plus/icons-vue";
 import { debounce } from "lodash-es";
+import formatRelativeTime from "@/utils/formatTime";
 
 const router = useRouter();
 const conversations = ref([]);
@@ -62,12 +63,7 @@ const openChat = (item) => {
 
 const formatTime = (timeStr) => {
   if (!timeStr) return "";
-  // 如果包含日期，只取时间部分
-  const parts = timeStr.split(" ");
-  if (parts.length === 2) {
-    return parts[1].substring(0, 5);
-  }
-  return timeStr;
+  return formatRelativeTime(timeStr);
 };
 </script>
 

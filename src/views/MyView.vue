@@ -425,7 +425,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 .profile-card {
   text-align: center;
   background: var(--bg-card);
-  border-radius: $radius-xl;
+  border-radius: var(--radius-xl);
   padding: 28px 24px 20px;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-light);
@@ -447,7 +447,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     background-image: var(--gradient-primary);
     background-origin: border-box;
     background-clip: padding-box, border-box;
-    transition: transform $transition-base;
+    transition: transform var(--transition-base);
 
     &:hover {
       transform: scale(1.05);
@@ -480,7 +480,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: border-color $transition-base;
+    transition: border-color var(--transition-base);
 
     &:hover {
       border-color: var(--el-color-primary);
@@ -495,7 +495,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     margin: 16px 0;
 
     :deep(.el-button) {
-      border-radius: $radius-full;
+      border-radius: var(--radius-full);
     }
   }
 
@@ -510,7 +510,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 
 .form-card {
   background: var(--bg-card);
-  border-radius: $radius-xl;
+  border-radius: var(--radius-xl);
   padding: 24px 24px 16px;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-light);

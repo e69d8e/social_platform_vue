@@ -12,11 +12,10 @@ const props = defineProps({
   round: { type: Boolean, default: true },
 });
 
-const emit = defineEmits(["change"]);
-
 const userStore = useUserStore();
 const followed = ref(props.followed);
 const followLoading = ref(false);
+const isHovered = ref(false);
 
 // 同步外部传入的关注状态
 watch(
@@ -54,18 +53,36 @@ const toggleFollow = throttle(async () => {
 <template>
   <el-button
     class="follow-btn"
+    :class="{ 'is-followed': followed, 'is-unfollow-hover': followed && isHovered }"
     :size="size || undefined"
     :round="round"
-    :type="followed ? 'default' : 'primary'"
+    :type="followed ? (isHovered ? 'danger' : 'default') : 'primary'"
+    :plain="followed && isHovered"
     :loading="followLoading"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
     @click.stop="toggleFollow"
   >
-    {{ followed ? "已关注" : "关注" }}
+    {{ followed ? (isHovered ? "取消关注" : "已关注") : "关注" }}
   </el-button>
 </template>
 
 <style lang="scss" scoped>
 .follow-btn {
   flex-shrink: 0;
+  min-width: 76px;
+  transition: all $transition-base;
+
+  &.is-followed {
+    color: var(--text-secondary);
+    border-color: var(--border-default);
+    background: var(--bg-card);
+
+    &:hover {
+      color: var(--el-color-danger);
+      border-color: var(--el-color-danger-light-5);
+      background: var(--el-color-danger-light-9);
+    }
+  }
 }
 </style>
