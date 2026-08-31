@@ -252,4 +252,63 @@ onMounted(getCategoryList);
     border-radius: var(--radius-lg);
   }
 }
+
+@media (max-width: 768px) {
+  .category {
+    margin-bottom: 12px;
+
+    .category-header {
+      padding: 0 2px 8px;
+
+      .category-title {
+        font-size: 15px;
+      }
+    }
+
+    .category-grid {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 6px;
+      margin: 0 -4px;
+      padding-left: 4px;
+      padding-right: 4px;
+      gap: 8px;
+
+      &::-webkit-scrollbar {
+        height: 3px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: var(--border-default);
+        border-radius: var(--radius-full);
+      }
+    }
+
+    .chip {
+      flex-shrink: 0;
+      scroll-snap-align: start;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+
+      .chip-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 11px;
+      }
+
+      .chip-name {
+        font-size: 13px;
+      }
+    }
+
+    .chip-skeleton {
+      width: 90px;
+      flex-shrink: 0;
+      height: 34px;
+      border-radius: var(--radius-full);
+    }
+  }
+}
 </style>

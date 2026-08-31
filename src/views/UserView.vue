@@ -355,4 +355,42 @@ const formattedCreateTime = computed(() => {
     border-top: 1px solid var(--border-light);
   }
 }
+
+@media (max-width: 640px) {
+  .user-page {
+    padding: 10px 8px 36px;
+  }
+
+  .user-card {
+    padding: 24px 14px 20px;
+    border-radius: var(--radius-lg);
+
+    .info-grid {
+      gap: 10px;
+      padding: 12px 0;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+
+      :deep(.el-button) {
+        width: 100%;
+        margin: 0 !important;
+      }
+    }
+
+    .admin-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+
+      :deep(.el-button) {
+        width: 100%;
+        margin: 0 !important;
+      }
+    }
+  }
+}
 </style>

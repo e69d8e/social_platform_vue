@@ -544,27 +544,79 @@ const deleteComment = async (id) => {
   }
 }
 
-.empty-comments {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  text-align: center;
-  padding: 40px 0;
-  color: var(--text-placeholder);
-  font-size: 14px;
-
-  .empty-glyph {
+  .empty-comments {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: var(--bg-subtle);
-    color: var(--text-muted);
-    font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
-    font-size: 16px;
+    gap: 10px;
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text-placeholder);
+    font-size: 14px;
+
+    .empty-glyph {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      color: var(--text-muted);
+      font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+      font-size: 16px;
+    }
+  }
+
+@media (max-width: 640px) {
+  .comment-section {
+    margin-top: 24px;
+
+    .comment-input-card {
+      padding: 12px;
+      margin-bottom: 16px;
+
+      .comment-input-row {
+        gap: 8px;
+      }
+
+      .input-avatar {
+        width: 32px !important;
+        height: 32px !important;
+      }
+
+      .shortcut-tip {
+        display: none;
+      }
+    }
+
+    .comment-item {
+      padding: 12px 0;
+      gap: 10px;
+
+      .comment-avatar {
+        width: 32px !important;
+        height: 32px !important;
+      }
+    }
+
+    .comment-content {
+      font-size: 13.5px;
+    }
+
+    .child-comments {
+      padding: 8px 10px;
+      margin-top: 8px;
+
+      .child-item {
+        font-size: 12.5px;
+      }
+    }
+
+    .reply-btn {
+      display: inline-block;
+      padding: 2px 4px;
+    }
   }
 }
 </style>

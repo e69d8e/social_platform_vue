@@ -28,6 +28,7 @@ const handleChange = (page) => {
       :total="total"
       :page-size="pageSize"
       :current-page="pageNum"
+      :pager-count="5"
       background
       :layout="layout"
       @current-change="handleChange"
@@ -73,6 +74,24 @@ const handleChange = (page) => {
       &:hover:not(:disabled) {
         color: var(--el-color-primary);
         background: var(--el-color-primary-light-9);
+      }
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .pagination {
+    padding: 12px 0 4px;
+
+    :deep(.el-pagination) {
+      .el-pager li,
+      .btn-prev,
+      .btn-next {
+        min-width: 28px;
+        height: 28px;
+        line-height: 28px;
+        font-size: 12px;
+        margin: 0 2px;
       }
     }
   }

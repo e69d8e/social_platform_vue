@@ -86,10 +86,10 @@ onUnmounted(() => {
   transform: translateY(12px) scale(0.85);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .back-top {
     right: 16px;
-    bottom: 24px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     width: 40px;
     height: 40px;
   }

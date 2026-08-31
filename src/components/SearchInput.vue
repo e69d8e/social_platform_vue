@@ -45,4 +45,11 @@ const handleClear = () => {
   padding: 0 4px 16px;
   max-width: 400px;
 }
+
+@media (max-width: 640px) {
+  .search-input {
+    max-width: 100%;
+    padding: 0 2px 12px;
+  }
+}
 </style>

@@ -363,7 +363,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
       </el-form>
     </div>
 
-    <el-dialog v-model="dialogFormVisible" title="修改密码" width="440" center>
+    <el-dialog v-model="dialogFormVisible" title="修改密码" width="min(92vw, 440px)" center>
       <el-form
         :model="passwordForm"
         :rules="passwordRules"
@@ -396,7 +396,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
       </template>
     </el-dialog>
 
-    <el-dialog v-model="dialogVisible" title="确认注销？" width="400" center>
+    <el-dialog v-model="dialogVisible" title="确认注销？" width="min(90vw, 400px)" center>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="loading" @click="logout"
@@ -514,5 +514,34 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
   padding: 24px 24px 16px;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-light);
+}
+
+@media (max-width: 640px) {
+  .my-page {
+    padding: 10px 8px 36px;
+  }
+
+  .profile-card {
+    padding: 20px 14px 16px;
+    border-radius: var(--radius-lg);
+
+    .stat-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+
+      :deep(.el-button) {
+        width: 100%;
+        margin: 0 !important;
+        padding: 6px 4px;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .form-card {
+    padding: 18px 14px 12px;
+    border-radius: var(--radius-lg);
+  }
 }
 </style>

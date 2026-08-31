@@ -145,4 +145,23 @@ const onAgree = () => {
     }
   }
 }
+
+@media (max-width: 640px) {
+  .agreement-page {
+    padding: 16px 10px 36px;
+  }
+
+  .agreement-card {
+    padding: 24px 16px;
+    border-radius: var(--radius-lg);
+  }
+
+  .agreement-title {
+    font-size: 22px;
+  }
+
+  .section h2 {
+    font-size: 16px;
+  }
+}
 </style>

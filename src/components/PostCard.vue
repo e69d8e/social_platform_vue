@@ -123,6 +123,7 @@ const openUser = (e) => {
           :src="props.cover"
           :alt="props.title"
           loading="lazy"
+          referrerpolicy="no-referrer"
           :class="{ loaded: coverLoaded }"
           @load="coverLoaded = true"
           @error="coverFailed = true"
@@ -145,7 +146,11 @@ const openUser = (e) => {
               v-if="props.username"
               class="author"
               :class="{ clickable: Boolean(props.userId) }"
-              :title="props.userId ? `查看 @${props.username} 的主页` : `@${props.username}`"
+              :title="
+                props.userId
+                  ? `查看 @${props.username} 的主页`
+                  : `@${props.username}`
+              "
               @click.stop="openUser"
             >
               <el-icon size="12"><User /></el-icon>
@@ -433,6 +438,53 @@ const openUser = (e) => {
 
     .pop {
       animation: heartBeat 0.5s ease;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .body {
+    padding: 12px 14px 10px;
+    gap: 6px;
+  }
+
+  .title {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .excerpt {
+    font-size: 12.5px;
+  }
+
+  .text-wrap {
+    min-height: 120px;
+
+    .glyph {
+      font-size: 88px;
+      right: -8px;
+      bottom: -16px;
+    }
+
+    .text-content {
+      min-height: 110px;
+      -webkit-line-clamp: 5;
+      line-clamp: 5;
+    }
+  }
+
+  .meta {
+    .author {
+      max-width: 120px;
+      font-size: 12px;
+    }
+
+    .time {
+      font-size: 11px;
+    }
+
+    .like {
+      padding: 4px 8px;
     }
   }
 }

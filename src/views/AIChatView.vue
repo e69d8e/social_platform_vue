@@ -1745,16 +1745,6 @@ onUnmounted(() => {
 
 /* ========== 响应式 ========== */
 @media (max-width: 768px) {
-  .sidebar {
-    width: 240px;
-  }
-
-  .message-body {
-    max-width: 80%;
-  }
-}
-
-@media (max-width: 480px) {
   // 会话列表改为抽屉
   .sidebar {
     display: flex;
@@ -1833,7 +1823,7 @@ onUnmounted(() => {
   }
 
   .input-area {
-    padding: 10px 12px 14px;
+    padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
   }
 
   .back-bottom-btn {

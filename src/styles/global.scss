@@ -467,6 +467,81 @@ html.dark .el-empty {
 }
 
 // ============================================================
+// Mobile Responsive Global Styles & Element Plus Overrides
+// ============================================================
+@media (max-width: 768px) {
+  // 弹窗移动端自适应（防止小屏横向溢出）
+  .el-dialog {
+    width: min(92vw, 480px) !important;
+    max-width: calc(100vw - 24px) !important;
+    margin: 16px auto !important;
+    border-radius: var(--radius-lg) !important;
+
+    .el-dialog__header {
+      padding: 16px 16px 12px !important;
+      margin-right: 0 !important;
+    }
+
+    .el-dialog__body {
+      padding: 12px 16px 16px !important;
+      max-height: 75vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .el-dialog__footer {
+      padding: 12px 16px 16px !important;
+    }
+  }
+
+  .el-message-box {
+    width: min(90vw, 380px) !important;
+    max-width: calc(100vw - 24px) !important;
+    padding: 16px !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  // 消息提示组件移动端居中且缩窄
+  .el-message {
+    min-width: unset !important;
+    max-width: calc(100vw - 32px) !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .el-notification {
+    width: min(90vw, 340px) !important;
+    right: 16px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  // 移动端列表页外层边距收窄
+  .list-page {
+    padding: 12px 8px 32px !important;
+  }
+
+  // 移动端表单卡片内边距收窄
+  .form-card {
+    padding: 20px 16px !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  // 移动端卡片内边距微调
+  .surface-card {
+    border-radius: var(--radius-lg) !important;
+  }
+}
+
+// Safe Area 环境变量工具
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+// ============================================================
 // Reduced Motion（用户系统级偏好：关闭动画）
 // ============================================================
 @media (prefers-reduced-motion: reduce) {
@@ -482,3 +557,4 @@ html.dark .el-empty {
     transition-duration: 0.01ms !important;
   }
 }
+

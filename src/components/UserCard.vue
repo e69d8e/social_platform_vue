@@ -148,4 +148,30 @@ const fansCount = computed(() => formattedCount(props.count));
     overflow: hidden;
   }
 }
+
+@media (max-width: 640px) {
+  .usercard .card {
+    border-radius: $radius-md;
+
+    :deep(.el-card__header) {
+      padding: 12px 14px 6px;
+    }
+
+    :deep(.el-card__body) {
+      padding: 0 14px 12px;
+    }
+  }
+
+  .usercard .card-header {
+    gap: 10px;
+  }
+
+  .usercard .nickname {
+    font-size: 14px;
+  }
+
+  .usercard .bio {
+    font-size: 12.5px;
+  }
+}
 </style>

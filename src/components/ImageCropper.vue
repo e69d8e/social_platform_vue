@@ -821,4 +821,34 @@ const boxStyle = computed(() => ({
     }
   }
 }
+
+@media (max-width: 640px) {
+  .cropper {
+    .stage {
+      height: min(260px, 38vh);
+    }
+
+    .ratio-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .toolbar {
+      gap: 4px;
+      margin-top: 10px;
+
+      .zoom-slider {
+        margin: 0 2px;
+      }
+    }
+
+    .tip {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      margin-top: 8px;
+    }
+  }
+}
 </style>

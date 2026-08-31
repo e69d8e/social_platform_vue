@@ -25,6 +25,8 @@ import {
   RemoveFilled,
   Share,
   ChatDotRound,
+  Loading,
+  Picture,
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 
@@ -164,6 +166,16 @@ const banPost = async () => {
   }
 };
 
+// 保证富文本中第三方图片均附带 referrerpolicy="no-referrer" 绕过防盗链
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  if (node.tagName === "IMG") {
+    node.setAttribute("referrerpolicy", "no-referrer");
+    if (!node.hasAttribute("loading")) {
+      node.setAttribute("loading", "lazy");
+    }
+  }
+});
+
 const likeCount = computed(() => formattedCount(post.value.likeCount));
 const viewCount = computed(() => formattedCount(post.value.viewCount));
 const sanitizedContent = computed(() => DOMPurify.sanitize(post.value.content));
@@ -283,7 +295,22 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
           fit="cover"
           class="cover-img"
           alt="文章封面"
-        />
+          referrerpolicy="no-referrer"
+          loading="lazy"
+        >
+          <template #placeholder>
+            <div class="image-slot loading">
+              <el-icon class="is-loading"><Loading /></el-icon>
+              <span>图片加载中…</span>
+            </div>
+          </template>
+          <template #error>
+            <div class="image-slot error">
+              <el-icon size="24"><Picture /></el-icon>
+              <span>图片加载失败（可能网络超时或外链失效）</span>
+            </div>
+          </template>
+        </el-image>
       </div>
 
       <div class="rule"></div>
@@ -302,13 +329,21 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       </footer>
     </article>
 
-    <el-dialog v-model="dialogVisible" title="确认删除作品?" width="400" center>
-      <p style="text-align: center; color: var(--text-secondary); margin-bottom: 8px;">
+    <el-dialog v-model="dialogVisible" title="确认删除作品?" width="min(90vw, 400px)" center>
+      <p
+        style="
+          text-align: center;
+          color: var(--text-secondary);
+          margin-bottom: 8px;
+        "
+      >
         删除后作品将无法恢复，确定继续吗？
       </p>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="danger" :loading="deleteLoading" @click="deletePost">确认删除</el-button>
+        <el-button type="danger" :loading="deleteLoading" @click="deletePost"
+          >确认删除</el-button
+        >
       </template>
     </el-dialog>
 
@@ -575,6 +610,28 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
         display: block;
         object-fit: cover;
       }
+
+      .image-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        min-height: 220px;
+        background: var(--bg-subtle);
+        color: var(--text-placeholder);
+        font-size: 13px;
+        gap: 8px;
+
+        &.loading {
+          color: var(--text-secondary);
+        }
+
+        &.error {
+          color: var(--text-placeholder);
+        }
+      }
     }
 
     .rule {
@@ -611,7 +668,10 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
         margin: 16px 0;
         box-shadow: var(--shadow-sm);
         cursor: zoom-in;
-        transition: transform var(--transition-base), box-shadow var(--transition-base), opacity var(--transition-base);
+        transition:
+          transform var(--transition-base),
+          box-shadow var(--transition-base),
+          opacity var(--transition-base);
 
         &:hover {
           opacity: 0.94;
@@ -685,19 +745,22 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
 
 @media (max-width: 640px) {
   .post-detail {
-    padding: 12px 12px 36px;
+    padding: 10px 8px 36px;
 
     .paper {
-      padding: 24px 16px 24px;
+      padding: 20px 14px 20px;
+      border-radius: var(--radius-lg);
 
       .paper-glyph {
-        font-size: 150px;
-        right: 6px;
+        font-size: 130px;
+        right: 4px;
+        top: 4px;
       }
     }
 
     .paper-head .title {
-      font-size: 21px;
+      font-size: 20px;
+      margin-bottom: 14px;
     }
 
     .paper-head .byline {
@@ -705,9 +768,66 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       align-items: flex-start;
       gap: 12px;
 
-      .stats-bar {
-        padding-bottom: 0;
+      .author {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .author-avatar {
+          width: 38px !important;
+          height: 38px !important;
+        }
+
+        .nickname {
+          font-size: 14px;
+          max-width: 130px;
+        }
       }
+
+      .stats-bar {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding-bottom: 0;
+
+        .action-pill,
+        .like-pill {
+          padding: 5px 12px;
+          font-size: 12px;
+        }
+      }
+    }
+
+    .cover {
+      margin: 14px 0 8px;
+      border-radius: var(--radius-lg);
+    }
+
+    .content {
+      font-size: 15px;
+      line-height: 1.75;
+
+      :deep(pre) {
+        padding: 12px 14px;
+        font-size: 12.5px;
+        border-radius: var(--radius-sm);
+      }
+
+      :deep(blockquote) {
+        padding: 10px 14px;
+        margin: 12px 0;
+      }
+
+      :deep(table) {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
+    .paper-end {
+      margin-top: 28px;
     }
   }
 }

@@ -214,13 +214,13 @@ const activeOption = computed(() => ({
 
     <div class="charts-grid">
       <div class="chart-card">
-        <v-chart :option="postsOption" autoresize style="height: 340px" />
+        <v-chart :option="postsOption" autoresize class="dashboard-chart" />
       </div>
       <div class="chart-card">
-        <v-chart :option="usersOption" autoresize style="height: 340px" />
+        <v-chart :option="usersOption" autoresize class="dashboard-chart" />
       </div>
       <div class="chart-card">
-        <v-chart :option="activeOption" autoresize style="height: 340px" />
+        <v-chart :option="activeOption" autoresize class="dashboard-chart" />
       </div>
     </div>
   </div>
@@ -306,6 +306,10 @@ const activeOption = computed(() => ({
       border: 1px solid var(--border-light);
     }
   }
+
+  .dashboard-chart {
+    height: 340px;
+  }
 }
 
 @media (min-width: 900px) {
@@ -318,6 +322,56 @@ const activeOption = computed(() => ({
 
     .chart-card:first-child {
       grid-column: 1 / -1;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-page {
+    padding: 10px 8px 36px;
+
+    .toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding-bottom: 14px;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      padding-bottom: 14px;
+
+      .summary-card {
+        padding: 12px 10px;
+        gap: 8px;
+
+        .summary-icon {
+          width: 36px;
+          height: 36px;
+        }
+
+        .summary-info .summary-value {
+          font-size: 18px;
+        }
+
+        .summary-info .summary-label {
+          font-size: 11.5px;
+        }
+      }
+    }
+
+    .charts-grid {
+      gap: 12px;
+
+      .chart-card {
+        padding: 14px 8px 8px;
+        border-radius: var(--radius-md);
+      }
+    }
+
+    .dashboard-chart {
+      height: 280px;
     }
   }
 }

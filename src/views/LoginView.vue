@@ -17,6 +17,22 @@ import SlideVerify from "vue3-slide-verify";
 import "vue3-slide-verify/dist/style.css";
 // import { ElMessage } from "element-plus";
 
+import captcha1 from "@/assets/captcha/captcha1.png";
+import captcha2 from "@/assets/captcha/captcha2.png";
+import captcha3 from "@/assets/captcha/captcha3.png";
+import captcha4 from "@/assets/captcha/captcha4.png";
+import captcha5 from "@/assets/captcha/captcha5.png";
+import captcha6 from "@/assets/captcha/captcha6.png";
+
+const captchaImages = [
+  captcha1,
+  captcha2,
+  captcha3,
+  captcha4,
+  captcha5,
+  captcha6,
+];
+
 const router = useRouter();
 const route = useRoute();
 const signStore = useSignStore();
@@ -273,6 +289,7 @@ const resetForm = (formEl) => {
             v-else
             :key="slideCaptchaId"
             :offset="slideOffset"
+            :imgs="captchaImages"
             slider-text="向右滑动完成验证"
             :accuracy="3"
             @success="onSlideSuccess"
@@ -285,13 +302,13 @@ const resetForm = (formEl) => {
         <div class="switch-link">
           <template v-if="isLogin">
             <span>还没有账号？</span>
-            <el-link @click="toRegister" :underline="false" type="primary"
+            <el-link @click="toRegister" underline="never" type="primary"
               >去注册</el-link
             >
           </template>
           <template v-else>
             <span>已有账号？</span>
-            <el-link @click="toLogin" :underline="false" type="primary"
+            <el-link @click="toLogin" underline="never" type="primary"
               >去登录</el-link
             >
           </template>
@@ -304,7 +321,7 @@ const resetForm = (formEl) => {
           >
           <el-link
             @click="router.push('/userAgreement')"
-            :underline="false"
+            underline="never"
             type="primary"
             >《用户协议》</el-link
           >
@@ -472,8 +489,41 @@ const resetForm = (formEl) => {
 }
 
 @media (max-width: 480px) {
+  .login-page {
+    padding: 16px 10px;
+  }
+
   .login-card {
-    padding: 28px 20px;
+    padding: 24px 14px;
+    border-radius: var(--radius-lg);
+
+    .logo-img {
+      width: 56px !important;
+      height: 56px !important;
+    }
+
+    .brand-name {
+      font-size: 18px !important;
+    }
+
+    .title {
+      font-size: 20px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .slide-verify-wrapper {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+
+      :deep(.slide-verify) {
+        max-width: 100%;
+      }
+    }
   }
 }
 

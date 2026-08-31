@@ -130,4 +130,26 @@ const {
     }
   }
 }
+
+@media (max-width: 640px) {
+  .home {
+    padding: 10px 8px 36px;
+
+    .category {
+      padding: 0 2px 6px;
+    }
+
+    .feed-head {
+      padding: 2px 2px 10px;
+
+      .feed-title {
+        font-size: 15px;
+      }
+
+      .feed-subtitle {
+        display: none;
+      }
+    }
+  }
+}
 </style>

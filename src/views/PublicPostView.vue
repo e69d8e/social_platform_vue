@@ -368,7 +368,7 @@ onBeforeUnmount(async () => {
           v-model="categoryId"
           placeholder="请选择分类（默认：其他）"
           clearable
-          style="width: 240px"
+          class="category-select"
         >
           <el-option
             v-for="item in categoryList"
@@ -393,7 +393,7 @@ onBeforeUnmount(async () => {
     <el-dialog
       v-model="dialogConfirmVisible"
       title="确认发布?"
-      width="400"
+      width="min(90vw, 400px)"
       center
     >
       <p style="text-align: center; color: var(--text-secondary); margin-bottom: 8px;">
@@ -574,6 +574,10 @@ onBeforeUnmount(async () => {
   }
 }
 
+.category-select {
+  width: 240px;
+}
+
 .submit-area {
   padding-top: 24px;
   border-top: 1px solid var(--border-light);
@@ -595,8 +599,77 @@ onBeforeUnmount(async () => {
 }
 
 @media (max-width: 640px) {
+  .public-page {
+    padding: 10px 8px 36px;
+  }
+
   .form-card {
-    padding: 20px 16px;
+    padding: 18px 14px;
+    border-radius: var(--radius-lg);
+  }
+
+  .cover-area {
+    flex-direction: column;
+    width: 100%;
+
+    .cover-preview-box {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 5 / 3;
+    }
+
+    .cover-actions {
+      width: 100%;
+      flex-direction: row;
+      gap: 10px;
+
+      .cover-uploader {
+        flex: 1;
+
+        .upload-trigger {
+          width: 100%;
+          height: 42px;
+          flex-direction: row;
+          border-style: solid;
+          background: var(--bg-subtle);
+          border-radius: var(--radius-md);
+        }
+      }
+
+      .mobile-remove-cover-btn {
+        height: 42px;
+        flex: 1;
+        width: auto;
+      }
+    }
+  }
+
+  .editor-wrapper {
+    :deep(.w-e-toolbar) {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+
+      &::-webkit-scrollbar {
+        height: 3px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: var(--border-default);
+      }
+    }
+
+    :deep(.w-e-text-container) {
+      height: 300px;
+    }
+  }
+
+  .category-select {
+    width: 100% !important;
+  }
+
+  .submit-area .submit-btn {
+    max-width: 100%;
   }
 }
 </style>

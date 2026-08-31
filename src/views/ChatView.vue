@@ -384,6 +384,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   max-width: 720px;
   margin: 0 auto;
   background: var(--chat-bg);
@@ -677,6 +678,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.03);
   position: relative;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .input-inner {
@@ -780,21 +782,37 @@ onUnmounted(() => {
   }
 
   .bubble-wrap {
-    max-width: 75%;
+    max-width: 78%;
   }
 
   .messages-area {
-    padding: 16px 12px 8px;
+    padding: 14px 10px 8px;
+  }
+
+  .floating-bottom-btn {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    right: 14px;
   }
 }
 
 @media (max-width: 480px) {
   .bubble-wrap {
-    max-width: 82%;
+    max-width: 85%;
+  }
+
+  .copy-msg-btn {
+    opacity: 0.85;
+    pointer-events: auto;
+  }
+
+  .header-inner {
+    padding: 8px 10px;
+    gap: 8px;
   }
 
   .input-inner {
-    padding: 10px 12px;
+    padding: 8px 10px;
+    gap: 8px;
   }
 }
 </style>

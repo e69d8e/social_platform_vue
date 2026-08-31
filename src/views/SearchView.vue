@@ -423,4 +423,41 @@ watch(activeName, (name) => {
     padding: 60px 0;
   }
 }
+
+@media (max-width: 640px) {
+  .search {
+    padding: 10px 8px 36px;
+
+    .search-top {
+      gap: 8px;
+      margin-bottom: 12px;
+
+      .search-info {
+        font-size: 13px;
+
+        .keyword {
+          max-width: 100px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+    }
+
+    .search-history {
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border-radius: var(--radius-md);
+
+      .history-tag {
+        font-size: 12px;
+        padding: 3px 8px;
+      }
+    }
+
+    .search-tabs .tab-label {
+      font-size: 14px;
+    }
+  }
+}
 </style>

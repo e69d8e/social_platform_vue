@@ -80,4 +80,28 @@ const attrs = useAttrs();
     font-variant-numeric: tabular-nums;
   }
 }
+
+@media (max-width: 640px) {
+  .page-header {
+    gap: 8px;
+    padding: 4px 2px 12px;
+
+    &.large {
+      margin-bottom: 14px;
+
+      .page-title {
+        font-size: 18px;
+      }
+    }
+
+    .page-title {
+      font-size: 16px;
+    }
+
+    .total-count {
+      padding: 1px 8px;
+      font-size: 11.5px;
+    }
+  }
+}
 </style>
