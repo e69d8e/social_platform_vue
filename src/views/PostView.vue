@@ -107,6 +107,11 @@ onMounted(async () => {
 
 const likeLoading = ref(false);
 const toggleLike = throttle(async () => {
+  if (!userStore.userInfo?.username) {
+    ElMessage.info("请先登录后再点赞");
+    router.push("/login");
+    return;
+  }
   if (likeLoading.value) return;
   likeLoading.value = true;
   const oldLiked = post.value.liked;
@@ -117,7 +122,9 @@ const toggleLike = throttle(async () => {
   try {
     const res = await likeApi(post.value.id);
     if (res.data.code !== 1) throw new Error("操作失败");
-    ElMessage.success(res.data.message);
+    ElMessage.success(
+      res.data.message || (post.value.liked ? "点赞成功" : "已取消点赞"),
+    );
   } catch {
     post.value.liked = oldLiked;
     post.value.likeCount = oldCount;
@@ -158,8 +165,13 @@ const deletePost = async () => {
 
 const banPost = async () => {
   try {
-    const res = await banPostApi(post.value.id);
-    if (res.data.code === 1) ElMessage.success(res.data.message);
+    const id = post.value?.id || route.params.id;
+    const res = await banPostApi(id);
+    if (res.data.code === 1) {
+      ElMessage.success(
+        res.data.message || (post.value.enabled ? "封禁成功" : "解封成功"),
+      );
+    }
     router.back();
   } catch {
     ElMessage.error("操作失败，请重试");
@@ -226,19 +238,21 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               :round="true"
             />
             <el-icon
-              v-if="String(userStore.userInfo.id) === String(post.userId)"
+              v-if="userStore.userInfo.id && String(userStore.userInfo.id) === String(post.userId)"
               title="删除作品"
               class="admin-icon"
               @click="dialogVisible = true"
               ><Delete
             /></el-icon>
             <el-popconfirm
-              v-if="userStore.userInfo.authorityId === 3"
-              title="确定封禁/解封该文章吗？"
+              v-if="[2, 3].includes(userStore.userInfo.authorityId) || ['REVIEWER', 'ADMIN'].includes(userStore.userInfo.authority)"
+              :title="post.enabled ? '确定封禁该文章吗？' : '确定解封该文章吗？'"
               @confirm="banPost"
             >
               <template #reference>
-                <el-icon title="封禁文章" class="admin-icon"
+                <el-icon
+                  :title="post.enabled ? '封禁文章' : '解封文章'"
+                  class="admin-icon"
                   ><RemoveFilled
                 /></el-icon>
               </template>
@@ -365,7 +379,7 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
 .post-detail {
   max-width: 860px;
   margin: 0 auto;
-  padding: 16px 16px 48px;
+  padding: 16px 16px 100px;
 
   .back-margin {
     margin-bottom: 16px;
@@ -745,7 +759,7 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
 
 @media (max-width: 640px) {
   .post-detail {
-    padding: 10px 8px 36px;
+    padding: 10px 8px calc(90px + env(safe-area-inset-bottom, 0px));
 
     .paper {
       padding: 20px 14px 20px;

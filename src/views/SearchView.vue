@@ -15,8 +15,10 @@ import BackButton from "@/components/BackButton.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
 import { Close, Delete, Search } from "@element-plus/icons-vue";
+import { useUserStore } from "@/stores/user";
 // import { ElMessage } from "element-plus";
 
+const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
 const pageNum = ref(1);
@@ -36,6 +38,7 @@ const historyList = ref([]);
 const historyLoading = ref(false);
 
 const fetchHistory = async () => {
+  if (!userStore.userInfo?.username) return;
   historyLoading.value = true;
   try {
     const res = await getSearchHistoryApi({ pageNum: 1, pageSize: 20 });

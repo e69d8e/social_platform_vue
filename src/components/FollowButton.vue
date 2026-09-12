@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { throttle } from "lodash-es";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
@@ -14,6 +15,7 @@ const props = defineProps({
 
 const emit = defineEmits(["change"]);
 
+const router = useRouter();
 const userStore = useUserStore();
 const followed = ref(props.followed);
 const followLoading = ref(false);
@@ -29,6 +31,11 @@ watch(
 
 // 乐观更新：先切换 UI，接口失败时回滚
 const toggleFollow = throttle(async () => {
+  if (!userStore.userInfo?.username) {
+    ElMessage.info("请先登录后再关注");
+    router.push("/login");
+    return;
+  }
   if (String(userStore.userInfo.id) === String(props.userId)) {
     ElMessage.warning("不能关注自己");
     return;
@@ -41,7 +48,9 @@ const toggleFollow = throttle(async () => {
     const api = oldFollowed ? unfollowUserApi : followUserApi;
     const res = await api(props.userId);
     if (res.data.code !== 1) throw new Error(res.data.message || "操作失败");
-    ElMessage.success(res.data.message);
+    ElMessage.success(
+      res.data.message || (followed.value ? "关注成功" : "已取消关注"),
+    );
     emit("change", followed.value);
   } catch (e) {
     followed.value = oldFollowed;
@@ -54,6 +63,7 @@ const toggleFollow = throttle(async () => {
 
 <template>
   <el-button
+    v-if="String(userStore.userInfo.id) !== String(userId)"
     class="follow-btn"
     :class="{ 'is-followed': followed, 'is-unfollow-hover': followed && isHovered }"
     :size="size || undefined"

@@ -40,6 +40,7 @@ const router = createRouter({
           path: "/friends",
           name: "friend",
           component: () => import("@/views/FriendListView.vue"),
+          meta: { requiresAuth: true },
         },
         {
           path: "/postList/:id",
@@ -50,6 +51,7 @@ const router = createRouter({
           path: "/followPosts",
           name: "MyFollowPostsView",
           component: () => import("@/views/MyFollowPostsView.vue"),
+          meta: { requiresAuth: true },
         },
         {
           path: "/category/:id",
@@ -67,11 +69,13 @@ const router = createRouter({
       path: "/my",
       name: "my",
       component: () => import("@/views/MyView.vue"),
+      meta: { requiresAuth: true },
     },
     {
       path: "/publicPost",
       name: "publicPost",
       component: () => import("@/views/PublicPostView.vue"),
+      meta: { requiresAuth: true },
     },
     {
       path: "/post/:id",
@@ -82,24 +86,25 @@ const router = createRouter({
       path: "/posts/banned",
       name: "bannedPosts",
       component: () => import("@/views/BanPostListView.vue"),
-      meta: { roles: [2, 3] },
+      meta: { requiresAuth: true, roles: [2, 3] },
     },
     {
       path: "/users/banned",
       name: "bannedUsers",
       component: () => import("@/views/BanUserListView.vue"),
-      meta: { roles: [2] },
+      meta: { requiresAuth: true, roles: [2] },
     },
     {
       path: "/admin/dashboard",
       name: "adminDashboard",
       component: () => import("@/views/AdminDashboardView.vue"),
-      meta: { roles: [2] },
+      meta: { requiresAuth: true, roles: [2] },
     },
     {
       path: "/aiChat",
       name: "AIChat",
       component: () => import("@/views/AIChatView.vue"),
+      meta: { requiresAuth: true },
     },
     {
       path: "/userAgreement",
@@ -110,11 +115,13 @@ const router = createRouter({
       path: "/conversations",
       name: "conversations",
       component: () => import("@/views/ConversationsView.vue"),
+      meta: { requiresAuth: true },
     },
     {
       path: "/chat/:conversationId",
       name: "chat",
       component: () => import("@/views/ChatView.vue"),
+      meta: { requiresAuth: true },
     },
   ],
   // 跳转后回到顶部：列表页之间不继承滚动位置，新页面从顶部读起
@@ -123,11 +130,21 @@ const router = createRouter({
   },
 });
 
-// 路由守卫：校验页面权限
+// 路由守卫：校验页面访问权限与角色权限
 router.beforeEach((to, from, next) => {
+  const userStore = useUserStore();
+  const isLoggedIn = Boolean(userStore.token?.accessToken);
+
+  // 1. 未登录拦截：需要登录的页面直接重定向到 /login
+  if (to.meta.requiresAuth && !isLoggedIn) {
+    ElMessage.info("请先登录后访问该页面");
+    next({ path: "/login", query: { redirect: to.fullPath } });
+    return;
+  }
+
+  // 2. 角色权限拦截：管理员/审核员等
   const requiredRoles = to.meta.roles;
   if (requiredRoles) {
-    const userStore = useUserStore();
     const userRole = userStore.userInfo?.authorityId;
     if (!requiredRoles.includes(userRole)) {
       ElMessage.error("无权访问该页面");
@@ -135,6 +152,7 @@ router.beforeEach((to, from, next) => {
       return;
     }
   }
+
   next();
 });
 

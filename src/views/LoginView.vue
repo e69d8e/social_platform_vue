@@ -13,8 +13,7 @@ import { ref, reactive, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 import { Loading } from "@element-plus/icons-vue";
-import SlideVerify from "vue3-slide-verify";
-import "vue3-slide-verify/dist/style.css";
+import SlideVerify from "@/components/SlideVerify.vue";
 // import { ElMessage } from "element-plus";
 
 import captcha1 from "@/assets/captcha/captcha1.png";
@@ -184,7 +183,10 @@ const submitForm = (formEl) => {
           userStore.setInfo(userInfo.data.data);
           const data = await getSignInDaysApi();
           signStore.setSignDay(data.data.data);
-          router.push("/");
+          const redirect = route.query.redirect
+            ? decodeURIComponent(route.query.redirect)
+            : "/";
+          router.push(redirect);
         } else {
           const res = await registerApi(ruleForm.value, verifyToken.value);
           if (res.data.code !== 1) {

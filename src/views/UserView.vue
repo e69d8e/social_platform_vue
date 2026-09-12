@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { banUserApi, setReviewerApi, setUserApi } from "@/api/adminApi";
@@ -11,7 +12,17 @@ import formattedCount from "@/utils/formattedCount";
 import { Male, Female, Warning } from "@element-plus/icons-vue";
 
 const route = useRoute();
+const router = useRouter();
 const userStore = useUserStore();
+
+const handleSendMsg = () => {
+  if (!userStore.userInfo?.username) {
+    ElMessage.info("请先登录后再发送私信");
+    router.push("/login");
+    return;
+  }
+  router.push("/chat/new?receiverId=" + route.params.id);
+};
 
 const userInfo = ref({
   id: "",
@@ -56,7 +67,9 @@ const ban = async () => {
     const res = await banUserApi(route.params.id);
     if (res.data.code === 1) {
       userInfo.value.enabled = !userInfo.value.enabled;
-      ElMessage.success(res.data.message);
+      ElMessage.success(
+        res.data.message || (userInfo.value.enabled ? "解封成功" : "封禁成功"),
+      );
     }
   } finally {
     banLoading.value = false;
@@ -154,7 +167,7 @@ const formattedCreateTime = computed(() => {
           type="primary"
           plain
           size="small"
-          @click="$router.push('/chat/new?receiverId=' + route.params.id)"
+          @click="handleSendMsg"
           >发私信</el-button
         >
         <el-button

@@ -91,8 +91,23 @@ request.interceptors.response.use(
         userStore.removeToken();
         userStore.removeInfo();
         processQueue(refreshError, null);
-        ElMessage.error("用户未登录");
-        router.push("/login");
+
+        // 关键防护：如果当前位于公开页面（如首页、搜索页、分类列表、帖子详情等），不强制跳转登录页，保障游客自由浏览体验
+        const currentPath = router.currentRoute.value?.path || "";
+        const publicPaths = ["/home", "/", "/search", "/userAgreement", "/login"];
+        const isPublicPath =
+          publicPaths.includes(currentPath) ||
+          currentPath.startsWith("/post/") ||
+          currentPath.startsWith("/category/") ||
+          currentPath.startsWith("/user/") ||
+          currentPath.startsWith("/postList/") ||
+          currentPath.startsWith("/follow/") ||
+          currentPath.startsWith("/fans/");
+
+        if (!isPublicPath) {
+          ElMessage.error("用户未登录");
+          router.push("/login");
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

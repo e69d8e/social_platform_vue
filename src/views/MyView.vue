@@ -195,6 +195,7 @@ const logout = async () => {
   try {
     const res = await logoutApi();
     if (res.data.code !== 1) return;
+    userStore.removeToken();
     userStore.removeInfo();
     dialogVisible.value = false;
     ElMessage.success(res.data.message || "已注销");
@@ -264,12 +265,12 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           >我的好友</el-button
         >
         <el-button
-          v-if="userInfo.authorityId === 3"
+          v-if="[2, 3].includes(userInfo.authorityId)"
           size="small"
           @click="$router.push('/posts/banned')"
           type="primary"
           plain
-          >我的封禁</el-button
+          >封禁帖子</el-button
         >
         <el-button
           v-if="userInfo.authorityId === 2"
@@ -277,7 +278,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           @click="$router.push('/users/banned')"
           type="primary"
           plain
-          >我的封禁</el-button
+          >封禁用户</el-button
         >
         <el-button
           v-if="userInfo.authorityId === 2"

@@ -91,6 +91,7 @@ const goToMy = () => {
 };
 
 const fetchSearchHistory = async () => {
+  if (!userStore.userInfo.username) return;
   historyLoading.value = true;
   try {
     const res = await getSearchHistoryApi({ pageNum: 1, pageSize: 10 });
@@ -103,6 +104,7 @@ const fetchSearchHistory = async () => {
 };
 
 const onSearchFocus = () => {
+  if (!userStore.userInfo.username) return;
   fetchSearchHistory();
   historyVisible.value = true;
 };
@@ -197,6 +199,7 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
 const unreadCount = ref(0);
 
 const fetchUnreadCount = async () => {
+  if (!userStore.userInfo.username) return;
   try {
     const res = await getUnreadCountApi();
     if (res.data.code === 1) {
@@ -265,7 +268,12 @@ watch(
               <span class="logo-text">Y社区</span>
               <el-icon class="logo-icon"><HomeFilled /></el-icon>
             </div>
-            <div v-if="userStore.userInfo.username" class="sign" @click="sign">
+            <div
+              v-if="userStore.userInfo.username"
+              class="sign"
+              :title="`本月已连续签到 ${signStore.signDay} 天`"
+              @click="sign"
+            >
               <el-tag size="small" effect="plain" type="warning"
                 >点击签到</el-tag
               >
@@ -275,7 +283,7 @@ watch(
             </div>
           </div>
 
-          <!-- 中间：搜索 -->
+          <!-- 中间：搜索 (桌面端) -->
           <div class="header-center">
             <div class="search-wrapper">
               <div class="search-row">
@@ -330,8 +338,19 @@ watch(
             </div>
           </div>
 
-          <!-- 左侧工具：暗色模式 + AI助手 -->
-          <div class="header-left-tools">
+          <!-- 右侧区域：工具 + 导航 + 用户 -->
+          <div class="header-right">
+            <!-- 移动端快捷搜索按钮 (<992px 显示) -->
+            <button
+              class="mobile-tool-btn header-search-btn-mobile"
+              title="搜索"
+              type="button"
+              @click="mobileSearchVisible = true"
+            >
+              <el-icon :size="16"><Search /></el-icon>
+            </button>
+
+            <!-- 暗色模式切换 -->
             <button
               class="theme-toggle-btn"
               :title="themeStore.isDark ? '切换浅色模式' : '切换暗色模式'"
@@ -343,44 +362,41 @@ watch(
                 <Moon v-else />
               </el-icon>
             </button>
+
+            <!-- AI 助手 -->
             <button
               v-if="userStore.userInfo.username"
               class="nav-pill ai-nav-pill"
               :class="{ 'is-nav-active': isAiChatActive }"
               type="button"
+              title="AI 助手"
               @click="$router.push('/aiChat')"
             >
               <span class="ai-sparkle">✦</span>
-              <span>AI 助手</span>
+              <span class="ai-text">AI 助手</span>
             </button>
-          </div>
 
-          <!-- 占位，将右侧内容推到右边 -->
-          <div class="header-spacer" />
-
-          <!-- 移动端快捷搜索按钮 (<992px 显示) -->
-          <div class="header-mobile-tools">
-            <button
-              class="mobile-tool-btn"
-              title="搜索"
-              type="button"
-              @click="mobileSearchVisible = true"
-            >
-              <el-icon :size="16"><Search /></el-icon>
-            </button>
-          </div>
-
-          <!-- 右侧按钮 (桌面端) -->
-          <div class="header-actions">
-            <template v-if="userStore.userInfo.username">
-              <el-badge
-                v-if="unreadCount > 0"
-                :key="unreadCount"
-                :value="unreadCount"
-                :max="99"
-                class="msg-badge"
-              >
+            <!-- 右侧导航 (桌面端与平板端) -->
+            <div class="header-actions">
+              <template v-if="userStore.userInfo.username">
+                <el-badge
+                  v-if="unreadCount > 0"
+                  :key="unreadCount"
+                  :value="unreadCount"
+                  :max="99"
+                  class="msg-badge"
+                >
+                  <button
+                    class="nav-pill"
+                    :class="{ 'is-nav-active': isConversationsActive }"
+                    type="button"
+                    @click="$router.push('/conversations')"
+                  >
+                    私信
+                  </button>
+                </el-badge>
                 <button
+                  v-else
                   class="nav-pill"
                   :class="{ 'is-nav-active': isConversationsActive }"
                   type="button"
@@ -388,71 +404,62 @@ watch(
                 >
                   私信
                 </button>
-              </el-badge>
-              <button
-                v-else
-                class="nav-pill"
-                :class="{ 'is-nav-active': isConversationsActive }"
-                type="button"
-                @click="$router.push('/conversations')"
-              >
-                私信
-              </button>
-              <button
-                class="nav-pill"
-                :class="{ 'is-nav-active': isMyPostsActive }"
-                type="button"
-                @click="myPosts"
-              >
-                我的帖子
-              </button>
-              <button
-                class="nav-pill"
-                :class="{ 'is-nav-active': isMyFollowPostsActive }"
-                type="button"
-                @click="myFollowPosts"
-              >
-                我的关注
-              </button>
-              <button
-                class="publish-btn"
-                type="button"
-                @click="$router.push('/publicPost')"
-              >
-                <el-icon :size="14"><Edit /></el-icon>
-                <span>发布</span>
-              </button>
-            </template>
-          </div>
-
-          <!-- 右侧用户 -->
-          <div class="header-user">
-            <template v-if="!userStore.userInfo.username">
-              <el-button type="primary" size="small" @click="$router.push('/login')"
-                >去登录</el-button
-              >
-            </template>
-            <template v-else>
-              <el-avatar
-                class="user-avatar"
-                :size="36"
-                :src="userStore.userInfo.avatar"
-                @click="$router.push('/my')"
-              />
-              <div class="user-info">
-                <span class="user-nickname" @click="$router.push('/my')">
-                  {{ userStore.userInfo.nickname }}
-                </span>
-                <el-text
-                  size="small"
-                  type="primary"
-                  class="user-fans"
-                  @click="toFans"
+                <button
+                  class="nav-pill"
+                  :class="{ 'is-nav-active': isMyPostsActive }"
+                  type="button"
+                  @click="myPosts"
                 >
-                  {{ fansCount }} 粉
-                </el-text>
-              </div>
-            </template>
+                  我的帖子
+                </button>
+                <button
+                  class="nav-pill"
+                  :class="{ 'is-nav-active': isMyFollowPostsActive }"
+                  type="button"
+                  @click="myFollowPosts"
+                >
+                  我的关注
+                </button>
+                <button
+                  class="publish-btn"
+                  type="button"
+                  @click="$router.push('/publicPost')"
+                >
+                  <el-icon :size="14"><Edit /></el-icon>
+                  <span>发布</span>
+                </button>
+              </template>
+            </div>
+
+            <!-- 右侧用户 -->
+            <div class="header-user">
+              <template v-if="!userStore.userInfo.username">
+                <el-button type="primary" size="small" @click="$router.push('/login')"
+                  >去登录</el-button
+                >
+              </template>
+              <template v-else>
+                <el-avatar
+                  class="user-avatar"
+                  :size="36"
+                  :src="userStore.userInfo.avatar"
+                  @click="$router.push('/my')"
+                />
+                <div class="user-info">
+                  <span class="user-nickname" @click="$router.push('/my')">
+                    {{ userStore.userInfo.nickname }}
+                  </span>
+                  <el-text
+                    size="small"
+                    type="primary"
+                    class="user-fans"
+                    @click="toFans"
+                  >
+                    {{ fansCount }} 粉
+                  </el-text>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
       </el-header>
@@ -594,6 +601,7 @@ watch(
   .header-inner {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 16px;
     max-width: 1400px;
     margin: 0 auto;
@@ -602,18 +610,18 @@ watch(
     position: relative;
   }
 
-  // ---- Logo ----
+  // ---- Logo & Left ----
   .header-left {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     flex-shrink: 0;
   }
 
   .logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     cursor: pointer;
     user-select: none;
     transition: transform var(--transition-base);
@@ -638,6 +646,7 @@ watch(
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    white-space: nowrap;
   }
 
   .logo-icon {
@@ -659,6 +668,7 @@ watch(
     background: var(--bg-subtle);
     border: 1px solid var(--border-light);
     transition: all var(--transition-base);
+    white-space: nowrap;
 
     &:hover {
       background: var(--el-color-primary-light-9);
@@ -674,64 +684,20 @@ watch(
     color: var(--text-secondary);
   }
 
-  // ---- Left tools ----
-  .header-left-tools {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .theme-toggle-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 1px solid var(--border-default);
-    background: var(--bg-card);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all var(--transition-base);
-
-    &:hover {
-      color: var(--el-color-primary);
-      border-color: var(--el-color-primary-light-7);
-      background: var(--bg-subtle);
-      transform: rotate(15deg);
-    }
-  }
-
-  .ai-nav-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 500;
-
-    .ai-sparkle {
-      font-size: 12px;
-      color: var(--el-color-warning);
-    }
-  }
-
-  .header-spacer {
-    flex: 1;
-    min-width: 0;
-  }
-
   // ---- Search ----
   .header-center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: 360px;
-    width: 100%;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 12px;
   }
 
   .search-wrapper {
     position: relative;
     width: 100%;
+    max-width: 380px;
+    min-width: 140px;
   }
 
   .search-row {
@@ -847,7 +813,65 @@ watch(
     }
   }
 
+  // ---- Right Zone ----
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .mobile-tool-btn.header-search-btn-mobile {
+    display: none;
+  }
+
+  .theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border-default);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all var(--transition-base);
+
+    &:hover {
+      color: var(--el-color-primary);
+      border-color: var(--el-color-primary-light-7);
+      background: var(--bg-subtle);
+      transform: rotate(15deg);
+    }
+  }
+
+  .ai-nav-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+    flex-shrink: 0;
+
+    .ai-sparkle {
+      font-size: 12px;
+      color: var(--el-color-warning);
+    }
+  }
+
   // ---- Navigation Pills & Buttons ----
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+
+    .msg-badge :deep(.el-badge__content) {
+      animation: badge-pop 0.35s ease;
+    }
+  }
+
   .nav-pill {
     appearance: none;
     background: transparent;
@@ -859,6 +883,7 @@ watch(
     font-family: inherit;
     color: var(--text-secondary);
     cursor: pointer;
+    white-space: nowrap;
     transition: all var(--transition-base);
 
     &:hover {
@@ -875,81 +900,61 @@ watch(
     }
   }
 
-  .header-actions {
-    display: flex;
+  .publish-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+    background: var(--gradient-primary);
+    border: none;
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: var(--radius-full);
+    padding: 7px 18px;
+    cursor: pointer;
+    white-space: nowrap;
     flex-shrink: 0;
+    box-shadow: 0 2px 10px rgba(204, 109, 78, 0.25);
+    transition: all var(--transition-base);
 
-    .msg-badge :deep(.el-badge__content) {
-      animation: badge-pop 0.35s ease;
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--glow-primary);
     }
 
-    .publish-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: var(--gradient-primary);
-      border: none;
-      color: #fff;
-      font-size: 13.5px;
-      font-weight: 600;
-      font-family: inherit;
-      border-radius: var(--radius-full);
-      padding: 7px 18px;
-      cursor: pointer;
-      box-shadow: 0 2px 10px rgba(204, 109, 78, 0.25);
-      transition: all var(--transition-base);
-
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--glow-primary);
-      }
-
-      &:active {
-        transform: translateY(0);
-      }
+    &:active {
+      transform: translateY(0);
     }
   }
 
-  // ---- Mobile Header Tools ----
-  .header-mobile-tools {
-    display: none;
+  .mobile-tool-btn {
+    appearance: none;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border-default);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
     flex-shrink: 0;
+    transition: all var(--transition-base);
 
-    .mobile-tool-btn {
-      appearance: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 1px solid var(--border-default);
-      background: var(--bg-card);
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all var(--transition-base);
-
-      &:hover,
-      &.active {
-        color: var(--el-color-primary);
-        border-color: var(--el-color-primary-light-7);
-        background: var(--el-color-primary-light-9);
-      }
-
-      &.primary {
-        background: var(--gradient-primary);
-        border: none;
-        color: #fff;
-        box-shadow: var(--shadow-xs);
-      }
+    &:hover,
+    &.active {
+      color: var(--el-color-primary);
+      border-color: var(--el-color-primary-light-7);
+      background: var(--el-color-primary-light-9);
     }
 
-    .msg-badge :deep(.el-badge__content) {
-      animation: badge-pop 0.35s ease;
+    &.primary {
+      background: var(--gradient-primary);
+      border: none;
+      color: #fff;
+      box-shadow: var(--shadow-xs);
     }
   }
 
@@ -1176,15 +1181,74 @@ watch(
 }
 
 // ---- Responsive ----
-@media (max-width: 992px) {
+@media (max-width: 1280px) {
   .layout .header {
-    .header-center,
-    .header-actions {
+    .header-inner {
+      gap: 12px;
+      padding: 0 16px;
+    }
+
+    .sign-text {
       display: none;
     }
 
-    .header-mobile-tools {
-      display: flex;
+    .sign {
+      padding: 3px 8px;
+    }
+
+    .search-wrapper {
+      max-width: 280px;
+    }
+
+    .nav-pill {
+      padding: 5px 10px;
+      font-size: 13px;
+    }
+
+    .publish-btn {
+      padding: 6px 14px;
+      font-size: 13px;
+    }
+  }
+}
+
+@media (max-width: 1100px) {
+  .layout .header {
+    .ai-text {
+      display: none;
+    }
+
+    .ai-nav-pill {
+      padding: 5px 8px;
+    }
+
+    .search-wrapper {
+      max-width: 220px;
+    }
+
+    .header-actions {
+      gap: 3px;
+    }
+
+    .nav-pill {
+      padding: 5px 8px;
+      font-size: 12.5px;
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .layout .header {
+    .header-center {
+      display: none;
+    }
+
+    .mobile-tool-btn.header-search-btn-mobile {
+      display: inline-flex;
+    }
+
+    .header-actions {
+      gap: 4px;
     }
   }
 }
@@ -1201,8 +1265,12 @@ watch(
 
     .header-inner {
       padding: 0 14px;
-      gap: 10px;
+      gap: 8px;
       height: 56px;
+    }
+
+    .header-actions {
+      display: none;
     }
 
     .user-info {
@@ -1239,28 +1307,49 @@ watch(
     padding: 2px 6px;
   }
 
-  .layout .header-left-tools {
-    gap: 4px;
-  }
-
-  .layout .theme-toggle-btn {
+  .layout .theme-toggle-btn,
+  .layout .header-search-btn-mobile,
+  .layout .mobile-tool-btn {
     width: 30px;
     height: 30px;
   }
 
   .layout .ai-nav-pill {
-    padding: 4px 8px;
+    padding: 4px 6px;
     font-size: 12px;
-  }
 
-  .layout .header-mobile-tools .mobile-tool-btn {
-    width: 30px;
-    height: 30px;
+    .ai-text {
+      display: none;
+    }
   }
 
   .layout .user-avatar {
     width: 32px !important;
     height: 32px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .layout .header-inner {
+    padding: 0 6px;
+    gap: 4px;
+  }
+
+  .layout .header-left {
+    gap: 6px;
+  }
+
+  .layout .header-right {
+    gap: 4px;
+  }
+
+  .layout .logo-text {
+    font-size: 14px;
+  }
+
+  .layout .sign :deep(.el-tag) {
+    padding: 0 4px;
+    font-size: 11px;
   }
 }
 </style>

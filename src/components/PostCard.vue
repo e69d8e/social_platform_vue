@@ -8,6 +8,7 @@ import { formatExactTime } from "@/utils/formatTime";
 import pickGlyphChar from "@/utils/glyph";
 import { Star, View, User } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
+import { useUserStore } from "@/stores/user";
 
 const props = defineProps({
   id: { type: String, default: "" },
@@ -25,6 +26,7 @@ const props = defineProps({
 });
 
 const router = useRouter();
+const userStore = useUserStore();
 
 // ---- 点赞（乐观更新 + 失败回滚） ----
 const likeCount = ref(props.likeCount);
@@ -46,6 +48,11 @@ watch(
 );
 
 const handleLike = async () => {
+  if (!userStore.userInfo?.username) {
+    ElMessage.info("请先登录后再点赞");
+    router.push("/login");
+    return;
+  }
   const oldLiked = liked.value;
   const oldCount = likeCount.value;
   liked.value = !liked.value;
@@ -54,7 +61,7 @@ const handleLike = async () => {
   try {
     const res = await likeApi(props.id);
     if (res.data.code !== 1) throw new Error("操作失败");
-    ElMessage.success(res.data.message);
+    ElMessage.success(res.data.message || (liked.value ? "点赞成功" : "已取消点赞"));
   } catch {
     liked.value = oldLiked;
     likeCount.value = oldCount;
