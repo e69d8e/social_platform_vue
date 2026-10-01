@@ -66,7 +66,7 @@ watch(
 </script>
 
 <template>
-  <div class="list-page" v-loading="loading">
+  <div class="list-page" v-loading="loading && postList.length > 0">
     <PageHeader :title="pageTitle" :total="total" unit="篇" />
 
     <SkeletonGrid v-if="loading && postList.length === 0" :count="8" />

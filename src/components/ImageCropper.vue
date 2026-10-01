@@ -573,7 +573,9 @@ const boxStyle = computed(() => ({
           <button
             type="button"
             class="ratio-pill"
-            :class="{ active: Math.abs(currentRatio - 1) < 0.01 && !isOriginalRatio }"
+            :class="{
+              active: Math.abs(currentRatio - 1) < 0.01 && !isOriginalRatio,
+            }"
             @click="changeRatio(1)"
           >
             1:1

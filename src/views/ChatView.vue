@@ -6,6 +6,7 @@ import {
   getMessageHistoryApi,
   sendMessageApi,
   markReadApi,
+  getConversationsApi,
 } from "@/api/messageApi";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { connect, disconnect } from "@/utils/websocket";
@@ -28,6 +29,7 @@ const messages = ref([]);
 const inputMessage = ref("");
 const sending = ref(false);
 const loadingHistory = ref(false);
+const historyError = ref(false);
 const historyFinished = ref(false);
 const appendingOld = ref(false);
 const isNearBottom = ref(true);
@@ -35,8 +37,16 @@ const pageNum = ref(1);
 const pageSize = 20;
 
 const conversationId = ref(route.params.conversationId);
-const isNewChat = conversationId.value === "new";
+const isNewChat = ref(conversationId.value === "new");
 const receiverId = ref(route.query.receiverId || "");
+
+// 首屏消息条数：老消息上翻加载后保持「新消息」动画边界不漂移
+const firstPageCount = ref(0);
+
+// 触屏设备上 Enter 应换行，发送交给按钮（软键盘没有 Shift）
+const isTouchDevice =
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(hover: none)").matches;
 
 const otherUser = ref({ nickname: "", avatar: "" });
 
@@ -50,8 +60,9 @@ const scrollToBottom = async (behavior = "smooth") => {
 };
 
 const loadHistory = async () => {
-  if (isNewChat || loadingHistory.value || historyFinished.value) return;
+  if (isNewChat.value || loadingHistory.value || historyFinished.value) return;
   loadingHistory.value = true;
+  historyError.value = false;
   try {
     const res = await getMessageHistoryApi(conversationId.value, {
       pageNum: pageNum.value,
@@ -62,10 +73,12 @@ const loadHistory = async () => {
       const reversed = list.reverse();
       if (pageNum.value === 1) {
         messages.value = reversed;
+        firstPageCount.value = reversed.length;
         await scrollToBottom("auto");
       } else {
         const container = messagesContainer.value;
         const oldScrollHeight = container?.scrollHeight || 0;
+        firstPageCount.value += reversed.length;
         appendingOld.value = true;
         messages.value = [...reversed, ...messages.value];
         await nextTick();
@@ -79,12 +92,19 @@ const loadHistory = async () => {
       } else {
         pageNum.value++;
       }
+    } else {
+      historyError.value = true;
     }
   } catch {
-    // silently fail
+    historyError.value = true;
   } finally {
     loadingHistory.value = false;
   }
+};
+
+const retryHistory = () => {
+  historyError.value = false;
+  loadHistory();
 };
 
 const loadOtherUserInfo = async () => {
@@ -103,7 +123,7 @@ const loadOtherUserInfo = async () => {
 };
 
 const markAsRead = async () => {
-  if (isNewChat) return;
+  if (isNewChat.value) return;
   try {
     await markReadApi(conversationId.value);
   } catch {
@@ -119,6 +139,51 @@ const autoResize = () => {
 };
 
 watch(inputMessage, autoResize);
+
+// 新聊天发出第一条消息后：把当前页「接管」为真实会话，
+// 用户留在对话里继续聊，而不是被踢回会话列表
+const adoptConversation = async () => {
+  try {
+    const convRes = await getConversationsApi({ pageNum: 1, pageSize: 20 });
+    const payload = convRes.data.data;
+    const convs = Array.isArray(payload) ? payload : payload?.list || [];
+    const hit = convs.find(
+      (c) => String(c.otherUserId) === String(receiverId.value),
+    );
+    if (!hit?.conversationId) return;
+    conversationId.value = hit.conversationId;
+    isNewChat.value = false;
+    await loadHistory();
+    markAsRead();
+    connect(onWsMessage);
+    router.replace({
+      path: `/chat/${hit.conversationId}`,
+      query: { receiverId: receiverId.value },
+    });
+  } catch {
+    // 会话接管失败不影响消息已送达，保持当前界面
+  }
+};
+
+const deliver = async (msg) => {
+  try {
+    const res = await sendMessageApi({
+      receiverId: receiverId.value,
+      content: msg.content,
+    });
+    if (res.data.code === 1) {
+      msg.status = "sent";
+      if (res.data.data?.id) msg.id = res.data.data.id;
+      if (isNewChat.value) await adoptConversation();
+    } else {
+      msg.status = "failed";
+      ElMessage.error(res.data.message || "发送失败");
+    }
+  } catch {
+    msg.status = "failed";
+    ElMessage.error("发送失败，请重试");
+  }
+};
 
 const sendMessage = async () => {
   const content = inputMessage.value.trim();
@@ -141,33 +206,21 @@ const sendMessage = async () => {
   };
   messages.value.push(tempMsg);
   scrollToBottom("smooth");
+  await deliver(tempMsg);
+  sending.value = false;
+};
 
-  try {
-    const res = await sendMessageApi({
-      receiverId: receiverId.value,
-      content,
-    });
-    if (res.data.code === 1) {
-      tempMsg.status = "sent";
-      if (res.data.data?.id) tempMsg.id = res.data.data.id;
-      if (isNewChat) {
-        router.replace("/conversations");
-        return;
-      }
-    } else {
-      tempMsg.status = "failed";
-      ElMessage.error(res.data.message || "发送失败");
-    }
-  } catch {
-    tempMsg.status = "failed";
-    ElMessage.error("发送失败，请重试");
-  } finally {
-    sending.value = false;
-  }
+const retryMessage = async (msg) => {
+  if (msg.status !== "failed" || msg.retrying) return;
+  msg.retrying = true;
+  msg.status = "sending";
+  await deliver(msg);
+  msg.retrying = false;
 };
 
 const handleKeyDown = (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
+  // 触屏软键盘的 Enter 用于换行，发送走右侧按钮
+  if (e.key === "Enter" && !e.shiftKey && !isTouchDevice) {
     e.preventDefault();
     sendMessage();
   }
@@ -220,8 +273,12 @@ onMounted(async () => {
   await loadOtherUserInfo();
   await loadHistory();
   await markAsRead();
-  if (!isNewChat) {
+  if (!isNewChat.value) {
     connect(onWsMessage);
+  }
+  // 桌面端进入聊天自动聚焦输入框；触屏不聚焦以免立即弹出软键盘
+  if (!isTouchDevice) {
+    textareaRef.value?.focus();
   }
 });
 
@@ -236,10 +293,22 @@ onUnmounted(() => {
     <!-- 顶部栏 -->
     <div class="chat-header">
       <div class="header-inner">
-        <div class="back" @click="$router.back()">
+        <button
+          class="back"
+          type="button"
+          aria-label="返回会话列表"
+          @click="$router.back()"
+        >
           <el-icon size="18"><ArrowLeft /></el-icon>
-        </div>
-        <div class="header-info">
+        </button>
+        <!-- 对方头像/昵称可点击进入主页，聊天中也能查看对方资料 -->
+        <button
+          class="header-info"
+          type="button"
+          :disabled="!receiverId"
+          aria-label="查看对方主页"
+          @click="receiverId && $router.push(`/user/${receiverId}`)"
+        >
           <el-avatar
             v-if="otherUser.avatar"
             :src="otherUser.avatar"
@@ -252,7 +321,7 @@ onUnmounted(() => {
           <div class="header-text">
             <span class="header-name">{{ otherUser.nickname || "私信" }}</span>
           </div>
-        </div>
+        </button>
       </div>
     </div>
 
@@ -266,6 +335,14 @@ onUnmounted(() => {
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>加载历史消息...</span>
       </div>
+      <button
+        v-else-if="historyError"
+        class="history-retry"
+        type="button"
+        @click="retryHistory"
+      >
+        历史消息加载失败，点击重试
+      </button>
 
       <!-- 新聊天欢迎 -->
       <div
@@ -291,7 +368,7 @@ onUnmounted(() => {
         :class="[
           'message-row',
           msg.senderId + '' === userStore.userInfo.id + '' ? 'mine' : 'other',
-          idx >= messages.length - pageSize ? 'msg-new' : 'msg-old',
+          idx >= firstPageCount ? 'msg-new' : 'msg-old',
         ]"
       >
         <el-avatar
@@ -321,9 +398,23 @@ onUnmounted(() => {
             </button>
           </div>
           <div class="msg-meta-line">
-            <el-icon v-if="msg.status === 'sending'" class="is-loading sending-icon"><Loading /></el-icon>
-            <span v-else-if="msg.status === 'failed'" class="failed-tag">发送失败</span>
-            <span class="msg-time">{{ formatRelativeTime(msg.createTime) }}</span>
+            <el-icon
+              v-if="msg.status === 'sending'"
+              class="is-loading sending-icon"
+              ><Loading
+            /></el-icon>
+            <button
+              v-else-if="msg.status === 'failed'"
+              class="failed-tag"
+              type="button"
+              title="重新发送"
+              @click="retryMessage(msg)"
+            >
+              发送失败，点击重试
+            </button>
+            <span class="msg-time">{{
+              formatRelativeTime(msg.createTime)
+            }}</span>
           </div>
         </div>
       </div>
@@ -351,13 +442,17 @@ onUnmounted(() => {
           ref="textareaRef"
           v-model="inputMessage"
           @keydown="handleKeyDown"
-          placeholder="说点什么...（Enter 发送，Shift+Enter 换行）"
-          :disabled="sending"
+          :placeholder="
+            isTouchDevice
+              ? '说点什么...（点右侧按钮发送）'
+              : '说点什么...（Enter 发送，Shift+Enter 换行）'
+          "
           rows="1"
         />
         <button
           class="send-btn"
           :disabled="!inputMessage.trim() || sending"
+          :aria-label="sending ? '发送中' : '发送'"
           @click="sendMessage"
         >
           <el-icon v-if="!sending" :size="18"><Position /></el-icon>
@@ -413,6 +508,8 @@ onUnmounted(() => {
   justify-content: center;
   width: 36px;
   height: 36px;
+  border: none;
+  background: none;
   border-radius: 50%;
   cursor: pointer;
   color: var(--chat-text);
@@ -420,8 +517,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 
   &:hover {
-    background: var(--el-fill-color-light, #ebedf0);
+    background: var(--bg-muted);
     color: var(--chat-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
   }
 }
 
@@ -429,6 +531,27 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  border: none;
+  background: none;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 44px;
+
+  &:not(:disabled):hover {
+    background: var(--bg-muted);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
 }
 
 .header-avatar {
@@ -473,6 +596,24 @@ onUnmounted(() => {
   color: var(--chat-text-placeholder);
 }
 
+.history-retry {
+  align-self: center;
+  border: 1px dashed var(--border-default);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: var(--chat-primary);
+    border-color: var(--chat-primary-light);
+  }
+}
+
 /* 欢迎卡片 */
 .welcome-area {
   flex: 1;
@@ -487,7 +628,7 @@ onUnmounted(() => {
   padding: 40px 24px;
 
   .welcome-avatar {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
     margin-bottom: 16px;
   }
 
@@ -534,7 +675,7 @@ onUnmounted(() => {
 
 .msg-avatar {
   flex-shrink: 0;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-xs);
 }
 
 .bubble-wrap {
@@ -589,8 +730,8 @@ onUnmounted(() => {
 
 .bubble {
   padding: 10px 14px;
-  border-radius: 18px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
   transition: box-shadow 0.2s;
   word-break: break-word;
 
@@ -612,7 +753,7 @@ onUnmounted(() => {
     var(--chat-primary) 0%,
     var(--chat-primary-light) 100%
   );
-  color: #fff;
+  color: var(--color-on-primary);
   border-bottom-right-radius: 6px;
 }
 
@@ -638,6 +779,17 @@ onUnmounted(() => {
 .failed-tag {
   font-size: 11px;
   color: var(--el-color-danger);
+  border: none;
+  background: none;
+  padding: 2px 0;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline dashed;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: var(--el-color-danger-dark-2);
+  }
 }
 
 .msg-time {
@@ -676,7 +828,7 @@ onUnmounted(() => {
   background: var(--chat-white);
   border-top: 1px solid var(--chat-border);
   flex-shrink: 0;
-  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-xs);
   position: relative;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -699,7 +851,7 @@ onUnmounted(() => {
     resize: none;
     font-family: inherit;
     outline: none;
-    background: var(--el-fill-color-light, #f0f2f5);
+    background: var(--bg-muted);
     color: var(--chat-text);
     transition:
       background 0.2s,
@@ -711,7 +863,7 @@ onUnmounted(() => {
     }
 
     &:focus {
-      background: var(--el-fill-color, #ebedf0);
+      background: var(--bg-muted);
       box-shadow: 0 0 0 2px var(--chat-primary-lighter);
     }
 
@@ -734,15 +886,15 @@ onUnmounted(() => {
     var(--chat-primary) 0%,
     var(--chat-primary-light) 100%
   );
-  color: #fff;
+  color: var(--color-on-primary);
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.25s;
-  box-shadow: 0 2px 8px rgba(204, 120, 92, 0.3);
+  box-shadow: var(--glow-primary);
 
   &:hover:not(:disabled) {
     transform: scale(1.08);
-    box-shadow: 0 4px 16px rgba(204, 120, 92, 0.4);
+    box-shadow: var(--glow-primary);
   }
 
   &:active:not(:disabled) {
@@ -753,7 +905,7 @@ onUnmounted(() => {
     opacity: 0.4;
     cursor: not-allowed;
     box-shadow: none;
-    background: var(--el-border-color, #dcdfe6);
+    background: var(--border-default);
   }
 }
 
@@ -767,12 +919,20 @@ onUnmounted(() => {
 }
 
 .messages-area::-webkit-scrollbar-thumb {
-  background: var(--el-border-color, #dcdfe6);
+  background: var(--border-default);
   border-radius: 10px;
 }
 
 .messages-area::-webkit-scrollbar-thumb:hover {
-  background: var(--el-border-color-darker, #c0c4cc);
+  background: var(--text-muted-soft);
+}
+
+/* 触屏设备没有 hover：复制按钮常显 */
+@media (hover: none) {
+  .copy-msg-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 /* 响应式 */

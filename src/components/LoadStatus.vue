@@ -63,6 +63,19 @@ defineEmits(["retry"]);
     font-size: 13px;
     letter-spacing: 2px;
   }
+
+  .load-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 12px 24px;
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-lg);
+    background: var(--bg-subtle);
+  }
 }
 
 @keyframes spin {

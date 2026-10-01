@@ -205,6 +205,19 @@ const logout = async () => {
   }
 };
 
+// 「取消」= 放弃本次改动并还原为当前资料，语义上不该离开页面
+const resetProfile = () => {
+  Object.assign(ruleForm, { ...userStore.userInfo });
+  imageUrl.value = userStore.userInfo.avatar || "";
+  file.value = null;
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value);
+    previewUrl.value = "";
+  }
+  ruleFormRef.value?.clearValidate();
+  ElMessage.info("已还原为当前资料");
+};
+
 const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 </script>
 
@@ -224,25 +237,24 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
         <img v-if="imageUrl" :src="imageUrl" class="avatar" alt="头像" />
         <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
       </el-upload>
+      <p v-if="file" class="avatar-pending-tip">
+        新头像将在点击「确认修改」后生效
+      </p>
 
       <div class="user-meta">
         <h3 class="nickname">{{ userInfo.nickname || "未设置昵称" }}</h3>
-        <el-text
-          :type="
-            userInfo.authorityId === 3
-              ? 'primary'
-              : userInfo.authorityId === 2
-                ? 'danger'
-                : 'success'
-          "
-          size="small"
-        >
-          @{{ userInfo.username }}
-        </el-text>
+        <span class="username-line">@{{ userInfo.username }}</span>
         <AuthorityComponent :authority-id="userInfo.authorityId" />
       </div>
 
       <div class="stat-buttons">
+        <el-button
+          size="small"
+          @click="$router.push('/postList/' + userInfo.id)"
+          type="primary"
+          plain
+          >我的帖子</el-button
+        >
         <el-button
           size="small"
           @click="$router.push('/fans/' + userInfo.id)"
@@ -264,28 +276,23 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           plain
           >我的好友</el-button
         >
-        <el-button
-          v-if="[2, 3].includes(userInfo.authorityId)"
-          size="small"
-          @click="$router.push('/posts/banned')"
-          type="primary"
-          plain
+      </div>
+
+      <!-- 管理功能与社交入口分区，避免混排误触 -->
+      <div v-if="[2, 3].includes(userInfo.authorityId)" class="admin-actions">
+        <el-button size="small" @click="$router.push('/posts/banned')"
           >封禁帖子</el-button
         >
         <el-button
           v-if="userInfo.authorityId === 2"
           size="small"
           @click="$router.push('/users/banned')"
-          type="primary"
-          plain
           >封禁用户</el-button
         >
         <el-button
           v-if="userInfo.authorityId === 2"
           size="small"
           @click="$router.push('/admin/dashboard')"
-          type="primary"
-          plain
           >数据面板</el-button
         >
       </div>
@@ -297,9 +304,10 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
         <el-button
           size="small"
           type="danger"
+          plain
           :loading="loading"
           @click="dialogVisible = true"
-          >注销</el-button
+          >退出登录</el-button
         >
       </div>
     </div>
@@ -359,12 +367,17 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
             :loading="loading"
             >确认修改</el-button
           >
-          <el-button @click="$router.back()">取消</el-button>
+          <el-button @click="resetProfile">取消</el-button>
         </el-form-item>
       </el-form>
     </div>
 
-    <el-dialog v-model="dialogFormVisible" title="修改密码" width="min(92vw, 440px)" center>
+    <el-dialog
+      v-model="dialogFormVisible"
+      title="修改密码"
+      width="min(92vw, 420px)"
+      center
+    >
       <el-form
         :model="passwordForm"
         :rules="passwordRules"
@@ -397,7 +410,13 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
       </template>
     </el-dialog>
 
-    <el-dialog v-model="dialogVisible" title="确认注销？" width="min(90vw, 400px)" center>
+    <el-dialog
+      v-model="dialogVisible"
+      title="确认退出登录？"
+      width="min(92vw, 420px)"
+      center
+    >
+      <p class="logout-tip">退出后将返回登录页，当前登录状态会被清除。</p>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="loading" @click="logout"
@@ -470,6 +489,17 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     margin: 0;
   }
 
+  .username-line {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .avatar-pending-tip {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--el-color-warning-dark-2);
+  }
+
   .avatar-uploader-icon {
     font-size: 28px;
     color: var(--text-placeholder);
@@ -500,6 +530,21 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     }
   }
 
+  .admin-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border-light);
+
+    :deep(.el-button) {
+      border-radius: var(--radius-full);
+      color: var(--text-secondary);
+    }
+  }
+
   .security-actions {
     display: flex;
     justify-content: center;
@@ -507,6 +552,12 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     padding-top: 16px;
     border-top: 1px solid var(--border-light);
   }
+}
+
+.logout-tip {
+  text-align: center;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
 }
 
 .form-card {
@@ -528,7 +579,7 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 
     .stat-buttons {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 6px;
 
       :deep(.el-button) {

@@ -64,6 +64,16 @@
           <el-icon :size="30"><ChatLineRound /></el-icon>
           <p>暂无历史会话</p>
         </div>
+
+        <button
+          v-if="sessions.length && !sessionsFinished"
+          class="load-more-sessions"
+          type="button"
+          :disabled="sessionsLoading"
+          @click="loadMoreSessions"
+        >
+          {{ sessionsLoading ? "加载中…" : "加载更早的会话" }}
+        </button>
       </div>
     </aside>
 
@@ -197,14 +207,24 @@
               v-model="inputMessage"
               @keydown="handleKeyPress"
               placeholder="输入消息，Enter 发送，Shift+Enter 换行"
-              :disabled="isLoading"
               rows="1"
             ></textarea>
             <div class="input-toolbar">
               <span class="input-hint">Enter 发送 · Shift+Enter 换行</span>
               <button
+                v-if="isLoading"
+                class="stop-btn"
+                type="button"
+                title="停止生成本条回复"
+                @click="abortActiveStream"
+              >
+                <span class="stop-square" aria-hidden="true"></span>
+                停止
+              </button>
+              <button
+                v-else
                 class="send-btn"
-                :disabled="!inputMessage.trim() || isLoading"
+                :disabled="!inputMessage.trim()"
                 @click="sendMessage"
               >
                 <el-icon :size="15"><Promotion /></el-icon>
@@ -497,20 +517,40 @@ const jumpToBottom = () => {
   scrollToBottom(true);
 };
 
-// 加载会话列表
-const loadSessions = async () => {
+// 加载会话列表（append=false 时替换，用于删除/重命名后的刷新）
+const sessionsFinished = ref(false);
+const sessionsLoading = ref(false);
+const loadSessions = async (append = false) => {
+  if (sessionsLoading.value) return;
+  sessionsLoading.value = true;
   try {
     const res = await getSessionApi(currentPage.value, pageSize);
     if (res.data.code === 1) {
-      sessions.value = res.data.data || [];
+      const list = res.data.data || [];
+      sessions.value = append ? [...sessions.value, ...list] : list;
+      sessionsFinished.value = list.length < pageSize;
     }
   } catch (error) {
     console.error("加载会话列表失败:", error);
     ElMessage.error("加载会话列表失败");
+  } finally {
+    sessionsLoading.value = false;
   }
 };
 
+const loadMoreSessions = async () => {
+  if (sessionsFinished.value) return;
+  currentPage.value += 1;
+  await loadSessions(true);
+};
+
 // 创建新会话（回复期间不允许新建，避免流式数据串台）
+const refreshSessions = async () => {
+  currentPage.value = 1;
+  sessionsFinished.value = false;
+  await loadSessions(false);
+};
+
 const createNewSession = async () => {
   if (isLoading.value) {
     ElMessage.info("AI 正在回复中，请稍候再开新对话");
@@ -523,7 +563,7 @@ const createNewSession = async () => {
       rawMessages.value = [];
       isNearBottom.value = true;
       sidebarOpen.value = false;
-      await loadSessions();
+      await refreshSessions();
       // 聚焦到输入框
       await nextTick();
       inputRef.value?.focus();
@@ -596,7 +636,7 @@ const deleteSession = async (sessionId) => {
         currentSessionId.value = null;
         rawMessages.value = [];
       }
-      await loadSessions();
+      await refreshSessions();
       ElMessage.success("会话已删除");
     }
   } catch (error) {
@@ -621,7 +661,7 @@ const sendMessage = async () => {
       const res = await createSessionApi();
       if (res.data.code === 1) {
         currentSessionId.value = res.data.data;
-        await loadSessions();
+        await refreshSessions();
       } else {
         inputMessage.value = content;
         ElMessage.error("创建会话失败");
@@ -655,11 +695,31 @@ const sendMessage = async () => {
       credentials: "include",
       signal: streamController.signal,
       body: JSON.stringify({
-        userId: userStore.userInfo.id,
         memoryId: sentSessionId,
         content,
       }),
     });
+
+    // 出错时后端返回 JSON（如会话不存在/无权访问），不能把错误 JSON 当流渲染进气泡
+    const contentType = response.headers.get("content-type") || "";
+    if (!response.ok || !contentType.includes("text/stream")) {
+      let message = "消息发送失败，请重试";
+      try {
+        const err = await response.json();
+        message = err.message || message;
+      } catch {
+        // 非 JSON 响应，用默认提示
+      }
+      ElMessage.error(message);
+      rawMessages.value.push({
+        type: "AI",
+        text: message,
+        toolExecutionRequests: [],
+        attributes: {},
+        timestamp: new Date(),
+      });
+      return;
+    }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
@@ -704,7 +764,7 @@ const sendMessage = async () => {
     streamController = null;
     if (currentSessionId.value === sentSessionId) {
       // 会话名可能被后端更新，延迟刷新列表
-      setTimeout(() => loadSessions(), 800);
+      setTimeout(() => refreshSessions(), 800);
       await nextTick();
       inputRef.value?.focus();
     }
@@ -879,12 +939,12 @@ onUnmounted(() => {
   font-weight: 500;
   white-space: nowrap;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 14px rgba(204, 120, 92, 0.25);
+  box-shadow: 0 4px 14px rgba(204, 109, 78, 0.25);
 }
 
 .new-chat-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(204, 120, 92, 0.38);
+  box-shadow: 0 6px 20px rgba(204, 109, 78, 0.38);
 }
 
 .new-chat-btn:active {
@@ -958,7 +1018,7 @@ onUnmounted(() => {
     var(--chat-primary-dark) 100%
   );
   color: #fff;
-  box-shadow: 0 6px 18px rgba(204, 120, 92, 0.32);
+  box-shadow: 0 6px 18px rgba(204, 109, 78, 0.32);
 }
 
 .session-item.active .session-icon {
@@ -1030,6 +1090,31 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
+.load-more-sessions {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 8px auto 12px;
+  padding: 8px 0;
+  border: 1px dashed var(--border-default);
+  background: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    color: var(--el-color-primary);
+    border-color: var(--el-color-primary-light-5);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+}
+
 /* ========== 主聊天区域 ========== */
 .chat-main {
   flex: 1;
@@ -1063,7 +1148,7 @@ onUnmounted(() => {
 }
 
 .welcome-logo :deep(.el-avatar) {
-  box-shadow: 0 12px 34px rgba(204, 120, 92, 0.35);
+  box-shadow: 0 12px 34px rgba(204, 109, 78, 0.35);
 }
 
 @keyframes float {
@@ -1115,12 +1200,12 @@ onUnmounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 8px 24px rgba(204, 120, 92, 0.35);
+  box-shadow: 0 8px 24px rgba(204, 109, 78, 0.35);
 }
 
 .start-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(204, 120, 92, 0.45);
+  box-shadow: 0 12px 32px rgba(204, 109, 78, 0.45);
 }
 
 .start-btn:active {
@@ -1470,6 +1555,13 @@ onUnmounted(() => {
   opacity: 1;
 }
 
+/* 触屏无 hover：复制提示常显（点按代码块即复制） */
+@media (hover: none) {
+  .markdown-body :deep(pre::after) {
+    opacity: 0.75;
+  }
+}
+
 .markdown-body :deep(pre.copied::after) {
   content: "已复制 ✓";
   opacity: 1;
@@ -1595,7 +1687,7 @@ onUnmounted(() => {
 
 .input-box:focus-within {
   border-color: var(--chat-primary);
-  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.14);
+  box-shadow: 0 0 0 3px rgba(204, 109, 78, 0.14);
 }
 
 .input-box textarea {
@@ -1636,6 +1728,40 @@ onUnmounted(() => {
   color: var(--text-placeholder, #b0aea9);
 }
 
+/* 停止生成按钮：生成期间替代发送按钮出现 */
+.stop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  .stop-square {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--el-color-danger);
+  }
+
+  &:hover {
+    color: var(--el-color-danger);
+    border-color: var(--el-color-danger-light-5);
+    background: var(--el-color-danger-light-9);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
 .send-btn {
   display: inline-flex;
   align-items: center;
@@ -1654,12 +1780,12 @@ onUnmounted(() => {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 14px rgba(204, 120, 92, 0.25);
+  box-shadow: 0 4px 14px rgba(204, 109, 78, 0.25);
 }
 
 .send-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(204, 120, 92, 0.38);
+  box-shadow: 0 6px 20px rgba(204, 109, 78, 0.38);
 }
 
 .send-btn:active:not(:disabled) {
@@ -1782,7 +1908,7 @@ onUnmounted(() => {
       var(--chat-primary) 0%,
       var(--chat-primary-light) 100%
     );
-    box-shadow: 0 4px 14px rgba(204, 120, 92, 0.32);
+    box-shadow: 0 4px 14px rgba(204, 109, 78, 0.32);
   }
 
   .sidebar-backdrop {

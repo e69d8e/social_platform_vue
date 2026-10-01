@@ -168,7 +168,11 @@ $transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --gradient-warm: linear-gradient(135deg, #e59a42 0%, #c24c4c 100%);
   --gradient-cool: linear-gradient(135deg, #5a947a 0%, #4a8d80 100%);
   --gradient-success: linear-gradient(135deg, #5a947a 0%, #41755e 100%);
-  --gradient-card: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(251, 249, 244, 0.7) 100%);
+  --gradient-card: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(251, 249, 244, 0.7) 100%
+  );
 
   // Glow
   --glow-primary: 0 4px 24px rgba(204, 109, 78, 0.28);
@@ -288,7 +292,11 @@ html.dark {
   --gradient-warm: linear-gradient(135deg, #f0b858 0%, #e06c6c 100%);
   --gradient-cool: linear-gradient(135deg, #6eb395 0%, #5a947a 100%);
   --gradient-success: linear-gradient(135deg, #6eb395 0%, #5a947a 100%);
-  --gradient-card: linear-gradient(180deg, rgba(28, 27, 24, 1) 0%, rgba(22, 21, 19, 0.7) 100%);
+  --gradient-card: linear-gradient(
+    180deg,
+    rgba(28, 27, 24, 1) 0%,
+    rgba(22, 21, 19, 0.7) 100%
+  );
 
   // Glow
   --glow-primary: 0 4px 28px rgba(230, 138, 110, 0.35);
@@ -304,4 +312,3 @@ html.dark {
   --surface-dark-elevated: #22211e;
   --surface-dark-soft: #181715;
 }
-

@@ -94,5 +94,13 @@ export function useInfiniteScroll({
     window.removeEventListener("scroll", handleScroll);
   });
 
-  return { items, loading, loadingMore, noMore, isError, loadMore: append, retry };
+  return {
+    items,
+    loading,
+    loadingMore,
+    noMore,
+    isError,
+    loadMore: append,
+    retry,
+  };
 }

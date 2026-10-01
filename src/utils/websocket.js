@@ -27,6 +27,8 @@ export function connect(onMessage) {
 
   messageCallback = onMessage;
   const userStore = useUserStore();
+  // 后端会拒绝无 token 的 CONNECT，这里直接不发起连接
+  if (!userStore.token?.accessToken) return;
   const socket = new SockJS(import.meta.env.VITE_WS_URL);
   stompClient = Stomp.over(socket);
   stompClient.debug = null;

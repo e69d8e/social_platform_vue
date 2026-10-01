@@ -15,8 +15,8 @@ import BackButton from "@/components/BackButton.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
 import { Close, Delete, Search } from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useUserStore } from "@/stores/user";
-// import { ElMessage } from "element-plus";
 
 const userStore = useUserStore();
 const route = useRoute();
@@ -25,6 +25,9 @@ const pageNum = ref(1);
 const postPageSize = ref(8);
 const userPageSize = ref(12);
 const loading = ref(true);
+const tabLoading = ref(false);
+const postFetchedPage = ref(1);
+const userFetchedPage = ref(1);
 const activeName = ref("1");
 
 const searchQuery = computed(() => route.query.keyword || "");
@@ -61,6 +64,19 @@ const deleteHistory = async (id) => {
 
 const clearHistory = async () => {
   try {
+    await ElMessageBox.confirm(
+      "清空后无法恢复，确定清空全部搜索历史吗？",
+      "清空搜索历史",
+      {
+        confirmButtonText: "清空",
+        cancelButtonText: "取消",
+        type: "warning",
+      },
+    );
+  } catch {
+    return; // 用户取消
+  }
+  try {
     await clearSearchHistoryApi();
     historyList.value = [];
     ElMessage.success("已清空搜索历史");
@@ -88,6 +104,7 @@ const fetchData = async () => {
     loading.value = false;
     return;
   }
+  // 两个维度同时搜索：另一侧的计数徽标即时可用，切 tab 不用再等
   await Promise.all([searchPosts(keyword), searchUsers(keyword)]);
   loading.value = false;
 };
@@ -106,7 +123,6 @@ onMounted(() => {
 });
 
 const searchPosts = async (keyword) => {
-  if (activeName.value !== "1") return;
   try {
     const res = await searchPostsApi({
       pageNum: pageNum.value,
@@ -115,13 +131,13 @@ const searchPosts = async (keyword) => {
     });
     posts.value = res.data.data || [];
     postTotal.value = Number(res.data.total || 0);
+    postFetchedPage.value = pageNum.value;
   } catch {
     ElMessage.error("搜索帖子失败");
   }
 };
 
 const searchUsers = async (keyword) => {
-  if (activeName.value !== "2") return;
   try {
     const res = await searchUsersApi({
       pageNum: pageNum.value,
@@ -130,6 +146,7 @@ const searchUsers = async (keyword) => {
     });
     users.value = res.data.data || [];
     usersTotal.value = Number(res.data.total || 0);
+    userFetchedPage.value = pageNum.value;
   } catch {
     ElMessage.error("搜索用户失败");
   }
@@ -144,8 +161,7 @@ const pageChange = async (newPageNum) => {
   }
 };
 
-const handleTabChange = (name) => {
-  activeName.value = name;
+const handleTabChange = () => {
   pageNum.value = 1;
 };
 
@@ -165,24 +181,33 @@ watch(
 
 watch(activeName, (name) => {
   pageNum.value = 1;
-  if (name === "1") {
-    searchPosts(searchQuery.value);
-  } else {
-    searchUsers(searchQuery.value);
+  // 关键词搜索时两个 tab 的第 1 页已并行拉取过；只有当目标 tab
+  // 之前翻过页时才需要回到第 1 页重新拉取，并用轻遮罩过渡
+  const isPosts = name === "1";
+  const fetchedPage = isPosts ? postFetchedPage.value : userFetchedPage.value;
+  if (fetchedPage !== 1) {
+    tabLoading.value = true;
+    const req = isPosts
+      ? searchPosts(searchQuery.value)
+      : searchUsers(searchQuery.value);
+    req.finally(() => {
+      tabLoading.value = false;
+    });
   }
 });
 </script>
 
 <template>
-  <div class="search" v-loading="loading">
+  <div class="search" v-loading="loading && !posts.length && !users.length">
     <!-- 顶部栏 -->
     <div class="search-top">
       <BackButton :size="20" />
       <div class="search-info" v-if="searchQuery">
         <span class="keyword">"{{ searchQuery }}"</span>
-        <span class="divider">|</span>
-        <span v-if="activeName === '1'">找到 {{ postTotal }} 条帖子</span>
-        <span v-else>找到 {{ usersTotal }} 位用户</span>
+        <span v-if="activeName === '1'" class="result-count">
+          找到 {{ postTotal }} 条帖子
+        </span>
+        <span v-else class="result-count">找到 {{ usersTotal }} 位用户</span>
       </div>
     </div>
 
@@ -209,9 +234,14 @@ watch(activeName, (name) => {
           <el-icon><Search /></el-icon>
           <span class="tag-keyword">{{ item.keyword }}</span>
           <span class="tag-type">{{ item.type === 0 ? "帖子" : "用户" }}</span>
-          <el-icon class="tag-close" @click.stop="deleteHistory(item.id)"
-            ><Close
-          /></el-icon>
+          <button
+            class="tag-close"
+            type="button"
+            :aria-label="`删除历史记录 ${item.keyword}`"
+            @click.stop="deleteHistory(item.id)"
+          >
+            <el-icon><Close /></el-icon>
+          </button>
         </span>
       </div>
     </div>
@@ -220,6 +250,7 @@ watch(activeName, (name) => {
     <el-tabs
       v-model="activeName"
       class="search-tabs"
+      v-loading="tabLoading"
       @tab-change="handleTabChange"
     >
       <el-tab-pane name="1">
@@ -322,9 +353,10 @@ watch(activeName, (name) => {
         font-weight: 600;
       }
 
-      .divider {
-        margin: 0 8px;
-        color: var(--border-default);
+      .result-count {
+        margin-left: 12px;
+        padding-left: 12px;
+        border-left: 1px solid var(--border-default);
       }
     }
   }
@@ -386,13 +418,29 @@ watch(activeName, (name) => {
       }
 
       .tag-close {
-        font-size: 12px;
-        margin-left: 2px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        margin-right: -4px;
+        padding: 0;
+        border: none;
+        background: none;
+        border-radius: 50%;
         color: var(--text-placeholder);
-        transition: color $transition-fast;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all $transition-fast;
 
         &:hover {
           color: var(--el-color-danger);
+          background: var(--el-color-danger-light-9);
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--border-focus);
+          outline-offset: 1px;
         }
       }
     }

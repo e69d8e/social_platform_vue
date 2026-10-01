@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { addCommentApi, getCommentApi } from "@/api/commentApi";
@@ -36,6 +36,14 @@ const lastId = ref("");
 const offset = ref(0);
 const noMore = ref(false);
 const expandedParentIds = ref(new Set());
+// 首屏与错误态：首评加载有骨架屏，失败有重试，不再静默白屏
+const firstLoading = ref(false);
+const loadError = ref(false);
+// 服务端返回的评论总数（接口未提供时回退为已加载条数）
+const commentTotal = ref(null);
+const totalCount = computed(() =>
+  commentTotal.value === null ? comments.value.length : commentTotal.value,
+);
 
 const toggleExpandReplies = (parentId) => {
   if (expandedParentIds.value.has(parentId)) {
@@ -63,6 +71,10 @@ const getComments = async () => {
     offset: offset.value,
   });
   const list = res.data.data.list;
+  // 接口若携带总数则采用，徽标与标题不再显示"已加载条数"冒充总数
+  if (res.data.total !== undefined && res.data.total !== null) {
+    commentTotal.value = Number(res.data.total);
+  }
 
   if (list.length === 0) {
     noMore.value = true;
@@ -89,9 +101,27 @@ const getComments = async () => {
   offset.value = res.data.data.offset;
 };
 
-onMounted(async () => {
-  await getComments();
-});
+const loadFirstPage = async () => {
+  firstLoading.value = true;
+  loadError.value = false;
+  try {
+    await getComments();
+  } catch {
+    loadError.value = true;
+  } finally {
+    firstLoading.value = false;
+  }
+};
+
+onMounted(loadFirstPage);
+
+const retryFirstLoad = () => {
+  comments.value = [];
+  lastId.value = "";
+  offset.value = 0;
+  noMore.value = false;
+  loadFirstPage();
+};
 
 const loading = ref(false);
 
@@ -255,15 +285,34 @@ const deleteComment = async (id) => {
 </script>
 
 <template>
-  <div class="comment-section" v-loading="loading">
+  <div class="comment-section">
     <h3 class="comment-title">
       评论
-      <span class="comment-count">{{ comments.length }}</span>
+      <span class="comment-count">{{ totalCount }}</span>
     </h3>
+
+    <!-- 首屏骨架 -->
+    <div v-if="firstLoading" class="comments-skeleton" aria-busy="true">
+      <div v-for="n in 3" :key="n" class="skeleton-row">
+        <div class="skeleton skeleton-avatar"></div>
+        <div class="skeleton-lines">
+          <div class="skeleton skeleton-line w30"></div>
+          <div class="skeleton skeleton-line w80"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 首屏加载失败：给出重试入口 -->
+    <div v-else-if="loadError" class="comments-error">
+      <span>评论加载失败</span>
+      <el-button type="primary" size="small" round @click="retryFirstLoad"
+        >重新加载</el-button
+      >
+    </div>
 
     <!-- 评论列表 -->
     <div
-      v-if="comments.length === 0 && !loading"
+      v-else-if="comments.length === 0 && !loading"
       class="empty-comments"
       @click="handleOpenInput"
       title="点击发表第一条评论"
@@ -272,85 +321,106 @@ const deleteComment = async (id) => {
       <span>暂无评论，来说点什么吧</span>
     </div>
 
-    <div class="comment-item" v-for="item in comments" :key="item.id">
-      <el-avatar :size="40" :src="item.user.avatar" class="comment-avatar" />
-      <div class="comment-main">
-        <div class="comment-header">
-          <span class="username">{{ item.user.nickname }}</span>
-          <span class="time">{{ formatRelativeTime(item.createTime) }}</span>
-        </div>
-        <div class="comment-content">{{ item.content }}</div>
-        <div class="comment-actions">
-          <span class="reply-btn" @click="reply(item, null)">回复</span>
-          <el-popconfirm
-            v-if="['REVIEWER', 'ADMIN'].includes(userStore.userInfo.authority) || [2, 3].includes(userStore.userInfo.authorityId)"
-            title="确认删除该评论?"
-            @confirm="deleteComment(item.id)"
-          >
-            <template #reference>
-              <el-button
-                size="small"
-                type="danger"
-                :icon="deletingId === item.id ? Loading : Delete"
-                :loading="deletingId === item.id"
-                circle
-                class="action-delete-btn"
-              />
-            </template>
-          </el-popconfirm>
-        </div>
-
-        <!-- 子评论 -->
-        <div
-          class="child-comments"
-          v-if="item.children && item.children.length"
-        >
-          <div
-            class="child-item"
-            v-for="child in getVisibleChildren(item)"
-            :key="child.id"
-          >
-            <span class="username">{{ child.user.nickname }}</span>
-            <span class="reply-text"
-              >回复 @{{ child.replyUser.nickname }}：</span
+    <template v-else>
+      <div class="comment-item" v-for="item in comments" :key="item.id">
+        <el-avatar :size="40" :src="item.user.avatar" class="comment-avatar" />
+        <div class="comment-main">
+          <div class="comment-header">
+            <span class="username">{{ item.user.nickname }}</span>
+            <span class="time">{{ formatRelativeTime(item.createTime) }}</span>
+          </div>
+          <div class="comment-content">{{ item.content }}</div>
+          <div class="comment-actions">
+            <button class="reply-btn" type="button" @click="reply(item, null)">
+              回复
+            </button>
+            <el-popconfirm
+              v-if="
+                ['REVIEWER', 'ADMIN'].includes(userStore.userInfo.authority) ||
+                [2, 3].includes(userStore.userInfo.authorityId)
+              "
+              title="确认删除该评论?"
+              @confirm="deleteComment(item.id)"
             >
-            <span class="child-text">{{ child.content }}</span>
-            <span class="child-actions">
-              <span class="reply-btn" @click="reply(item, child)">回复</span>
-              <el-popconfirm
-                v-if="['REVIEWER', 'ADMIN'].includes(userStore.userInfo.authority) || [2, 3].includes(userStore.userInfo.authorityId)"
-                title="确认删除该评论?"
-                @confirm="deleteComment(child.id)"
-              >
-                <template #reference>
-                  <el-button
-                    size="small"
-                    type="danger"
-                    :icon="deletingId === child.id ? Loading : Delete"
-                    :loading="deletingId === child.id"
-                    circle
-                    class="action-delete-btn"
-                  />
-                </template>
-              </el-popconfirm>
-            </span>
+              <template #reference>
+                <el-button
+                  size="small"
+                  type="danger"
+                  :icon="deletingId === item.id ? Loading : Delete"
+                  :loading="deletingId === item.id"
+                  circle
+                  class="action-delete-btn"
+                />
+              </template>
+            </el-popconfirm>
           </div>
 
-          <!-- 折叠 / 展开控制 -->
+          <!-- 子评论 -->
           <div
-            v-if="item.children.length > 3"
-            class="expand-replies-btn"
-            @click="toggleExpandReplies(item.id)"
+            class="child-comments"
+            v-if="item.children && item.children.length"
           >
-            <span>{{ isExpanded(item.id) ? "收起回复" : `展开其余 ${item.children.length - 3} 条回复` }}</span>
-            <el-icon :size="12">
-              <ArrowUp v-if="isExpanded(item.id)" />
-              <ArrowDown v-else />
-            </el-icon>
+            <div
+              class="child-item"
+              v-for="child in getVisibleChildren(item)"
+              :key="child.id"
+            >
+              <span class="username">{{ child.user.nickname }}</span>
+              <span v-if="child.replyUser" class="reply-text"
+                >回复 @{{ child.replyUser.nickname }}：</span
+              >
+              <span class="child-text">{{ child.content }}</span>
+              <span class="child-actions">
+                <button
+                  class="reply-btn"
+                  type="button"
+                  @click="reply(item, child)"
+                >
+                  回复
+                </button>
+                <el-popconfirm
+                  v-if="
+                    ['REVIEWER', 'ADMIN'].includes(
+                      userStore.userInfo.authority,
+                    ) || [2, 3].includes(userStore.userInfo.authorityId)
+                  "
+                  title="确认删除该评论?"
+                  @confirm="deleteComment(child.id)"
+                >
+                  <template #reference>
+                    <el-button
+                      size="small"
+                      type="danger"
+                      :icon="deletingId === child.id ? Loading : Delete"
+                      :loading="deletingId === child.id"
+                      circle
+                      class="action-delete-btn"
+                    />
+                  </template>
+                </el-popconfirm>
+              </span>
+            </div>
+
+            <!-- 折叠 / 展开控制 -->
+            <div
+              v-if="item.children.length > 3"
+              class="expand-replies-btn"
+              @click="toggleExpandReplies(item.id)"
+            >
+              <span>{{
+                isExpanded(item.id)
+                  ? "收起回复"
+                  : `展开其余 ${item.children.length - 3} 条回复`
+              }}</span>
+              <el-icon :size="12">
+                <ArrowUp v-if="isExpanded(item.id)" />
+                <ArrowDown v-else />
+              </el-icon>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 
   <!-- 底部悬浮灵动岛 (Floating Capsule Island) -->
@@ -360,11 +430,11 @@ const deleteComment = async (id) => {
     ref="floatingBarRef"
   >
     <!-- 紧凑折叠态 (Compact Capsule) -->
-    <div
-      v-show="!isInputExpanded"
-      class="compact-bar"
-    >
-      <div class="avatar-wrap" :title="userStore.userInfo?.nickname || '未登录'">
+    <div v-show="!isInputExpanded" class="compact-bar">
+      <div
+        class="avatar-wrap"
+        :title="userStore.userInfo?.nickname || '未登录'"
+      >
         <el-avatar
           :size="34"
           :src="userStore.userInfo?.avatar"
@@ -383,9 +453,7 @@ const deleteComment = async (id) => {
               : "写下你的评论..."
           }}
         </span>
-        <span class="shortcut-badge">
-          <kbd>Ctrl</kbd>+<kbd>Enter</kbd>
-        </span>
+        <span class="shortcut-badge"> <kbd>Ctrl</kbd>+<kbd>Enter</kbd> </span>
       </div>
 
       <button
@@ -395,14 +463,10 @@ const deleteComment = async (id) => {
         @click="scrollToComments"
       >
         <el-icon :size="15"><ChatDotRound /></el-icon>
-        <span class="count-num">{{ comments.length }}</span>
+        <span class="count-num">{{ totalCount }}</span>
       </button>
 
-      <button
-        class="compact-send-btn"
-        type="button"
-        @click="handleOpenInput"
-      >
+      <button class="compact-send-btn" type="button" @click="handleOpenInput">
         <span>评论</span>
       </button>
     </div>
@@ -456,11 +520,7 @@ const deleteComment = async (id) => {
           </span>
         </div>
         <div class="footer-actions">
-          <button
-            type="button"
-            class="cancel-btn"
-            @click="handleCancelInput"
-          >
+          <button type="button" class="cancel-btn" @click="handleCancelInput">
             取消
           </button>
           <button
@@ -469,7 +529,9 @@ const deleteComment = async (id) => {
             :disabled="!content.trim() || submitting"
             @click="submitComment"
           >
-            <el-icon v-if="submitting" class="is-loading" :size="14"><Loading /></el-icon>
+            <el-icon v-if="submitting" class="is-loading" :size="14"
+              ><Loading
+            /></el-icon>
             <span>发表评论</span>
           </button>
         </div>
@@ -995,12 +1057,79 @@ const deleteComment = async (id) => {
   color: var(--text-muted);
 
   .reply-btn {
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 4px 8px;
+    margin: -4px -8px;
+    font-size: inherit;
+    font-family: inherit;
+    color: inherit;
     cursor: pointer;
     transition: color $transition-fast;
 
     &:hover {
       color: var(--el-color-primary);
     }
+
+    &:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 1px;
+      border-radius: var(--radius-xs);
+    }
+  }
+
+  // 首屏骨架与错误态
+  .comments-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 8px 0 24px;
+
+    .skeleton-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .skeleton-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .skeleton-lines {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .skeleton-line {
+      height: 14px;
+
+      &.w30 {
+        width: 30%;
+      }
+
+      &.w80 {
+        width: 80%;
+      }
+    }
+  }
+
+  .comments-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 40px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
   }
 
   .action-delete-btn {
@@ -1091,47 +1220,47 @@ const deleteComment = async (id) => {
   }
 }
 
-  .empty-comments {
+.empty-comments {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-placeholder);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+
+    .empty-glyph {
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
+  }
+
+  .empty-glyph {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    text-align: center;
-    padding: 40px 0;
-    color: var(--text-placeholder);
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: var(--radius-md);
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+    font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+    font-size: 16px;
     transition:
       background var(--transition-fast),
       color var(--transition-fast);
-
-    &:hover {
-      background: var(--bg-subtle);
-      color: var(--text-secondary);
-
-      .empty-glyph {
-        background: var(--el-color-primary-light-9);
-        color: var(--el-color-primary);
-      }
-    }
-
-    .empty-glyph {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      background: var(--bg-subtle);
-      color: var(--text-muted);
-      font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
-      font-size: 16px;
-      transition:
-        background var(--transition-fast),
-        color var(--transition-fast);
-    }
   }
+}
 
 @media (max-width: 640px) {
   .floating-comment-bar {

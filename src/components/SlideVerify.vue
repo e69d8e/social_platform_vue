@@ -1,6 +1,6 @@
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
-import { ArrowRight, Check, Close, RefreshRight } from "@element-plus/icons-vue";
+import { reactive, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import { ArrowRight, Check, RefreshRight } from "@element-plus/icons-vue";
 
 const props = defineProps({
   w: { type: Number, default: 310 },
@@ -8,26 +8,23 @@ const props = defineProps({
   l: { type: Number, default: 42 },
   r: { type: Number, default: 10 },
   sliderText: { type: String, default: "向右滑动完成验证" },
-  accuracy: { type: Number, default: 3 },
-  imgs: { type: Array, default: () => [] },
-  offset: { type: Number, default: 0 },
+  // 后端渲染的图片：缺口位置由服务端掌握，前端不再知道答案
+  bgImage: { type: String, default: "" },
+  blockImage: { type: String, default: "" },
+  y: { type: Number, default: 0 },
 });
 
-const emit = defineEmits(["success", "fail", "again", "refresh"]);
+const emit = defineEmits(["success", "refresh"]);
 
-const PI = Math.PI;
-
-const canvasRef = ref(null);
-const blockRef = ref(null);
-const sliderRef = ref(null);
-
-const blockX = ref(0);
-const blockY = ref(0);
-const loading = ref(true);
+// 与后端 SlideCaptchaImageUtil 对应：L = l + r*2 + 3，拼图块顶边 = y - r*2 - 1
+const pieceSize = computed(() => props.l + props.r * 2 + 3);
+const pieceTop = computed(() => props.y - props.r * 2 - 1);
+// 拖动距离低于该值视为误触，不提交校验（不消耗验证码）
+const MIN_DRAG = 10;
 
 const sliderState = reactive({
   isMouseDown: false,
-  status: "default", // 'default' | 'active' | 'success' | 'fail'
+  status: "default", // 'default' | 'active' | 'success'
   sliderLeft: 0,
   blockLeft: 0,
   startX: 0,
@@ -36,113 +33,22 @@ const sliderState = reactive({
   trail: [],
 });
 
-let isDestroyed = false;
-let currentImg = null;
-
-function getRandomNumberByRange(start, end) {
-  return Math.round(Math.random() * (end - start) + start);
-}
-
-function getRandomImg() {
-  const len = props.imgs.length;
-  if (len > 0) {
-    return props.imgs[getRandomNumberByRange(0, len - 1)];
-  }
-  return "https://picsum.photos/300/150?image=" + getRandomNumberByRange(0, 1084);
-}
-
-function draw(ctx, x, y, l, r, operation) {
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.arc(x + l / 2, y - r + 2, r, 0.72 * PI, 2.26 * PI);
-  ctx.lineTo(x + l, y);
-  ctx.arc(x + l + r - 2, y + l / 2, r, 1.21 * PI, 2.78 * PI);
-  ctx.lineTo(x + l, y + l);
-  ctx.lineTo(x, y + l);
-  ctx.arc(x + r - 2, y + l / 2, r + 0.4, 2.76 * PI, 1.24 * PI, true);
-  ctx.lineTo(x, y);
-  ctx.lineWidth = 2;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
-  ctx.stroke();
-  ctx[operation]();
-  ctx.globalCompositeOperation = "destination-over";
-}
-
 const reset = () => {
   sliderState.status = "default";
   sliderState.sliderLeft = 0;
   sliderState.blockLeft = 0;
   sliderState.isMouseDown = false;
   sliderState.trail = [];
-  if (blockRef.value) {
-    blockRef.value.style.left = "0px";
-  }
-};
-
-const initImg = () => {
-  if (isDestroyed || !canvasRef.value || !blockRef.value) return;
-  loading.value = true;
-  reset();
-
-  const canvas = canvasRef.value;
-  const block = blockRef.value;
-  const canvasCtx = canvas.getContext("2d");
-  const blockCtx = block.getContext("2d", { willReadFrequently: true });
-
-  const L = props.l + props.r * 2 + 3;
-  const minOffset = L + 10;
-  const maxOffset = props.w - (L + 10);
-
-  if (props.offset >= minOffset && props.offset <= maxOffset) {
-    blockX.value = props.offset;
-  } else if (props.offset > 0) {
-    blockX.value = Math.min(Math.max(props.offset, minOffset), maxOffset);
-  } else {
-    blockX.value = getRandomNumberByRange(minOffset, maxOffset);
-  }
-  blockY.value = getRandomNumberByRange(10 + props.r * 2, props.h - (L + 10));
-
-  const img = document.createElement("img");
-  img.crossOrigin = "Anonymous";
-  currentImg = img;
-
-  img.onload = () => {
-    if (isDestroyed || !canvasRef.value || !blockRef.value || currentImg !== img) return;
-    loading.value = false;
-
-    canvasCtx.clearRect(0, 0, props.w, props.h);
-    blockCtx.clearRect(0, 0, props.w, props.h);
-    block.width = props.w;
-
-    draw(canvasCtx, blockX.value, blockY.value, props.l, props.r, "fill");
-    draw(blockCtx, blockX.value, blockY.value, props.l, props.r, "clip");
-
-    canvasCtx.drawImage(img, 0, 0, props.w, props.h);
-    blockCtx.drawImage(img, 0, 0, props.w, props.h);
-
-    const y = blockY.value - props.r * 2 - 1;
-    const imgData = blockCtx.getImageData(blockX.value, y, L, L);
-    block.width = L;
-    blockCtx.putImageData(imgData, 0, y);
-  };
-
-  img.onerror = () => {
-    if (isDestroyed) return;
-    img.src = getRandomImg();
-  };
-
-  img.src = getRandomImg();
 };
 
 const handleRefresh = () => {
-  initImg();
+  reset();
   emit("refresh");
 };
 
 // 拖拽事件处理
 const onDragStart = (e) => {
-  if (sliderState.status === "success" || loading.value) return;
+  if (sliderState.status === "success") return;
   sliderState.isMouseDown = true;
   sliderState.status = "active";
   sliderState.startTime = Date.now();
@@ -160,9 +66,6 @@ const updatePosition = (clientX, clientY) => {
   sliderState.sliderLeft = moveX;
   const blockLeft = ((props.w - 40 - 20) / (props.w - 40)) * moveX;
   sliderState.blockLeft = blockLeft;
-  if (blockRef.value) {
-    blockRef.value.style.left = `${blockLeft}px`;
-  }
   if (clientY !== undefined) {
     sliderState.trail.push(clientY - sliderState.startY);
   }
@@ -180,41 +83,39 @@ const onDragEnd = (e) => {
   if (!sliderState.isMouseDown) return;
   sliderState.isMouseDown = false;
 
-  const clientX = e.clientX ?? e.changedTouches?.[0]?.clientX ?? (sliderState.startX + sliderState.sliderLeft);
-  const clientY = e.clientY ?? e.changedTouches?.[0]?.clientY ?? sliderState.startY;
+  const clientX =
+    e.clientX ??
+    e.changedTouches?.[0]?.clientX ??
+    sliderState.startX + sliderState.sliderLeft;
+  const clientY =
+    e.clientY ?? e.changedTouches?.[0]?.clientY ?? sliderState.startY;
   // 确保使用松手时的真实坐标，彻底消除节流延迟
   updatePosition(clientX, clientY);
 
-  const duration = Date.now() - sliderState.startTime;
   const currentLeft = sliderState.blockLeft;
-  const targetX = blockX.value;
-  const isSpliced = Math.abs(currentLeft - targetX) <= props.accuracy;
-
-  if (isSpliced) {
-    sliderState.status = "success";
-    emit("success", {
-      timestamp: duration,
-      left: parseFloat(currentLeft.toFixed(2)),
-    });
-  } else {
-    sliderState.status = "fail";
-    emit("fail");
-    setTimeout(() => {
-      reset();
-      emit("again");
-    }, 800);
+  if (currentLeft <= MIN_DRAG) {
+    reset();
+    return;
   }
+
+  const duration = Date.now() - sliderState.startTime;
+  // 前端不再本地预判对错（不知道答案），统一提交后端校验；
+  // 校验失败由父组件刷新新验证码（通过 :key 重新挂载）
+  sliderState.status = "success";
+  emit("success", {
+    timestamp: duration,
+    left: parseFloat(currentLeft.toFixed(2)),
+  });
 };
 
 watch(
-  () => props.offset,
+  () => props.bgImage,
   () => {
-    initImg();
-  }
+    reset();
+  },
 );
 
 onMounted(() => {
-  initImg();
   window.addEventListener("mousemove", onDragMove);
   window.addEventListener("mouseup", onDragEnd);
   window.addEventListener("touchmove", onDragMove);
@@ -222,8 +123,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  isDestroyed = true;
-  currentImg = null;
   window.removeEventListener("mousemove", onDragMove);
   window.removeEventListener("mouseup", onDragEnd);
   window.removeEventListener("touchmove", onDragMove);
@@ -233,21 +132,38 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="slide-verify" :style="{ width: `${w}px` }">
-    <!-- 验证码图片与拼图画布 -->
+    <!-- 服务端渲染的验证码图片与拼图块 -->
     <div class="canvas-wrapper" :style="{ width: `${w}px`, height: `${h}px` }">
-      <div v-if="loading" class="slide-verify-loading">
-        <el-icon class="is-loading"><RefreshRight /></el-icon>
-      </div>
-      <canvas ref="canvasRef" :width="w" :height="h" class="main-canvas" />
-      <canvas ref="blockRef" :width="w" :height="h" class="block-canvas" />
-      <div class="slide-verify-refresh-icon" @click="handleRefresh" title="刷新验证码">
+      <img
+        :src="'data:image/png;base64,' + bgImage"
+        class="main-img"
+        alt="滑块验证码"
+        draggable="false"
+      />
+      <img
+        v-if="blockImage"
+        :src="'data:image/png;base64,' + blockImage"
+        class="block-img"
+        :style="{
+          left: `${sliderState.blockLeft}px`,
+          top: `${pieceTop}px`,
+          width: `${pieceSize}px`,
+          height: `${pieceSize}px`,
+        }"
+        alt=""
+        draggable="false"
+      />
+      <div
+        class="slide-verify-refresh-icon"
+        @click="handleRefresh"
+        title="刷新验证码"
+      >
         <el-icon><RefreshRight /></el-icon>
       </div>
     </div>
 
     <!-- 滑动轨道 -->
     <div
-      ref="sliderRef"
       class="slide-verify-slider"
       :class="`container-${sliderState.status}`"
       :style="{ width: `${w}px` }"
@@ -262,8 +178,9 @@ onBeforeUnmount(() => {
         @mousedown.prevent="onDragStart"
         @touchstart.prevent="onDragStart"
       >
-        <el-icon v-if="sliderState.status === 'success'" class="slider-icon"><Check /></el-icon>
-        <el-icon v-else-if="sliderState.status === 'fail'" class="slider-icon"><Close /></el-icon>
+        <el-icon v-if="sliderState.status === 'success'" class="slider-icon"
+          ><Check
+        /></el-icon>
         <el-icon v-else class="slider-icon"><ArrowRight /></el-icon>
       </div>
       <span class="slide-verify-slider-text">
@@ -283,26 +200,18 @@ onBeforeUnmount(() => {
     overflow: hidden;
     border-radius: 4px;
 
-    .slide-verify-loading {
-      position: absolute;
-      inset: 0;
-      background: rgba(255, 255, 255, 0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      color: var(--el-color-primary);
-      z-index: 10;
-    }
-
-    .main-canvas {
+    .main-img {
       display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
 
-    .block-canvas {
+    .block-img {
       position: absolute;
       left: 0;
       top: 0;
+      pointer-events: none;
     }
 
     .slide-verify-refresh-icon {
@@ -401,18 +310,6 @@ onBeforeUnmount(() => {
         background: #67c23a !important;
         color: #fff;
         border-color: #67c23a;
-      }
-    }
-
-    &.container-fail {
-      .slide-verify-slider-mask {
-        border: 1px solid #f56c6c;
-        background-color: #fde2e2;
-      }
-      .slide-verify-slider-mask-item {
-        background: #f56c6c !important;
-        color: #fff;
-        border-color: #f56c6c;
       }
     }
   }

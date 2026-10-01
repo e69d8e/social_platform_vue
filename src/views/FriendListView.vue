@@ -25,7 +25,7 @@ const {
 </script>
 
 <template>
-  <div class="list-page" v-loading="loading">
+  <div class="list-page" v-loading="loading && friendList.length > 0">
     <PageHeader title="好友列表" :total="total" unit="人" />
 
     <SkeletonGrid

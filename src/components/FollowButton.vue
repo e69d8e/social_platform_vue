@@ -30,42 +30,50 @@ watch(
 );
 
 // 乐观更新：先切换 UI，接口失败时回滚
-const toggleFollow = throttle(async () => {
-  if (!userStore.userInfo?.username) {
-    ElMessage.info("请先登录后再关注");
-    router.push("/login");
-    return;
-  }
-  if (String(userStore.userInfo.id) === String(props.userId)) {
-    ElMessage.warning("不能关注自己");
-    return;
-  }
-  if (followLoading.value) return;
-  followLoading.value = true;
-  const oldFollowed = followed.value;
-  followed.value = !followed.value;
-  try {
-    const api = oldFollowed ? unfollowUserApi : followUserApi;
-    const res = await api(props.userId);
-    if (res.data.code !== 1) throw new Error(res.data.message || "操作失败");
-    ElMessage.success(
-      res.data.message || (followed.value ? "关注成功" : "已取消关注"),
-    );
-    emit("change", followed.value);
-  } catch (e) {
-    followed.value = oldFollowed;
-    ElMessage.error(e.message || "操作失败，请重试");
-  } finally {
-    followLoading.value = false;
-  }
-}, 800);
+// leading throttle + followLoading 双守卫：杜绝快速双击触发「关注→取关」双翻转
+const toggleFollow = throttle(
+  async () => {
+    if (!userStore.userInfo?.username) {
+      ElMessage.info("请先登录后再关注");
+      router.push("/login");
+      return;
+    }
+    if (String(userStore.userInfo.id) === String(props.userId)) {
+      ElMessage.warning("不能关注自己");
+      return;
+    }
+    if (followLoading.value) return;
+    followLoading.value = true;
+    const oldFollowed = followed.value;
+    followed.value = !followed.value;
+    try {
+      const api = oldFollowed ? unfollowUserApi : followUserApi;
+      const res = await api(props.userId);
+      if (res.data.code !== 1) throw new Error(res.data.message || "操作失败");
+      ElMessage.success(
+        res.data.message || (followed.value ? "关注成功" : "已取消关注"),
+      );
+      emit("change", followed.value);
+    } catch (e) {
+      followed.value = oldFollowed;
+      ElMessage.error(e.message || "操作失败，请重试");
+    } finally {
+      followLoading.value = false;
+    }
+  },
+  800,
+  { trailing: false },
+);
 </script>
 
 <template>
   <el-button
     v-if="String(userStore.userInfo.id) !== String(userId)"
     class="follow-btn"
-    :class="{ 'is-followed': followed, 'is-unfollow-hover': followed && isHovered }"
+    :class="{
+      'is-followed': followed,
+      'is-unfollow-hover': followed && isHovered,
+    }"
     :size="size || undefined"
     :round="round"
     :type="followed ? (isHovered ? 'danger' : 'default') : 'primary'"

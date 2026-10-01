@@ -56,7 +56,11 @@ editorConfig.MENU_CONF["uploadImage"] = {
   maxNumberOfFiles: 1,
   customUpload(uploadFile, insertFn) {
     if (!uploadFile) return;
-    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(uploadFile.type)) {
+    if (
+      !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
+        uploadFile.type,
+      )
+    ) {
       ElMessage.error("上传图片格式应为 jpg / png / webp / gif!");
       return;
     }
@@ -303,7 +307,9 @@ onBeforeUnmount(async () => {
             <div v-if="imageUrl" class="cover-mask" @click="handleRemoveCover">
               <span>点击移除</span>
             </div>
-            <span v-if="!imageUrl" class="cover-empty-text">拖拽图片至此或点击右侧选择</span>
+            <span v-if="!imageUrl" class="cover-empty-text"
+              >拖拽图片至此或点击右侧选择</span
+            >
           </div>
           <div class="cover-actions">
             <el-upload
@@ -396,12 +402,20 @@ onBeforeUnmount(async () => {
       width="min(90vw, 400px)"
       center
     >
-      <p style="text-align: center; color: var(--text-secondary); margin-bottom: 8px;">
+      <p
+        style="
+          text-align: center;
+          color: var(--text-secondary);
+          margin-bottom: 8px;
+        "
+      >
         发布后所有社区成员均可浏览该帖子
       </p>
       <template #footer>
         <el-button @click="dialogConfirmVisible = false">取消</el-button>
-        <el-button type="primary" :loading="loading" @click="publicPost">确认发布</el-button>
+        <el-button type="primary" :loading="loading" @click="publicPost"
+          >确认发布</el-button
+        >
       </template>
     </el-dialog>
 

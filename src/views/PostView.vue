@@ -51,6 +51,7 @@ const post = ref({
 });
 const dialogVisible = ref(false);
 const loading = ref(true);
+const loadFailed = ref(false);
 const deleteLoading = ref(false);
 
 // ---- 图片大图预览逻辑 ----
@@ -95,6 +96,7 @@ const getPost = async (id) => {
     const res = await getPostDetailApi(id);
     post.value = res.data.data;
   } catch {
+    loadFailed.value = true;
     ElMessage.error("加载帖子失败");
   }
 };
@@ -106,33 +108,34 @@ onMounted(async () => {
 });
 
 const likeLoading = ref(false);
-const toggleLike = throttle(async () => {
-  if (!userStore.userInfo?.username) {
-    ElMessage.info("请先登录后再点赞");
-    router.push("/login");
-    return;
-  }
-  if (likeLoading.value) return;
-  likeLoading.value = true;
-  const oldLiked = post.value.liked;
-  const oldCount = post.value.likeCount;
-  post.value.liked = !post.value.liked;
-  post.value.likeCount += post.value.liked ? 1 : -1;
-  if (post.value.liked) likePop.value += 1;
-  try {
-    const res = await likeApi(post.value.id);
-    if (res.data.code !== 1) throw new Error("操作失败");
-    ElMessage.success(
-      res.data.message || (post.value.liked ? "点赞成功" : "已取消点赞"),
-    );
-  } catch {
-    post.value.liked = oldLiked;
-    post.value.likeCount = oldCount;
-    ElMessage.error("操作失败，请重试");
-  } finally {
-    likeLoading.value = false;
-  }
-}, 800);
+const toggleLike = throttle(
+  async () => {
+    if (!userStore.userInfo?.username) {
+      ElMessage.info("请先登录后再点赞");
+      router.push("/login");
+      return;
+    }
+    if (likeLoading.value) return;
+    likeLoading.value = true;
+    const oldLiked = post.value.liked;
+    const oldCount = post.value.likeCount;
+    post.value.liked = !post.value.liked;
+    post.value.likeCount += post.value.liked ? 1 : -1;
+    if (post.value.liked) likePop.value += 1;
+    try {
+      const res = await likeApi(post.value.id);
+      if (res.data.code !== 1) throw new Error("操作失败");
+    } catch {
+      post.value.liked = oldLiked;
+      post.value.likeCount = oldCount;
+      ElMessage.error("操作失败，请重试");
+    } finally {
+      likeLoading.value = false;
+    }
+  },
+  800,
+  { trailing: false },
+);
 
 const copyPostLink = () => {
   const url = window.location.href;
@@ -153,7 +156,12 @@ const deletePost = async () => {
   deleteLoading.value = true;
   try {
     const res = await deletePostApi(post.value.id);
-    if (res.data.code === 1) ElMessage.success(res.data.message);
+    if (res.data.code !== 1) {
+      // 删除失败时明确提示并留在当前页，绝不能让用户误以为已删除
+      ElMessage.error(res.data.message || "删除失败，请重试");
+      return;
+    }
+    ElMessage.success(res.data.message || "删除成功");
     dialogVisible.value = false;
     router.back();
   } catch {
@@ -203,8 +211,19 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
   <div class="post-detail" v-loading="loading">
     <BackButton class="back-margin" />
 
+    <!-- 加载失败/帖子不存在：给明确的出口而不是渲染空壳纸面 -->
+    <el-empty
+      v-if="loadFailed && !loading"
+      class="post-missing"
+      description="帖子不存在或已删除"
+    >
+      <el-button type="primary" round @click="$router.push('/home')"
+        >回首页</el-button
+      >
+    </el-empty>
+
     <!-- 阅读纸面：详情页主体像一张按在页面上的暖色纸卡 -->
-    <article class="paper">
+    <article v-else class="paper">
       <span class="paper-glyph" aria-hidden="true">{{ glyph }}</span>
 
       <header class="paper-head">
@@ -238,15 +257,23 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               :round="true"
             />
             <el-icon
-              v-if="userStore.userInfo.id && String(userStore.userInfo.id) === String(post.userId)"
+              v-if="
+                userStore.userInfo.id &&
+                String(userStore.userInfo.id) === String(post.userId)
+              "
               title="删除作品"
               class="admin-icon"
               @click="dialogVisible = true"
               ><Delete
             /></el-icon>
             <el-popconfirm
-              v-if="[2, 3].includes(userStore.userInfo.authorityId) || ['REVIEWER', 'ADMIN'].includes(userStore.userInfo.authority)"
-              :title="post.enabled ? '确定封禁该文章吗？' : '确定解封该文章吗？'"
+              v-if="
+                [2, 3].includes(userStore.userInfo.authorityId) ||
+                ['REVIEWER', 'ADMIN'].includes(userStore.userInfo.authority)
+              "
+              :title="
+                post.enabled ? '确定封禁该文章吗？' : '确定解封该文章吗？'
+              "
               @confirm="banPost"
             >
               <template #reference>
@@ -343,7 +370,12 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       </footer>
     </article>
 
-    <el-dialog v-model="dialogVisible" title="确认删除作品?" width="min(90vw, 400px)" center>
+    <el-dialog
+      v-model="dialogVisible"
+      title="确认删除作品?"
+      width="min(90vw, 400px)"
+      center
+    >
       <p
         style="
           text-align: center;
@@ -361,7 +393,7 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       </template>
     </el-dialog>
 
-    <CommentComponent :post-id="route.params.id" />
+    <CommentComponent v-if="!loadFailed" :post-id="route.params.id" />
 
     <!-- 帖子正文图片大图全屏预览 -->
     <el-image-viewer
@@ -383,6 +415,10 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
 
   .back-margin {
     margin-bottom: 16px;
+  }
+
+  .post-missing {
+    padding: 80px 0;
   }
 
   // ---- 阅读纸面 ----

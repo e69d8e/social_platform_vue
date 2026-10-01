@@ -14,23 +14,7 @@ import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 import { Loading } from "@element-plus/icons-vue";
 import SlideVerify from "@/components/SlideVerify.vue";
-// import { ElMessage } from "element-plus";
-
-import captcha1 from "@/assets/captcha/captcha1.png";
-import captcha2 from "@/assets/captcha/captcha2.png";
-import captcha3 from "@/assets/captcha/captcha3.png";
-import captcha4 from "@/assets/captcha/captcha4.png";
-import captcha5 from "@/assets/captcha/captcha5.png";
-import captcha6 from "@/assets/captcha/captcha6.png";
-
-const captchaImages = [
-  captcha1,
-  captcha2,
-  captcha3,
-  captcha4,
-  captcha5,
-  captcha6,
-];
+import { ElMessage } from "element-plus";
 
 const router = useRouter();
 const route = useRoute();
@@ -47,7 +31,8 @@ const isCheck = ref(false);
 const isLogin = ref(true);
 const slideVerified = ref(false);
 const slideCaptchaId = ref("");
-const slideOffset = ref(0);
+// 服务端渲染的验证码图片，缺口位置（答案）不再下发到前端
+const slideCaptcha = ref({ bgImage: "", blockImage: "", y: 0 });
 const verifyToken = ref("");
 const captchaLoading = ref(false);
 const captchaError = ref(false);
@@ -71,7 +56,7 @@ const validateUsername = (rule, value, callback) => {
 const validatePassword = (rule, value, callback) => {
   if (value === "") return callback(new Error("密码不能为空"));
   if (value.length < 6 || value.length > 16) {
-    callback(new Error("密码应该为6-16位字符或-_"));
+    callback(new Error("密码长度应为6-16位"));
   } else {
     callback();
   }
@@ -103,7 +88,11 @@ const loadSlideCaptcha = async () => {
       return;
     }
     slideCaptchaId.value = res.data.data.captchaId;
-    slideOffset.value = res.data.data.offset;
+    slideCaptcha.value = {
+      bgImage: res.data.data.bgImage,
+      blockImage: res.data.data.blockImage,
+      y: res.data.data.y,
+    };
   } catch {
     captchaError.value = true;
     ElMessage.error("验证码加载失败，请重试");
@@ -132,15 +121,6 @@ const onSlideSuccess = async (detail) => {
     loadSlideCaptcha();
   }
 };
-const onSlideFail = () => {
-  slideVerified.value = false;
-  verifyToken.value = "";
-};
-const onSlideAgain = () => {
-  slideVerified.value = false;
-  verifyToken.value = "";
-  loadSlideCaptcha();
-};
 const onSlideRefresh = () => {
   loadSlideCaptcha();
 };
@@ -151,8 +131,8 @@ const resetSlideVerify = () => {
 onMounted(loadSlideCaptcha);
 
 const submitForm = (formEl) => {
-  if (!formEl) return;
-  formEl.validate(async (valid) => {
+  if (!formEl || loading.value) return;
+  formEl.validate(async (valid, invalidFields) => {
     if (valid) {
       if (!isCheck.value) {
         ElMessage.error("请勾选用户协议");
@@ -204,7 +184,14 @@ const submitForm = (formEl) => {
         loading.value = false;
       }
     } else {
-      ElMessage.error("请检查输入");
+      // 校验失败时优先展示第一条具体错误（如"密码应该为6-16位字符或-_"），
+      // 让用户无需猜测是哪个字段出了问题
+      const firstError = invalidFields
+        ? Object.values(invalidFields)
+            .flat()
+            .find((e) => e?.message)?.message
+        : "";
+      ElMessage.error(firstError || "请检查输入");
     }
   });
 };
@@ -224,6 +211,12 @@ const toRegister = () => {
 const resetForm = (formEl) => {
   if (!formEl) return;
   formEl.resetFields();
+};
+
+// 新窗口打开协议：当前页的表单与滑块验证状态不会丢失
+const openAgreement = () => {
+  const href = router.resolve("/userAgreement").href;
+  window.open(href, "_blank", "noopener");
 };
 </script>
 
@@ -250,26 +243,32 @@ const resetForm = (formEl) => {
         <el-form-item label="用户名" prop="username">
           <el-input
             v-model="ruleForm.username"
-            autocomplete="off"
+            name="username"
+            autocomplete="username"
             placeholder="请输入用户名"
+            @keyup.enter="submitForm(ruleFormRef)"
           />
         </el-form-item>
         <el-form-item label="密码" prop="password">
           <el-input
             v-model="ruleForm.password"
             type="password"
-            autocomplete="off"
+            name="password"
+            :autocomplete="isLogin ? 'current-password' : 'new-password'"
             placeholder="请输入密码"
             show-password
+            @keyup.enter="submitForm(ruleFormRef)"
           />
         </el-form-item>
         <el-form-item label="确认密码" prop="confirmPassword" v-if="!isLogin">
           <el-input
             v-model="ruleForm.confirmPassword"
             type="password"
-            autocomplete="off"
+            name="new-password"
+            autocomplete="new-password"
             placeholder="请再次输入密码"
             show-password
+            @keyup.enter="submitForm(ruleFormRef)"
           />
         </el-form-item>
 
@@ -290,13 +289,11 @@ const resetForm = (formEl) => {
           <SlideVerify
             v-else
             :key="slideCaptchaId"
-            :offset="slideOffset"
-            :imgs="captchaImages"
+            :bg-image="slideCaptcha.bgImage"
+            :block-image="slideCaptcha.blockImage"
+            :y="slideCaptcha.y"
             slider-text="向右滑动完成验证"
-            :accuracy="3"
             @success="onSlideSuccess"
-            @fail="onSlideFail"
-            @again="onSlideAgain"
             @refresh="onSlideRefresh"
           />
         </div>
@@ -321,17 +318,15 @@ const resetForm = (formEl) => {
           <span class="agree-text" @click="isCheck = !isCheck"
             >我已阅读并同意</span
           >
-          <el-link
-            @click="router.push('/userAgreement')"
-            underline="never"
-            type="primary"
-            >《用户协议》</el-link
+          <el-link @click="openAgreement" underline="never" type="primary"
+            >《用户协议》（新窗口打开，不丢失已填内容）</el-link
           >
         </div>
 
         <el-form-item>
           <el-button
             type="primary"
+            :loading="loading"
             @click="submitForm(ruleFormRef)"
             class="submit-btn"
           >

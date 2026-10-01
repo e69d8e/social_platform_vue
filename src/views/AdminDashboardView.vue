@@ -35,6 +35,7 @@ use([
 
 const themeStore = useThemeStore();
 const loading = ref(true);
+const loadError = ref(false);
 const days = ref(30);
 
 const dailyPosts = ref([]);
@@ -55,13 +56,20 @@ const summary = ref(emptySummary());
 
 const fetchData = async () => {
   loading.value = true;
-  const res = await getDashboardApi({ days: days.value });
-  const data = res.data.data || {};
-  summary.value = { ...emptySummary(), ...(data.summary || {}) };
-  dailyPosts.value = data.dailyPosts || [];
-  weeklyNewUsers.value = data.weeklyNewUsers || [];
-  dailyActiveUsers.value = data.dailyActiveUsers || [];
-  loading.value = false;
+  loadError.value = false;
+  try {
+    const res = await getDashboardApi({ days: days.value });
+    const data = res.data.data || {};
+    summary.value = { ...emptySummary(), ...(data.summary || {}) };
+    dailyPosts.value = data.dailyPosts || [];
+    weeklyNewUsers.value = data.weeklyNewUsers || [];
+    dailyActiveUsers.value = data.dailyActiveUsers || [];
+  } catch {
+    loadError.value = true;
+    ElMessage.error("数据加载失败，请重试");
+  } finally {
+    loading.value = false;
+  }
 };
 
 const summaryCards = computed(() => [
@@ -91,11 +99,17 @@ const handleDaysChange = () => {
   fetchData();
 };
 
-const textColor = computed(() => (themeStore.darkMode ? "#faf9f5" : "#141413"));
-const subTextColor = computed(() =>
-  themeStore.darkMode ? "#a09d96" : "#6c6a64",
+// theme store 暴露的是 isDark（darkMode 字段不存在）
+const isDark = computed(() => themeStore.isDark);
+const textColor = computed(() => (isDark.value ? "#faf8f5" : "#181816"));
+const subTextColor = computed(() => (isDark.value ? "#a6a39b" : "#78756d"));
+const lineColor = computed(() => (isDark.value ? "#2e2c27" : "#e8e3dc"));
+// 折线配色与设计 token 同源（primary/success/warning 的明暗两套）
+const seriesColors = computed(() =>
+  isDark.value
+    ? ["#e68a6e", "#6eb395", "#f0b858"]
+    : ["#cc6d4e", "#5a947a", "#d99426"],
 );
-const lineColor = computed(() => (themeStore.darkMode ? "#333230" : "#e6dfd8"));
 
 const baseOption = computed(() => ({
   tooltip: { trigger: "axis" },
@@ -130,7 +144,7 @@ const postsOption = computed(() => ({
       data: dailyPosts.value.map((d) => d.count),
       smooth: true,
       areaStyle: { opacity: 0.15 },
-      itemStyle: { color: "#cc785c" },
+      itemStyle: { color: seriesColors.value[0] },
       lineStyle: { width: 2 },
     },
   ],
@@ -153,7 +167,7 @@ const usersOption = computed(() => ({
       data: weeklyNewUsers.value.map((d) => d.count),
       smooth: true,
       areaStyle: { opacity: 0.15 },
-      itemStyle: { color: "#5db872" },
+      itemStyle: { color: seriesColors.value[1] },
       lineStyle: { width: 2 },
     },
   ],
@@ -176,7 +190,7 @@ const activeOption = computed(() => ({
       data: dailyActiveUsers.value.map((d) => d.count),
       smooth: true,
       areaStyle: { opacity: 0.15 },
-      itemStyle: { color: "#e8a55a" },
+      itemStyle: { color: seriesColors.value[2] },
       lineStyle: { width: 2 },
     },
   ],
@@ -200,29 +214,41 @@ const activeOption = computed(() => ({
       </el-radio-group>
     </div>
 
-    <div class="summary-grid">
-      <div v-for="card in summaryCards" :key="card.label" class="summary-card">
-        <div class="summary-icon">
-          <el-icon :size="20"><component :is="card.icon" /></el-icon>
-        </div>
-        <div class="summary-info">
-          <span class="summary-value">{{ formatCount(card.value) }}</span>
-          <span class="summary-label">{{ card.label }}</span>
-        </div>
-      </div>
+    <div v-if="loadError" class="dashboard-error">
+      <el-empty description="数据加载失败">
+        <el-button type="primary" round @click="fetchData">重新加载</el-button>
+      </el-empty>
     </div>
 
-    <div class="charts-grid">
-      <div class="chart-card">
-        <v-chart :option="postsOption" autoresize class="dashboard-chart" />
+    <template v-else>
+      <div class="summary-grid">
+        <div
+          v-for="card in summaryCards"
+          :key="card.label"
+          class="summary-card"
+        >
+          <div class="summary-icon">
+            <el-icon :size="20"><component :is="card.icon" /></el-icon>
+          </div>
+          <div class="summary-info">
+            <span class="summary-value">{{ formatCount(card.value) }}</span>
+            <span class="summary-label">{{ card.label }}</span>
+          </div>
+        </div>
       </div>
-      <div class="chart-card">
-        <v-chart :option="usersOption" autoresize class="dashboard-chart" />
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <v-chart :option="postsOption" autoresize class="dashboard-chart" />
+        </div>
+        <div class="chart-card">
+          <v-chart :option="usersOption" autoresize class="dashboard-chart" />
+        </div>
+        <div class="chart-card">
+          <v-chart :option="activeOption" autoresize class="dashboard-chart" />
+        </div>
       </div>
-      <div class="chart-card">
-        <v-chart :option="activeOption" autoresize class="dashboard-chart" />
-      </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -231,6 +257,10 @@ const activeOption = computed(() => ({
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px 12px 40px;
+
+  .dashboard-error {
+    padding: 40px 0;
+  }
 
   .toolbar {
     display: flex;

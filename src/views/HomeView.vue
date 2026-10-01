@@ -42,7 +42,7 @@ const {
 
     <div class="feed-head">
       <div class="feed-head-left">
-        <span class="feed-title">推荐流</span>
+        <span class="section-title feed-title">推荐流</span>
         <span class="feed-subtitle">探索最新创作与社区热门讨论</span>
       </div>
     </div>
@@ -116,12 +116,7 @@ const {
     }
 
     .feed-title {
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      color: var(--text-ink);
-      padding-left: 12px;
-      border-left: 3.5px solid var(--el-color-primary);
+      margin-bottom: 0; // 覆盖 .section-title 的下边距，与副标题同行
     }
 
     .feed-subtitle {

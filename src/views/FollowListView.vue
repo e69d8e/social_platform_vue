@@ -72,7 +72,7 @@ watch(
 </script>
 
 <template>
-  <div class="list-page" v-loading="loading">
+  <div class="list-page" v-loading="loading && followList.length > 0">
     <PageHeader :title="pageTitle" :total="total" unit="人" />
 
     <SkeletonGrid

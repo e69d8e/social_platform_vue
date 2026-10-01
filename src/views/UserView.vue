@@ -41,10 +41,15 @@ const userInfo = ref({
 });
 const loading = ref(true);
 
+const loadFailed = ref(false);
 const getUserInfo = async () => {
   if (!route.params.id) return;
-  const res = await getUserInfoByIdApi(route.params.id);
-  userInfo.value = res.data.data;
+  try {
+    const res = await getUserInfoByIdApi(route.params.id);
+    userInfo.value = res.data.data;
+  } catch {
+    loadFailed.value = true;
+  }
 };
 
 onMounted(async () => {
@@ -94,11 +99,6 @@ const setReviewer = () => setRole(setReviewerApi, 3);
 
 const fansCount = computed(() => formattedCount(userInfo.value.fansCount));
 
-const authorityType = computed(() => {
-  const map = { 1: "success", 2: "danger", 3: "primary" };
-  return map[userInfo.value.authorityId] || "info";
-});
-
 const genderLabel = computed(() => {
   if (userInfo.value.gender === 1) return "男";
   if (userInfo.value.gender === 2) return "女";
@@ -117,14 +117,18 @@ const formattedCreateTime = computed(() => {
   <div class="user-page" v-loading="loading">
     <PageHeader title="个人主页" large />
 
-    <div class="user-card">
+    <el-empty v-if="loadFailed && !loading" description="用户不存在或加载失败">
+      <el-button type="primary" round @click="$router.push('/home')"
+        >回首页</el-button
+      >
+    </el-empty>
+
+    <div v-else class="user-card">
       <el-avatar :src="userInfo.avatar" :size="88" class="avatar" />
 
       <div class="user-meta">
         <h3 class="nickname">{{ userInfo.nickname || "未设置昵称" }}</h3>
-        <el-text :type="authorityType" size="small"
-          >@{{ userInfo.username }}</el-text
-        >
+        <span class="username-line">@{{ userInfo.username }}</span>
         <AuthorityComponent :authority-id="userInfo.authorityId" />
       </div>
 
@@ -156,14 +160,32 @@ const formattedCreateTime = computed(() => {
         </div>
       </div>
 
+      <p
+        v-if="userInfo.followPrivate || userInfo.fansPrivate"
+        class="privacy-note"
+      >
+        该用户隐藏了{{ userInfo.followPrivate ? "关注" : ""
+        }}{{ userInfo.followPrivate && userInfo.fansPrivate ? "和" : ""
+        }}{{ userInfo.fansPrivate ? "粉丝" : "" }}列表
+      </p>
+
       <div v-if="userInfo.bio" class="bio">
         <span class="label">简介</span>
         <p>{{ userInfo.bio }}</p>
       </div>
 
       <div class="actions">
+        <el-tooltip
+          v-if="!isSelf && !userInfo.enabled"
+          content="该账号已被封禁，无法发送私信"
+          placement="top"
+        >
+          <el-button type="primary" plain size="small" disabled
+            >发私信</el-button
+          >
+        </el-tooltip>
         <el-button
-          v-if="!isSelf"
+          v-else-if="!isSelf"
           type="primary"
           plain
           size="small"
@@ -172,23 +194,26 @@ const formattedCreateTime = computed(() => {
         >
         <el-button
           v-if="!userInfo.followPrivate"
-          type="success"
+          type="primary"
+          plain
           size="small"
           @click="$router.push('/follow/' + route.params.id)"
-          >Ta 的关注</el-button
+          >{{ isSelf ? "我的关注" : "Ta 的关注" }}</el-button
         >
         <el-button
           v-if="!userInfo.fansPrivate"
           type="primary"
+          plain
           size="small"
           @click="$router.push('/fans/' + route.params.id)"
-          >Ta 的粉丝</el-button
+          >{{ isSelf ? "我的粉丝" : "Ta 的粉丝" }}</el-button
         >
         <el-button
-          type="warning"
+          type="primary"
+          plain
           size="small"
           @click="$router.push('/postList/' + route.params.id)"
-          >Ta 的帖子</el-button
+          >{{ isSelf ? "我的帖子" : "Ta 的帖子" }}</el-button
         >
       </div>
 
@@ -275,6 +300,17 @@ const formattedCreateTime = computed(() => {
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
+  }
+
+  .username-line {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .privacy-note {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--text-placeholder);
   }
 
   .banned-badge {

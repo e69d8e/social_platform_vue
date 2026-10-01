@@ -27,15 +27,17 @@ const handleClick = () => {
 </script>
 
 <template>
-  <div
+  <button
+    type="button"
     class="back-btn"
     :class="attrs.class"
     :style="attrs.style"
+    aria-label="返回上一页"
     @click="handleClick"
   >
     <el-icon :size="size"><ArrowLeft /></el-icon>
     <span v-if="text">{{ text }}</span>
-  </div>
+  </button>
 </template>
 
 <style lang="scss" scoped>
@@ -46,7 +48,10 @@ const handleClick = () => {
   cursor: pointer;
   color: var(--text-secondary);
   font-size: 14px;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  font-family: inherit;
   border-radius: $radius-sm;
   transition: all $transition-base;
   flex-shrink: 0;
@@ -54,6 +59,11 @@ const handleClick = () => {
   &:hover {
     color: var(--el-color-primary);
     background: var(--el-color-primary-light-9);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
   }
 }
 </style>

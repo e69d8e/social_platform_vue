@@ -47,7 +47,10 @@ watch(
   },
 );
 
+// in-flight 守卫 + leading throttle：杜绝快速双击造成「赞→取消」双翻转
+let likeInFlight = false;
 const handleLike = async () => {
+  if (likeInFlight) return;
   if (!userStore.userInfo?.username) {
     ElMessage.info("请先登录后再点赞");
     router.push("/login");
@@ -58,17 +61,21 @@ const handleLike = async () => {
   liked.value = !liked.value;
   likeCount.value += liked.value ? 1 : -1;
   if (liked.value) popTick.value += 1;
+  likeInFlight = true;
   try {
     const res = await likeApi(props.id);
     if (res.data.code !== 1) throw new Error("操作失败");
-    ElMessage.success(res.data.message || (liked.value ? "点赞成功" : "已取消点赞"));
+    // 数字与心跳动画已是即时反馈，信息流里不再弹 toast 轰炸
   } catch {
     liked.value = oldLiked;
     likeCount.value = oldCount;
+    ElMessage.error("点赞失败，请重试");
+  } finally {
+    likeInFlight = false;
   }
 };
 
-const like = throttle(handleLike, 800);
+const like = throttle(handleLike, 800, { trailing: false });
 
 // ---- 纯文本摘要 ----
 const htmlToText = (html) => {
@@ -105,7 +112,6 @@ watch(
 // 封面加载失败时回退为纯文本卡片（章纹水印布局）
 const hasCover = computed(() => Boolean(props.cover) && !coverFailed.value);
 
-const openPost = () => router.push(`/post/${props.id}`);
 const openUser = (e) => {
   e?.stopPropagation?.();
   if (props.userId) {
@@ -115,15 +121,7 @@ const openUser = (e) => {
 </script>
 
 <template>
-  <div
-    class="postcard"
-    role="link"
-    tabindex="0"
-    :aria-label="`阅读帖子：${props.title}`"
-    :style="{ '--rise-delay': `${props.delay}ms` }"
-    @click="openPost"
-    @keydown.enter.prevent="openPost"
-  >
+  <div class="postcard" :style="{ '--rise-delay': `${props.delay}ms` }">
     <article class="card">
       <div v-if="hasCover" class="media">
         <img
@@ -138,7 +136,13 @@ const openUser = (e) => {
       </div>
 
       <div class="body">
-        <h4 class="title">{{ props.title }}</h4>
+        <h4 class="title">
+          <!-- 拉伸链接：覆盖整张卡片作为点击/键盘导航目标，替代外层 div 伪链接 -->
+          <RouterLink class="title-link" :to="`/post/${props.id}`">
+            {{ props.title }}
+            <span class="sr-only">— 阅读帖子</span>
+          </RouterLink>
+        </h4>
 
         <p v-if="hasCover" class="excerpt">{{ textContent }}</p>
 
@@ -199,18 +203,13 @@ const openUser = (e) => {
 <style lang="scss" scoped>
 .postcard {
   height: 100%;
-  cursor: pointer;
   border-radius: var(--radius-lg);
   animation: fadeInUp 0.45s ease both;
   animation-delay: var(--rise-delay, 0ms);
-
-  &:focus-visible {
-    outline: 2px solid var(--border-focus);
-    outline-offset: 2px;
-  }
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -225,7 +224,7 @@ const openUser = (e) => {
     border-color var(--transition-base);
 
   .postcard:hover &,
-  .postcard:focus-visible & {
+  .postcard:has(.title-link:focus-visible) & {
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
     border-color: var(--el-color-primary-light-7);
@@ -293,6 +292,33 @@ const openUser = (e) => {
   .postcard:hover & {
     color: var(--el-color-primary);
   }
+
+  // 拉伸链接：铺满整卡作为点击与键盘目标
+  .title-link {
+    color: inherit;
+    text-decoration: none;
+    outline: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    &:focus-visible::after {
+      outline: 2px solid var(--border-focus);
+      outline-offset: -2px;
+      border-radius: var(--radius-lg);
+    }
+  }
+}
+
+// 可交互元素浮在拉伸链接之上，保证各自的点击热区
+.author,
+.like {
+  position: relative;
+  z-index: 2;
 }
 
 .excerpt {

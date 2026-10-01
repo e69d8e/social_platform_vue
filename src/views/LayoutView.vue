@@ -26,9 +26,8 @@ import {
 import { getUnreadCountApi } from "@/api/messageApi";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
-import { debounce } from "lodash-es";
 import formattedCount from "@/utils/formattedCount";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { logoUrl } from "@/utils/request";
 
 const signStore = useSignStore();
@@ -84,6 +83,7 @@ const goToConversations = () => {
 
 const goToMy = () => {
   if (!userStore.userInfo.username) {
+    ElMessage.info("请先登录查看个人中心");
     router.push("/login");
     return;
   }
@@ -126,10 +126,19 @@ const deleteHistoryItem = async (id) => {
 
 const clearAllHistory = async () => {
   try {
+    await ElMessageBox.confirm(
+      "清空后无法恢复，确定清空全部搜索历史吗？",
+      "清空搜索历史",
+      { confirmButtonText: "清空", cancelButtonText: "取消", type: "warning" },
+    );
+  } catch {
+    return; // 用户取消
+  }
+  try {
     await clearSearchHistoryApi();
     historyList.value = [];
   } catch {
-    // silently fail
+    // 错误提示已由请求拦截器统一处理
   }
 };
 
@@ -151,7 +160,6 @@ const handleSearchSubmit = () => {
   }
   historyVisible.value = false;
   mobileSearchVisible.value = false;
-  search.cancel();
   router.push({
     path: "/search",
     query: { keyword: kw },
@@ -159,38 +167,31 @@ const handleSearchSubmit = () => {
   searchContent.value = "";
 };
 
-const search = debounce(() => {
-  const kw = searchContent.value.trim();
-  if (!kw) return;
-  historyVisible.value = false;
-  mobileSearchVisible.value = false;
-  router.push({
-    path: "/search",
-    query: { keyword: kw },
-  });
-  searchContent.value = "";
-}, 300);
-
-onUnmounted(() => {
-  search.cancel();
-});
-
 const myFollowPosts = () => router.push({ path: "/followPosts" });
 const myPosts = () =>
   router.push({ path: "/postList/" + userStore.userInfo.id });
 const toFans = () => router.push({ path: "/fans/" + userStore.userInfo.id });
 
+const signing = ref(false);
 const sign = async () => {
-  const res = await signInApi();
-  if (res.data.code === 1) {
-    if (signStore.signDay < res.data.data) {
-      ElMessage.success("签到成功");
+  if (signing.value) return; // 防连点并发多次签到请求
+  signing.value = true;
+  try {
+    const res = await signInApi();
+    if (res.data.code === 1) {
+      if (signStore.signDay < res.data.data) {
+        ElMessage.success("签到成功");
+      } else {
+        ElMessage.info("今天已经签到过了");
+      }
+      signStore.signDay = res.data.data;
     } else {
-      ElMessage.info("今天已经签到过了");
+      ElMessage.error(res.data.message);
     }
-    signStore.signDay = res.data.data;
-  } else {
-    ElMessage.error(res.data.message);
+  } catch {
+    // 错误提示已由请求拦截器统一处理
+  } finally {
+    signing.value = false;
   }
 };
 
@@ -263,15 +264,22 @@ watch(
         <div class="header-inner">
           <!-- 左侧：Logo + 签到 -->
           <div class="header-left">
-            <div class="logo" @click="$router.push('/')">
+            <button
+              class="logo"
+              type="button"
+              aria-label="回到首页"
+              @click="$router.push('/')"
+            >
               <el-image class="logo-img" :src="logoUrl" />
               <span class="logo-text">Y社区</span>
               <el-icon class="logo-icon"><HomeFilled /></el-icon>
-            </div>
-            <div
+            </button>
+            <button
               v-if="userStore.userInfo.username"
               class="sign"
+              type="button"
               :title="`本月已连续签到 ${signStore.signDay} 天`"
+              :disabled="signing"
               @click="sign"
             >
               <el-tag size="small" effect="plain" type="warning"
@@ -280,7 +288,7 @@ watch(
               <span class="sign-text"
                 >本月已连续签到 {{ signStore.signDay }} 天</span
               >
-            </div>
+            </button>
           </div>
 
           <!-- 中间：搜索 (桌面端) -->
@@ -297,41 +305,50 @@ watch(
                   class="search-input"
                   clearable
                 />
-                <el-button :icon="Search" @click="handleSearchSubmit" class="search-btn" />
+                <el-button
+                  :icon="Search"
+                  @click="handleSearchSubmit"
+                  class="search-btn"
+                />
               </div>
               <transition name="dropdown">
                 <div
-                  v-show="historyVisible && historyList.length"
+                  v-show="historyVisible"
                   class="search-dropdown"
                   v-loading="historyLoading"
                 >
-                  <div class="dropdown-header">
-                    <span>搜索历史</span>
-                    <el-button
-                      size="small"
-                      text
-                      type="danger"
-                      @click="clearAllHistory"
+                  <template v-if="historyList.length">
+                    <div class="dropdown-header">
+                      <span>搜索历史</span>
+                      <el-button
+                        size="small"
+                        text
+                        type="danger"
+                        @click="clearAllHistory"
+                      >
+                        <el-icon><Delete /></el-icon>
+                        清空
+                      </el-button>
+                    </div>
+                    <div
+                      v-for="item in historyList"
+                      :key="item.id"
+                      class="dropdown-item"
+                      @mousedown.prevent="historySearch(item)"
                     >
-                      <el-icon><Delete /></el-icon>
-                      清空
-                    </el-button>
-                  </div>
-                  <div
-                    v-for="item in historyList"
-                    :key="item.id"
-                    class="dropdown-item"
-                    @mousedown.prevent="historySearch(item)"
-                  >
-                    <span class="item-keyword">{{ item.keyword }}</span>
-                    <span class="item-type">{{
-                      item.type === 0 ? "帖子" : "用户"
-                    }}</span>
-                    <el-icon
-                      class="item-close"
-                      @mousedown.stop="deleteHistoryItem(item.id)"
-                      ><Close
-                    /></el-icon>
+                      <span class="item-keyword">{{ item.keyword }}</span>
+                      <span class="item-type">{{
+                        item.type === 0 ? "帖子" : "用户"
+                      }}</span>
+                      <el-icon
+                        class="item-close"
+                        @mousedown.stop="deleteHistoryItem(item.id)"
+                        ><Close
+                      /></el-icon>
+                    </div>
+                  </template>
+                  <div v-else class="dropdown-empty">
+                    暂无搜索历史，输入关键词开始探索
                   </div>
                 </div>
               </transition>
@@ -434,30 +451,37 @@ watch(
             <!-- 右侧用户 -->
             <div class="header-user">
               <template v-if="!userStore.userInfo.username">
-                <el-button type="primary" size="small" @click="$router.push('/login')"
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="$router.push('/login')"
                   >去登录</el-button
                 >
               </template>
               <template v-else>
-                <el-avatar
-                  class="user-avatar"
-                  :size="36"
-                  :src="userStore.userInfo.avatar"
+                <button
+                  class="user-btn"
+                  type="button"
+                  aria-label="进入个人中心"
                   @click="$router.push('/my')"
-                />
-                <div class="user-info">
-                  <span class="user-nickname" @click="$router.push('/my')">
+                >
+                  <el-avatar
+                    class="user-avatar"
+                    :size="36"
+                    :src="userStore.userInfo.avatar"
+                  />
+                  <span class="user-nickname">
                     {{ userStore.userInfo.nickname }}
                   </span>
-                  <el-text
-                    size="small"
-                    type="primary"
-                    class="user-fans"
-                    @click="toFans"
-                  >
-                    {{ fansCount }} 粉
-                  </el-text>
-                </div>
+                </button>
+                <button
+                  class="user-fans"
+                  type="button"
+                  :title="`查看我的 ${fansCount} 个粉丝`"
+                  @click="toFans"
+                >
+                  {{ fansCount }} 粉
+                </button>
               </template>
             </div>
           </div>
@@ -481,14 +505,22 @@ watch(
             @keyup.enter="handleSearchSubmit"
           >
             <template #append>
-              <el-button :icon="Search" @click="handleSearchSubmit">搜索</el-button>
+              <el-button :icon="Search" @click="handleSearchSubmit"
+                >搜索</el-button
+              >
             </template>
           </el-input>
 
           <div v-if="historyList.length" class="mobile-history">
             <div class="mobile-history-head">
               <span>搜索历史</span>
-              <el-button size="small" text type="danger" @click="clearAllHistory">清空</el-button>
+              <el-button
+                size="small"
+                text
+                type="danger"
+                @click="clearAllHistory"
+                >清空</el-button
+              >
             </div>
             <div class="mobile-history-tags">
               <span
@@ -520,45 +552,57 @@ watch(
 
       <!-- 移动端底部导航栏 (<768px 显示) -->
       <nav class="mobile-bottom-nav">
-        <div
+        <button
           class="bottom-tab"
+          type="button"
           :class="{ active: isHomeActive }"
           @click="$router.push('/home')"
         >
           <el-icon :size="20"><HomeFilled /></el-icon>
           <span class="tab-label">首页</span>
-        </div>
+        </button>
 
-        <div
+        <button
           class="bottom-tab"
+          type="button"
           :class="{ active: isMyFollowPostsActive }"
           @click="goToFollowPosts"
         >
-          <el-icon :size="20"><StarFilled v-if="isMyFollowPostsActive" /><Star v-else /></el-icon>
+          <el-icon :size="20"
+            ><StarFilled v-if="isMyFollowPostsActive" /><Star v-else
+          /></el-icon>
           <span class="tab-label">关注</span>
-        </div>
+        </button>
 
-        <div class="bottom-tab publish-tab" @click="goToPublish">
+        <button
+          class="bottom-tab publish-tab"
+          type="button"
+          @click="goToPublish"
+        >
           <div class="publish-circle">
             <el-icon :size="20"><Plus /></el-icon>
           </div>
           <span class="tab-label">发布</span>
-        </div>
+        </button>
 
-        <div
+        <button
           class="bottom-tab"
+          type="button"
           :class="{ active: isConversationsActive }"
           @click="goToConversations"
         >
           <div class="tab-icon-wrap">
             <el-icon :size="20"><ChatDotRound /></el-icon>
-            <span v-if="unreadCount > 0" class="tab-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+            <span v-if="unreadCount > 0" class="tab-badge">{{
+              unreadCount > 99 ? "99+" : unreadCount
+            }}</span>
           </div>
           <span class="tab-label">私信</span>
-        </div>
+        </button>
 
-        <div
+        <button
           class="bottom-tab"
+          type="button"
           :class="{ active: isMyActive }"
           @click="goToMy"
         >
@@ -569,8 +613,10 @@ watch(
             class="tab-avatar"
           />
           <el-icon v-else :size="20"><User /></el-icon>
-          <span class="tab-label">{{ userStore.userInfo.username ? '我的' : '去登录' }}</span>
-        </div>
+          <span class="tab-label">{{
+            userStore.userInfo.username ? "我的" : "去登录"
+          }}</span>
+        </button>
       </nav>
     </el-container>
   </div>
@@ -587,15 +633,14 @@ watch(
     top: 0;
     z-index: 100;
     padding: 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
     background: var(--glass-bg);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--glass-border);
     box-shadow: 0 1px 12px rgba(24, 24, 22, 0.03);
-    transition: background-color var(--transition-base), border-color var(--transition-base);
+    transition:
+      background-color var(--transition-base),
+      border-color var(--transition-base);
   }
 
   .header-inner {
@@ -622,12 +667,23 @@ watch(
     display: flex;
     align-items: center;
     gap: 8px;
+    border: none;
+    background: none;
+    padding: 4px 6px;
+    margin: -4px -6px;
     cursor: pointer;
     user-select: none;
+    font-family: inherit;
     transition: transform var(--transition-base);
 
     &:hover {
       transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+      border-radius: var(--radius-sm);
     }
   }
 
@@ -662,6 +718,7 @@ watch(
     gap: 6px;
     cursor: pointer;
     font-size: 12px;
+    font-family: inherit;
     color: var(--text-muted);
     padding: 4px 10px;
     border-radius: var(--radius-full);
@@ -670,11 +727,21 @@ watch(
     transition: all var(--transition-base);
     white-space: nowrap;
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: var(--el-color-primary-light-9);
       border-color: var(--el-color-primary-light-7);
       color: var(--el-color-primary);
       transform: translateY(-1px);
+    }
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.7;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
     }
   }
 
@@ -760,6 +827,13 @@ watch(
     padding: 8px 0;
     max-height: 320px;
     overflow-y: auto;
+
+    .dropdown-empty {
+      padding: 18px 16px;
+      font-size: 13px;
+      color: var(--text-placeholder);
+      text-align: center;
+    }
 
     .dropdown-header {
       display: flex;
@@ -966,27 +1040,44 @@ watch(
     flex-shrink: 0;
   }
 
-  .user-avatar {
+  .user-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: none;
+    padding: 4px 6px;
+    margin: -4px -6px;
+    border-radius: var(--radius-full);
     cursor: pointer;
-    flex-shrink: 0;
-    border: 2px solid var(--border-light);
-    transition: transform var(--transition-base), border-color var(--transition-base);
+    font-family: inherit;
+    transition: background var(--transition-base);
 
-    &:hover {
+    &:hover .user-avatar {
       transform: scale(1.06);
       border-color: var(--el-color-primary);
       box-shadow: var(--glow-primary);
     }
+
+    &:hover .user-nickname {
+      color: var(--el-color-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
   }
 
-  .user-info {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.3;
+  .user-avatar {
+    flex-shrink: 0;
+    border: 2px solid var(--border-light);
+    transition:
+      transform var(--transition-base),
+      border-color var(--transition-base);
   }
 
   .user-nickname {
-    cursor: pointer;
     font-size: 13.5px;
     font-weight: 600;
     color: var(--text-primary);
@@ -995,15 +1086,27 @@ watch(
     text-overflow: ellipsis;
     white-space: nowrap;
     transition: color var(--transition-base);
-
-    &:hover {
-      color: var(--el-color-primary);
-    }
   }
 
   .user-fans {
+    border: none;
+    background: none;
+    padding: 4px 6px;
     cursor: pointer;
     font-size: 11px;
+    font-family: inherit;
+    color: var(--el-color-primary);
+    border-radius: var(--radius-full);
+    transition: background var(--transition-base);
+
+    &:hover {
+      background: var(--el-color-primary-light-9);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
   }
 
   // ---- Main content ----
@@ -1097,8 +1200,11 @@ watch(
     flex: 1;
     height: 100%;
     gap: 3px;
+    border: none;
+    background: none;
     color: var(--text-muted);
     cursor: pointer;
+    font-family: inherit;
     transition: all var(--transition-fast);
     -webkit-tap-highlight-color: transparent;
 
@@ -1119,6 +1225,12 @@ watch(
 
     &:active {
       transform: scale(0.94);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: -2px;
+      border-radius: var(--radius-md);
     }
   }
 
@@ -1170,7 +1282,9 @@ watch(
       justify-content: center;
       margin-top: -12px;
       box-shadow: 0 4px 14px rgba(204, 109, 78, 0.38);
-      transition: transform var(--transition-base), box-shadow var(--transition-base);
+      transition:
+        transform var(--transition-base),
+        box-shadow var(--transition-base);
     }
 
     &:active .publish-circle {

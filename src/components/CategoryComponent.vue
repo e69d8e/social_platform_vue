@@ -13,14 +13,14 @@ const loadError = ref(false);
 
 // 调色板：按分类 id 稳定分配一个主题色，用于分类图标底色
 const palette = [
-  "#cc785c",
-  "#5db872",
-  "#5db8a6",
-  "#e8a55a",
+  "#cc6d4e",
+  "#5a947a",
+  "#5aa3a0",
+  "#d99426",
   "#8a7bd8",
   "#d4a017",
   "#5aa3e8",
-  "#c64545",
+  "#c24c4c",
   "#7a9e5d",
   "#b070c8",
   "#4a9a8f",

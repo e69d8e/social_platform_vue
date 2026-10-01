@@ -31,7 +31,7 @@ const {
 </script>
 
 <template>
-  <div class="follow-page" v-loading="loading">
+  <div class="follow-page" v-loading="loading && posts.length > 0">
     <PageHeader title="我的关注" />
 
     <SkeletonGrid v-if="loading && posts.length === 0" :count="8" />
