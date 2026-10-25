@@ -45,16 +45,7 @@ const {
     <CardGrid v-else :items="posts">
       <template #item="{ item, index }">
         <PostCard
-          :id="item.id"
-          :user-id="item.userId"
-          :username="item.username"
-          :title="item.title"
-          :cover="item.cover"
-          :content="item.content"
-          :like-count="item.likeCount"
-          :liked="item.liked"
-          :time="item.createTime"
-          :view-count="item.viewCount"
+          :post="item"
           :delay="index < 12 ? index * 40 : 0"
         />
       </template>

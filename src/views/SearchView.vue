@@ -225,16 +225,7 @@ watch(activeName, (name) => {
         <CardGrid v-else :items="posts">
           <template #item="{ item, index }">
             <PostCard
-              :id="item.id"
-              :user-id="item.userId"
-              :username="item.username"
-              :title="item.title"
-              :content="item.content"
-              :cover="item.cover"
-              :liked="item.liked"
-              :like-count="item.likeCount"
-              :time="item.createTime"
-              :view-count="item.viewCount"
+              :post="item"
               :delay="index < 12 ? index * 40 : 0"
             />
           </template>
@@ -262,12 +253,7 @@ watch(activeName, (name) => {
         <CardGrid v-else :items="users">
           <template #item="{ item, index }">
             <UserCard
-              :id="item.id"
-              :avatar="item.avatar"
-              :nickname="item.nickname"
-              :bio="item.bio"
-              :followed="item.followed"
-              :count="item.count"
+              :user="item"
               :delay="index < 12 ? index * 40 : 0"
             />
           </template>

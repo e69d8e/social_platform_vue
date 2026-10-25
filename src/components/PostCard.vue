@@ -8,16 +8,8 @@ import { Star, View, User } from "@element-plus/icons-vue";
 import { useLike } from "@/composables/useLike";
 
 const props = defineProps({
-  id: { type: String, default: "" },
-  userId: { type: [String, Number], default: "" },
-  username: { type: String, default: "" },
-  title: { type: String, default: "" },
-  cover: { type: String },
-  liked: { type: Boolean, default: false },
-  content: { type: String, default: "" },
-  likeCount: { type: Number, default: 0 },
-  time: { type: String, default: "" },
-  viewCount: { type: Number, default: 0 },
+  /** 帖子数据对象（列表接口返回的原样 item） */
+  post: { type: Object, required: true },
   // 入场动画延迟（ms），首页网格用它做级联错峰
   delay: { type: Number, default: 0 },
 });
@@ -26,9 +18,9 @@ const router = useRouter();
 
 // ---- 点赞：乐观更新 + 失败回滚 + 防双击（逻辑收敛于 useLike） ----
 const { liked, likeCount, popTick, toggleLike } = useLike({
-  postId: () => props.id,
-  liked: () => props.liked,
-  likeCount: () => props.likeCount,
+  postId: () => props.post.id,
+  liked: () => props.post.liked,
+  likeCount: () => props.post.likeCount,
 });
 
 // ---- 纯文本摘要 ----
@@ -44,19 +36,19 @@ const htmlToText = (html) => {
   return doc.body.textContent?.trim() || "";
 };
 
-const textContent = computed(() => htmlToText(props.content));
+const textContent = computed(() => htmlToText(props.post.content));
 
 // 文本卡水印字：取标题首个非符号字符，形似书页章纹
-const glyph = computed(() => pickGlyphChar(props.title));
+const glyph = computed(() => pickGlyphChar(props.post.title));
 
-const timeText = computed(() => formatExactTime(props.time));
+const timeText = computed(() => formatExactTime(props.post.createTime));
 
 // ---- 封面加载状态：淡入 + 失败回退纯文本卡 ----
 const coverLoaded = ref(false);
 const coverFailed = ref(false);
 
 watch(
-  () => props.cover,
+  () => props.post.cover,
   () => {
     coverLoaded.value = false;
     coverFailed.value = false;
@@ -64,12 +56,12 @@ watch(
 );
 
 // 封面加载失败时回退为纯文本卡片（章纹水印布局）
-const hasCover = computed(() => Boolean(props.cover) && !coverFailed.value);
+const hasCover = computed(() => Boolean(props.post.cover) && !coverFailed.value);
 
 const openUser = (e) => {
   e?.stopPropagation?.();
-  if (props.userId) {
-    router.push(`/user/${props.userId}`);
+  if (props.post.userId) {
+    router.push(`/user/${props.post.userId}`);
   }
 };
 </script>
@@ -79,8 +71,8 @@ const openUser = (e) => {
     <article class="card">
       <div v-if="hasCover" class="media">
         <img
-          :src="props.cover"
-          :alt="props.title"
+          :src="post.cover"
+          :alt="post.title"
           loading="lazy"
           referrerpolicy="no-referrer"
           :class="{ loaded: coverLoaded }"
@@ -92,8 +84,8 @@ const openUser = (e) => {
       <div class="body">
         <h4 class="title">
           <!-- 拉伸链接：覆盖整张卡片作为点击/键盘导航目标，替代外层 div 伪链接 -->
-          <RouterLink class="title-link" :to="`/post/${props.id}`">
-            {{ props.title }}
+          <RouterLink class="title-link" :to="`/post/${post.id}`">
+            {{ post.title }}
             <span class="sr-only">— 阅读帖子</span>
           </RouterLink>
         </h4>
@@ -108,25 +100,25 @@ const openUser = (e) => {
         <div class="meta">
           <div class="meta-left">
             <span
-              v-if="props.username"
+              v-if="post.username"
               class="author"
-              :class="{ clickable: Boolean(props.userId) }"
+              :class="{ clickable: Boolean(post.userId) }"
               :title="
-                props.userId
-                  ? `查看 @${props.username} 的主页`
-                  : `@${props.username}`
+                post.userId
+                  ? `查看 @${post.username} 的主页`
+                  : `@${post.username}`
               "
               @click.stop="openUser"
             >
               <el-icon size="12"><User /></el-icon>
-              <span class="author-name">@{{ props.username }}</span>
+              <span class="author-name">@{{ post.username }}</span>
             </span>
-            <span class="time" :title="props.time">{{ timeText }}</span>
+            <span class="time" :title="post.createTime">{{ timeText }}</span>
           </div>
           <div class="stats">
             <span class="view">
               <el-icon size="14"><View /></el-icon>
-              <span class="count">{{ formattedCount(props.viewCount) }}</span>
+              <span class="count">{{ formattedCount(post.viewCount) }}</span>
             </span>
             <button
               class="like"

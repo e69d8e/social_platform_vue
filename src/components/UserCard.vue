@@ -5,20 +5,18 @@ import formattedCount from "@/utils/formattedCount";
 import { baseURL } from "@/utils/request";
 
 const props = defineProps({
-  id: { type: String, default: "" },
-  avatar: {
-    type: String,
-    default: `${baseURL.replace("/api", "")}/imgs/avatar/default.jpg`,
-  },
-  nickname: { type: String, default: "用户名" },
-  bio: { type: String, default: "个性签名" },
-  followed: { type: Boolean, default: false },
-  count: { type: Number, default: 0 },
+  /** 用户数据对象（列表接口返回的原样 item） */
+  user: { type: Object, required: true },
   // 入场动画延迟（ms），列表网格用它做级联错峰
   delay: { type: Number, default: 0 },
 });
 
-const fansCount = computed(() => formattedCount(props.count));
+// 字段缺失时退回展示兜底值，避免空字符串卡片
+const DEFAULT_AVATAR = `${baseURL.replace("/api", "")}/imgs/avatar/default.jpg`;
+const avatar = computed(() => props.user.avatar || DEFAULT_AVATAR);
+const nickname = computed(() => props.user.nickname || "用户名");
+const bio = computed(() => props.user.bio || "个性签名");
+const fansCount = computed(() => formattedCount(props.user.count || 0));
 </script>
 
 <template>
@@ -28,23 +26,23 @@ const fansCount = computed(() => formattedCount(props.count));
         <div class="card-header">
           <el-avatar
             :size="44"
-            :src="props.avatar"
+            :src="avatar"
             class="pointer"
-            @click="$router.push(`/user/${props.id}`)"
+            @click="$router.push(`/user/${user.id}`)"
           />
-          <div class="user-info" @click="$router.push(`/user/${props.id}`)">
-            <span class="nickname">{{ props.nickname }}</span>
+          <div class="user-info" @click="$router.push(`/user/${user.id}`)">
+            <span class="nickname">{{ nickname }}</span>
             <span class="fans-count">{{ fansCount }} 粉</span>
           </div>
           <FollowButton
-            :user-id="props.id"
-            :followed="props.followed"
+            :user-id="user.id"
+            :followed="user.followed"
             size="small"
           />
         </div>
       </template>
-      <div class="bio pointer" @click="$router.push(`/user/${props.id}`)">
-        {{ props.bio }}
+      <div class="bio pointer" @click="$router.push(`/user/${user.id}`)">
+        {{ bio }}
       </div>
     </el-card>
   </div>

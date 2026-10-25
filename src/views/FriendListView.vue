@@ -44,12 +44,7 @@ const {
     <CardGrid v-else :items="friendList">
       <template #item="{ item, index }">
         <UserCard
-          :id="item.id"
-          :avatar="item.avatar"
-          :nickname="item.nickname"
-          :bio="item.bio"
-          :followed="item.followed"
-          :count="item.count"
+          :user="item"
           :delay="index < 12 ? index * 40 : 0"
         />
       </template>
