@@ -8,12 +8,12 @@ import {
   logoutApi,
   getUserInfoApi,
 } from "@/api/userApi";
-import { uploadAvatar, checkFileHashApi } from "@/api/uploadApi";
+import { uploadAvatar } from "@/api/uploadApi";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import ImageCropper from "@/components/ImageCropper.vue";
 import compressImage from "@/utils/compressImage";
-import { computeFileHash } from "@/utils/fileHash";
+import { uploadWithDedup } from "@/utils/uploadDedup";
 import formattedCount from "@/utils/formattedCount";
 import { Male, Female, Plus } from "@element-plus/icons-vue";
 
@@ -128,20 +128,11 @@ const submitForm = async (formEl) => {
   loading.value = true;
   try {
     if (file.value) {
-      // 秒传：先按哈希预检，命中则直接复用服务端已有 URL，跳过文件传输
-      let avatarUrl = null;
-      try {
-        const hash = await computeFileHash(file.value);
-        const check = await checkFileHashApi(hash);
-        if (check.data.code === 1 && check.data.data) avatarUrl = check.data.data;
-      } catch {
-        // 预检失败（网络/接口异常）回退正常上传
-      }
-      if (!avatarUrl) {
-        const res = await uploadAvatar(file.value);
-        if (res.data.code !== 1) return;
-        avatarUrl = res.data.data;
-      }
+      // 秒传：命中哈希直接复用服务端已有 URL，跳过文件传输
+      const avatarUrl = await uploadWithDedup(file.value, {
+        upload: uploadAvatar,
+      });
+      if (!avatarUrl) return;
       ruleForm.avatar = avatarUrl;
       imageUrl.value = avatarUrl;
     }
@@ -292,18 +283,18 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
       </div>
 
       <!-- 管理功能与社交入口分区，避免混排误触 -->
-      <div v-if="[2, 3].includes(userInfo.authorityId)" class="admin-actions">
+      <div v-if="userStore.isModerator" class="admin-actions">
         <el-button size="small" @click="$router.push('/posts/banned')"
           >封禁帖子</el-button
         >
         <el-button
-          v-if="userInfo.authorityId === 2"
+          v-if="userStore.isAdmin"
           size="small"
           @click="$router.push('/users/banned')"
           >封禁用户</el-button
         >
         <el-button
-          v-if="userInfo.authorityId === 2"
+          v-if="userStore.isAdmin"
           size="small"
           @click="$router.push('/admin/dashboard')"
           >数据面板</el-button

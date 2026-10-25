@@ -18,28 +18,34 @@ import {
 import { useUserStore } from "@/stores/user";
 import { useThemeStore } from "@/stores/theme";
 import { signInApi } from "@/api/userApi";
-import {
-  getSearchHistoryApi,
-  deleteSearchHistoryApi,
-  clearSearchHistoryApi,
-} from "@/api/searchApi";
 import { getUnreadCountApi } from "@/api/messageApi";
 import { useRouter } from "vue-router";
 import { useSignStore } from "@/stores/sign";
 import formattedCount from "@/utils/formattedCount";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import { logoUrl } from "@/utils/request";
+import { useRequireLogin } from "@/composables/useRequireLogin";
+import { useSearchHistory } from "@/composables/useSearchHistory";
+import { HEADER_HISTORY_PAGE_SIZE } from "@/constants/pagination";
 
 const signStore = useSignStore();
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
 const themeStore = useThemeStore();
+const requireLogin = useRequireLogin();
 const searchContent = ref("");
 const historyVisible = ref(false);
-const historyList = ref([]);
-const historyLoading = ref(false);
 const mobileSearchVisible = ref(false);
+
+// 搜索历史：拉取/删除/清空逻辑收敛于 useSearchHistory
+const {
+  historyList,
+  historyLoading,
+  fetchHistory,
+  deleteHistory,
+  clearHistory,
+} = useSearchHistory({ pageSize: HEADER_HISTORY_PAGE_SIZE });
 
 const isHomeActive = computed(
   () => route.path === "/home" || route.path === "/",
@@ -55,57 +61,28 @@ const isAiChatActive = computed(() => route.path === "/aiChat");
 const isMyActive = computed(() => route.path === "/my");
 
 const goToFollowPosts = () => {
-  if (!userStore.userInfo.username) {
-    ElMessage.info("请先登录查看关注动态");
-    router.push("/login");
-    return;
-  }
+  if (!requireLogin("请先登录查看关注动态")) return;
   router.push("/followPosts");
 };
 
 const goToPublish = () => {
-  if (!userStore.userInfo.username) {
-    ElMessage.info("请先登录后再发帖");
-    router.push("/login");
-    return;
-  }
+  if (!requireLogin("请先登录后再发帖")) return;
   router.push("/publicPost");
 };
 
 const goToConversations = () => {
-  if (!userStore.userInfo.username) {
-    ElMessage.info("请先登录查看私信");
-    router.push("/login");
-    return;
-  }
+  if (!requireLogin("请先登录查看私信")) return;
   router.push("/conversations");
 };
 
 const goToMy = () => {
-  if (!userStore.userInfo.username) {
-    ElMessage.info("请先登录查看个人中心");
-    router.push("/login");
-    return;
-  }
+  if (!requireLogin("请先登录查看个人中心")) return;
   router.push("/my");
 };
 
-const fetchSearchHistory = async () => {
-  if (!userStore.userInfo.username) return;
-  historyLoading.value = true;
-  try {
-    const res = await getSearchHistoryApi({ pageNum: 1, pageSize: 10 });
-    historyList.value = res.data.data || [];
-  } catch {
-    // silently fail
-  } finally {
-    historyLoading.value = false;
-  }
-};
-
 const onSearchFocus = () => {
-  if (!userStore.userInfo.username) return;
-  fetchSearchHistory();
+  if (!userStore.isLoggedIn) return;
+  fetchHistory();
   historyVisible.value = true;
 };
 
@@ -115,32 +92,10 @@ const onSearchBlur = () => {
   }, 200);
 };
 
-const deleteHistoryItem = async (id) => {
-  try {
-    await deleteSearchHistoryApi(id);
-    historyList.value = historyList.value.filter((h) => h.id !== id);
-  } catch {
-    // silently fail
-  }
-};
-
-const clearAllHistory = async () => {
-  try {
-    await ElMessageBox.confirm(
-      "清空后无法恢复，确定清空全部搜索历史吗？",
-      "清空搜索历史",
-      { confirmButtonText: "清空", cancelButtonText: "取消", type: "warning" },
-    );
-  } catch {
-    return; // 用户取消
-  }
-  try {
-    await clearSearchHistoryApi();
-    historyList.value = [];
-  } catch {
-    // 错误提示已由请求拦截器统一处理
-  }
-};
+// 移动端搜索弹窗打开时补拉一次历史（桌面端靠 focus 触发）
+watch(mobileSearchVisible, (visible) => {
+  if (visible && userStore.isLoggedIn) fetchHistory();
+});
 
 const historySearch = (item) => {
   historyVisible.value = false;
@@ -324,7 +279,7 @@ watch(
                         size="small"
                         text
                         type="danger"
-                        @click="clearAllHistory"
+                        @click="clearHistory"
                       >
                         <el-icon><Delete /></el-icon>
                         清空
@@ -342,7 +297,7 @@ watch(
                       }}</span>
                       <el-icon
                         class="item-close"
-                        @mousedown.stop="deleteHistoryItem(item.id)"
+                        @mousedown.stop="deleteHistory(item.id)"
                         ><Close
                       /></el-icon>
                     </div>
@@ -518,7 +473,7 @@ watch(
                 size="small"
                 text
                 type="danger"
-                @click="clearAllHistory"
+                @click="clearHistory"
                 >清空</el-button
               >
             </div>

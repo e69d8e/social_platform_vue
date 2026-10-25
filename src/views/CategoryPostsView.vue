@@ -4,6 +4,7 @@ import { useRoute } from "vue-router";
 import { searchPostsApi } from "@/api/searchApi";
 import { getPostCategoryApi } from "@/api/postApi";
 import { usePageList } from "@/composables/usePageList";
+import { POST_PAGE_SIZE } from "@/constants/pagination";
 import PostCard from "@/components/PostCard.vue";
 import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
@@ -40,7 +41,7 @@ const {
   pageChange,
   reset,
 } = usePageList({
-  pageSize: 8,
+  pageSize: POST_PAGE_SIZE,
   fetchPage: ({ pageNum, pageSize }) =>
     searchPostsApi({
       pageNum,

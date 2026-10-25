@@ -20,6 +20,7 @@ import {
 import { debounce } from "lodash-es";
 import formatRelativeTime from "@/utils/formatTime";
 import { ElMessage } from "element-plus";
+import { CHAT_PAGE_SIZE } from "@/constants/pagination";
 
 const route = useRoute();
 const router = useRouter();
@@ -34,7 +35,7 @@ const historyFinished = ref(false);
 const appendingOld = ref(false);
 const isNearBottom = ref(true);
 const pageNum = ref(1);
-const pageSize = 20;
+const pageSize = CHAT_PAGE_SIZE;
 
 const conversationId = ref(route.params.conversationId);
 const isNewChat = ref(conversationId.value === "new");
@@ -144,7 +145,10 @@ watch(inputMessage, autoResize);
 // 用户留在对话里继续聊，而不是被踢回会话列表
 const adoptConversation = async () => {
   try {
-    const convRes = await getConversationsApi({ pageNum: 1, pageSize: 20 });
+    const convRes = await getConversationsApi({
+      pageNum: 1,
+      pageSize: CHAT_PAGE_SIZE,
+    });
     const payload = convRes.data.data;
     const convs = Array.isArray(payload) ? payload : payload?.list || [];
     const hit = convs.find(

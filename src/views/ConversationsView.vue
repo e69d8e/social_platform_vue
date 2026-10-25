@@ -5,6 +5,7 @@ import { getConversationsApi } from "@/api/messageApi";
 import { ArrowLeft, ChatDotRound, Loading } from "@element-plus/icons-vue";
 import { debounce } from "lodash-es";
 import formatRelativeTime from "@/utils/formatTime";
+import { CHAT_PAGE_SIZE } from "@/constants/pagination";
 
 const router = useRouter();
 const conversations = ref([]);
@@ -13,7 +14,7 @@ const firstLoading = ref(true);
 const loadError = ref(false);
 const finished = ref(false);
 const pageNum = ref(1);
-const pageSize = 20;
+const pageSize = CHAT_PAGE_SIZE;
 
 const fetchConversations = async () => {
   if (loading.value || finished.value) return;

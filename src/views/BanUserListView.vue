@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { getBanUsersApi, searchBanUsersApi } from "@/api/adminApi";
 import { usePageList } from "@/composables/usePageList";
+import { USER_PAGE_SIZE } from "@/constants/pagination";
 import UserCard from "@/components/UserCard.vue";
 import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
@@ -20,7 +21,7 @@ const {
   pageChange,
   reset,
 } = usePageList({
-  pageSize: 12,
+  pageSize: USER_PAGE_SIZE,
   fetchPage: ({ pageNum, pageSize }) => {
     const params = { pageNum, pageSize };
     const kw = keyword.value.trim();

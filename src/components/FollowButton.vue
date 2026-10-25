@@ -1,10 +1,10 @@
 <script setup>
 import { ref, watch } from "vue";
-import { useRouter } from "vue-router";
 import { throttle } from "lodash-es";
 import { followUserApi, unfollowUserApi } from "@/api/followApi";
 import { useUserStore } from "@/stores/user";
 import { ElMessage } from "element-plus";
+import { useRequireLogin } from "@/composables/useRequireLogin";
 
 const props = defineProps({
   userId: { type: [String, Number], required: true },
@@ -15,8 +15,8 @@ const props = defineProps({
 
 const emit = defineEmits(["change"]);
 
-const router = useRouter();
 const userStore = useUserStore();
+const requireLogin = useRequireLogin();
 const followed = ref(props.followed);
 const followLoading = ref(false);
 const isHovered = ref(false);
@@ -33,11 +33,7 @@ watch(
 // leading throttle + followLoading 双守卫：杜绝快速双击触发「关注→取关」双翻转
 const toggleFollow = throttle(
   async () => {
-    if (!userStore.userInfo?.username) {
-      ElMessage.info("请先登录后再关注");
-      router.push("/login");
-      return;
-    }
+    if (!requireLogin("请先登录后再关注")) return;
     if (String(userStore.userInfo.id) === String(props.userId)) {
       ElMessage.warning("不能关注自己");
       return;

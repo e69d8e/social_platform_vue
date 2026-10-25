@@ -5,6 +5,7 @@ import { ElMessage } from "element-plus";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { banUserApi, setReviewerApi, setUserApi } from "@/api/adminApi";
+import { useRequireLogin } from "@/composables/useRequireLogin";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import FollowButton from "@/components/FollowButton.vue";
@@ -14,13 +15,10 @@ import { Male, Female, Warning } from "@element-plus/icons-vue";
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const requireLogin = useRequireLogin();
 
 const handleSendMsg = () => {
-  if (!userStore.userInfo?.username) {
-    ElMessage.info("请先登录后再发送私信");
-    router.push("/login");
-    return;
-  }
+  if (!requireLogin("请先登录后再发送私信")) return;
   router.push("/chat/new?receiverId=" + route.params.id);
 };
 

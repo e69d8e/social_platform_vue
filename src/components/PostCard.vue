@@ -1,14 +1,11 @@
 <script setup>
-import { likeApi } from "@/api/postApi";
 import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
-import { throttle } from "lodash-es";
 import formattedCount from "@/utils/formattedCount";
 import { formatExactTime } from "@/utils/formatTime";
 import pickGlyphChar from "@/utils/glyph";
 import { Star, View, User } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
-import { useUserStore } from "@/stores/user";
+import { useLike } from "@/composables/useLike";
 
 const props = defineProps({
   id: { type: String, default: "" },
@@ -26,56 +23,13 @@ const props = defineProps({
 });
 
 const router = useRouter();
-const userStore = useUserStore();
 
-// ---- 点赞（乐观更新 + 失败回滚） ----
-const likeCount = ref(props.likeCount);
-const liked = ref(props.liked);
-// 每次成功切到「已点赞」时 +1，触发图标重挂载从而重放心跳动画
-const popTick = ref(0);
-
-watch(
-  () => props.liked,
-  (val) => {
-    liked.value = val;
-  },
-);
-watch(
-  () => props.likeCount,
-  (val) => {
-    likeCount.value = val;
-  },
-);
-
-// in-flight 守卫 + leading throttle：杜绝快速双击造成「赞→取消」双翻转
-let likeInFlight = false;
-const handleLike = async () => {
-  if (likeInFlight) return;
-  if (!userStore.userInfo?.username) {
-    ElMessage.info("请先登录后再点赞");
-    router.push("/login");
-    return;
-  }
-  const oldLiked = liked.value;
-  const oldCount = likeCount.value;
-  liked.value = !liked.value;
-  likeCount.value += liked.value ? 1 : -1;
-  if (liked.value) popTick.value += 1;
-  likeInFlight = true;
-  try {
-    const res = await likeApi(props.id);
-    if (res.data.code !== 1) throw new Error("操作失败");
-    // 数字与心跳动画已是即时反馈，信息流里不再弹 toast 轰炸
-  } catch {
-    liked.value = oldLiked;
-    likeCount.value = oldCount;
-    ElMessage.error("点赞失败，请重试");
-  } finally {
-    likeInFlight = false;
-  }
-};
-
-const like = throttle(handleLike, 800, { trailing: false });
+// ---- 点赞：乐观更新 + 失败回滚 + 防双击（逻辑收敛于 useLike） ----
+const { liked, likeCount, popTick, toggleLike } = useLike({
+  postId: () => props.id,
+  liked: () => props.liked,
+  likeCount: () => props.likeCount,
+});
 
 // ---- 纯文本摘要 ----
 const htmlToText = (html) => {
@@ -179,7 +133,7 @@ const openUser = (e) => {
               type="button"
               :aria-pressed="liked"
               :aria-label="liked ? '取消点赞' : '点赞'"
-              @click.stop="like"
+              @click.stop="toggleLike"
             >
               <el-icon
                 :key="popTick"

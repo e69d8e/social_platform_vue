@@ -5,6 +5,7 @@ import { getFollowListApi, getUserFollowListApi } from "@/api/followApi";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { useUserStore } from "@/stores/user";
 import { usePageList } from "@/composables/usePageList";
+import { USER_PAGE_SIZE } from "@/constants/pagination";
 import UserCard from "@/components/UserCard.vue";
 import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
@@ -43,7 +44,7 @@ const {
   pageChange,
   reset,
 } = usePageList({
-  pageSize: 12,
+  pageSize: USER_PAGE_SIZE,
   // 首屏加载由下方 watch(immediate) 统一触发，避免与 onMounted 重复请求
   immediate: false,
   fetchPage: ({ pageNum, pageSize }) => {

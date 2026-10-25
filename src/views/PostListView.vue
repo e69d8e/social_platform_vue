@@ -5,6 +5,7 @@ import { useUserStore } from "@/stores/user";
 import { getPostListApi } from "@/api/postApi";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { usePageList } from "@/composables/usePageList";
+import { POST_PAGE_SIZE } from "@/constants/pagination";
 import PostCard from "@/components/PostCard.vue";
 import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
@@ -43,7 +44,7 @@ const {
   pageChange,
   reset,
 } = usePageList({
-  pageSize: 8,
+  pageSize: POST_PAGE_SIZE,
   // 首屏加载由下方 watch(immediate) 统一触发，避免与 onMounted 重复请求
   immediate: false,
   fetchPage: ({ pageNum, pageSize }) =>

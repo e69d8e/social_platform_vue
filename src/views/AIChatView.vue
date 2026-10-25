@@ -260,6 +260,7 @@ import DOMPurify from "dompurify";
 import { baseURL, logoUrl } from "@/utils/request";
 import { authFetch } from "@/utils/authFetch";
 import { useUserStore } from "@/stores/user";
+import { AI_SESSION_PAGE_SIZE } from "@/constants/pagination";
 
 const userStore = useUserStore();
 
@@ -421,7 +422,7 @@ const rawMessages = ref([]); // 存储原始消息数据
 const inputMessage = ref("");
 const isLoading = ref(false);
 const currentPage = ref(1);
-const pageSize = 10;
+const pageSize = AI_SESSION_PAGE_SIZE;
 
 const suggestions = [
   "帮我写一段周报",

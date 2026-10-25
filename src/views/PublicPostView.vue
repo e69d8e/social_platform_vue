@@ -5,7 +5,7 @@ import {
   getPostIdApi,
   publishPostApi,
 } from "@/api/postApi";
-import { deletePostImgApi, uploadPostImgApi, checkFileHashApi } from "@/api/uploadApi";
+import { deletePostImgApi, uploadPostImgApi } from "@/api/uploadApi";
 import { useRouter, onBeforeRouteLeave } from "vue-router";
 import "@wangeditor/editor/dist/css/style.css";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
@@ -13,7 +13,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import PageHeader from "@/components/PageHeader.vue";
 import ImageCropper from "@/components/ImageCropper.vue";
 import compressImage from "@/utils/compressImage";
-import { computeFileHash } from "@/utils/fileHash";
+import { uploadWithDedup } from "@/utils/uploadDedup";
 import { Plus, Delete } from "@element-plus/icons-vue";
 
 const router = useRouter();
@@ -84,19 +84,11 @@ const onEditorImageCropped = async (croppedFile) => {
       ElMessage.error("图片压缩后仍超过 8MB，请更换图片");
       return;
     }
-    // 秒传：先按哈希预检，命中则直接复用服务端已有 URL，跳过文件传输
-    let url = null;
-    try {
-      const hash = await computeFileHash(compressed);
-      const check = await checkFileHashApi(hash, id.value);
-      if (check.data.code === 1 && check.data.data) url = check.data.data;
-    } catch {
-      // 预检失败（网络/接口异常）回退正常上传
-    }
-    if (!url) {
-      const res = await uploadPostImgApi(compressed, id.value);
-      url = res.data.data;
-    }
+    // 秒传：命中哈希直接复用服务端已有 URL，跳过文件传输
+    const url = await uploadWithDedup(compressed, {
+      postId: id.value,
+      upload: uploadPostImgApi,
+    });
     if (url) {
       hasUploadedImg.value = true;
       editorPendingInsertFn(url, "图片描述", url);
@@ -221,18 +213,11 @@ const publicPost = async () => {
   loading.value = true;
   try {
     if (file.value) {
-      // 秒传：先按哈希预检，命中则直接复用服务端已有 URL，跳过文件传输
-      try {
-        const hash = await computeFileHash(file.value);
-        const check = await checkFileHashApi(hash, id.value);
-        if (check.data.code === 1 && check.data.data) coverUrl = check.data.data;
-      } catch {
-        // 预检失败（网络/接口异常）回退正常上传
-      }
-      if (!coverUrl) {
-        const res = await uploadPostImgApi(file.value, id.value);
-        coverUrl = res?.data?.data || null;
-      }
+      // 秒传：命中哈希直接复用服务端已有 URL，跳过文件传输
+      coverUrl = await uploadWithDedup(file.value, {
+        postId: id.value,
+        upload: uploadPostImgApi,
+      });
       if (coverUrl) hasUploadedImg.value = true;
     }
     const res = await publishPostApi({

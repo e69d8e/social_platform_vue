@@ -1,6 +1,7 @@
 <script setup>
 import { getFriendListApi } from "@/api/followApi";
 import { usePageList } from "@/composables/usePageList";
+import { USER_PAGE_SIZE } from "@/constants/pagination";
 import UserCard from "@/components/UserCard.vue";
 import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
@@ -15,7 +16,7 @@ const {
   loading,
   pageChange,
 } = usePageList({
-  pageSize: 12,
+  pageSize: USER_PAGE_SIZE,
   fetchPage: ({ pageNum, pageSize }) =>
     getFriendListApi({ pageNum, pageSize }).then((res) => ({
       data: res.data.data,

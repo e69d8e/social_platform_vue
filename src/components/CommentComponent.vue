@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
-import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { addCommentApi, getCommentApi } from "@/api/commentApi";
 import { useUserStore } from "@/stores/user";
+import { useRequireLogin } from "@/composables/useRequireLogin";
 import {
   Delete,
   ArrowDown,
@@ -18,8 +18,8 @@ import { deleteCommentApi } from "@/api/reviewerApi";
 import { debounce } from "lodash-es";
 import formatRelativeTime from "@/utils/formatTime";
 
-const router = useRouter();
 const userStore = useUserStore();
+const requireLogin = useRequireLogin();
 const content = ref("");
 const isInputExpanded = ref(false);
 const floatingBarRef = ref(null);
@@ -172,11 +172,7 @@ onUnmounted(() => {
 const replyContext = ref({ parentId: 0, replyUserId: null, replyUserName: "" });
 
 const handleOpenInput = () => {
-  if (!userStore.userInfo?.username) {
-    ElMessage.info("请先登录后再发表评论");
-    router.push("/login");
-    return;
-  }
+  if (!requireLogin("请先登录后再发表评论")) return;
   isInputExpanded.value = true;
   nextTick(() => {
     textareaRef.value?.focus();
@@ -196,11 +192,7 @@ const scrollToComments = () => {
 };
 
 const reply = (parent, child) => {
-  if (!userStore.userInfo?.username) {
-    ElMessage.info("请先登录后再回复");
-    router.push("/login");
-    return;
-  }
+  if (!requireLogin("请先登录后再回复")) return;
   replyContext.value.parentId = parent.id;
   replyContext.value.replyUserId = child ? child.user.id : parent.user.id;
   replyContext.value.replyUserName = child
@@ -226,11 +218,7 @@ const resetComments = async () => {
 
 const submitComment = async () => {
   if (submitting.value) return;
-  if (!userStore.userInfo?.username) {
-    ElMessage.info("请先登录后再发表评论");
-    router.push("/login");
-    return;
-  }
+  if (!requireLogin("请先登录后再发表评论")) return;
   if (!content.value.trim()) {
     ElMessage.warning("评论不能为空");
     return;
@@ -335,10 +323,7 @@ const deleteComment = async (id) => {
               回复
             </button>
             <el-popconfirm
-              v-if="
-                ['REVIEWER', 'ADMIN'].includes(userStore.userInfo.authority) ||
-                [2, 3].includes(userStore.userInfo.authorityId)
-              "
+              v-if="userStore.isModerator"
               title="确认删除该评论?"
               @confirm="deleteComment(item.id)"
             >
@@ -379,11 +364,7 @@ const deleteComment = async (id) => {
                   回复
                 </button>
                 <el-popconfirm
-                  v-if="
-                    ['REVIEWER', 'ADMIN'].includes(
-                      userStore.userInfo.authority,
-                    ) || [2, 3].includes(userStore.userInfo.authorityId)
-                  "
+                  v-if="userStore.isModerator"
                   title="确认删除该评论?"
                   @confirm="deleteComment(child.id)"
                 >

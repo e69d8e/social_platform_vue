@@ -2,15 +2,14 @@
 import { ref, onMounted, computed } from "vue";
 import {
   getPostDetailApi,
-  likeApi,
   deletePostApi,
   recordPostViewApi,
 } from "@/api/postApi";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
-import { throttle } from "lodash-es";
 import DOMPurify from "dompurify";
+import { useLike } from "@/composables/useLike";
 import CommentComponent from "@/components/CommentComponent.vue";
 import BackButton from "@/components/BackButton.vue";
 import FollowButton from "@/components/FollowButton.vue";
@@ -107,35 +106,17 @@ onMounted(async () => {
   recordPostViewApi(route.params.id);
 });
 
-const likeLoading = ref(false);
-const toggleLike = throttle(
-  async () => {
-    if (!userStore.userInfo?.username) {
-      ElMessage.info("请先登录后再点赞");
-      router.push("/login");
-      return;
-    }
-    if (likeLoading.value) return;
-    likeLoading.value = true;
-    const oldLiked = post.value.liked;
-    const oldCount = post.value.likeCount;
-    post.value.liked = !post.value.liked;
-    post.value.likeCount += post.value.liked ? 1 : -1;
-    if (post.value.liked) likePop.value += 1;
-    try {
-      const res = await likeApi(post.value.id);
-      if (res.data.code !== 1) throw new Error("操作失败");
-    } catch {
-      post.value.liked = oldLiked;
-      post.value.likeCount = oldCount;
-      ElMessage.error("操作失败，请重试");
-    } finally {
-      likeLoading.value = false;
-    }
-  },
-  800,
-  { trailing: false },
-);
+// 点赞：乐观更新 + 失败回滚 + 防双击（逻辑收敛于 useLike）
+const {
+  liked: postLiked,
+  likeCount: likedCount,
+  popTick: likePop,
+  toggleLike,
+} = useLike({
+  postId: () => post.value.id,
+  liked: () => post.value.liked,
+  likeCount: () => post.value.likeCount,
+});
 
 const copyPostLink = () => {
   const url = window.location.href;
@@ -196,14 +177,12 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   }
 });
 
-const likeCount = computed(() => formattedCount(post.value.likeCount));
+const likeCount = computed(() => formattedCount(likedCount.value));
 const viewCount = computed(() => formattedCount(post.value.viewCount));
 const sanitizedContent = computed(() => DOMPurify.sanitize(post.value.content));
 
 // 文章头部章纹水印，取标题首字（空标题退回首字为「文」）
 const glyph = computed(() => pickGlyphChar(post.value.title));
-// 点赞心跳：切到已赞时 +1 触发图标重挂载重放心跳动画
-const likePop = ref(0);
 const timeText = computed(() => formatExactTime(post.value.createTime));
 </script>
 
@@ -267,10 +246,7 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               ><Delete
             /></el-icon>
             <el-popconfirm
-              v-if="
-                [2, 3].includes(userStore.userInfo.authorityId) ||
-                ['REVIEWER', 'ADMIN'].includes(userStore.userInfo.authority)
-              "
+              v-if="userStore.isModerator"
               :title="
                 post.enabled ? '确定封禁该文章吗？' : '确定解封该文章吗？'
               "
@@ -311,20 +287,20 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
             </button>
             <button
               class="like-pill"
-              :class="{ liked: post.liked }"
+              :class="{ liked: postLiked }"
               type="button"
-              :aria-pressed="post.liked"
+              :aria-pressed="postLiked"
               @click="toggleLike"
             >
               <el-icon
                 :key="likePop"
-                :class="{ pop: likePop > 0 && post.liked }"
+                :class="{ pop: likePop > 0 && postLiked }"
                 size="16"
               >
-                <StarFilled v-if="post.liked" />
+                <StarFilled v-if="postLiked" />
                 <Star v-else />
               </el-icon>
-              <span>{{ post.liked ? "已赞 " : "点赞 " }}{{ likeCount }}</span>
+              <span>{{ postLiked ? "已赞 " : "点赞 " }}{{ likeCount }}</span>
             </button>
           </div>
         </div>

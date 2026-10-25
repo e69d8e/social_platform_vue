@@ -1,12 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import {
-  searchPostsApi,
-  getSearchHistoryApi,
-  deleteSearchHistoryApi,
-  clearSearchHistoryApi,
-} from "@/api/searchApi";
+import { searchPostsApi } from "@/api/searchApi";
 import { searchUsersApi } from "@/api/userApi";
 import PostCard from "@/components/PostCard.vue";
 import UserCard from "@/components/UserCard.vue";
@@ -15,15 +10,19 @@ import BackButton from "@/components/BackButton.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
 import { Close, Delete, Search } from "@element-plus/icons-vue";
-import { ElMessage, ElMessageBox } from "element-plus";
-import { useUserStore } from "@/stores/user";
+import { ElMessage } from "element-plus";
+import { useSearchHistory } from "@/composables/useSearchHistory";
+import {
+  POST_PAGE_SIZE,
+  USER_PAGE_SIZE,
+  SEARCH_HISTORY_PAGE_SIZE,
+} from "@/constants/pagination";
 
-const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
 const pageNum = ref(1);
-const postPageSize = ref(8);
-const userPageSize = ref(12);
+const postPageSize = POST_PAGE_SIZE;
+const userPageSize = USER_PAGE_SIZE;
 const loading = ref(true);
 const tabLoading = ref(false);
 const postFetchedPage = ref(1);
@@ -37,53 +36,9 @@ const users = ref([]);
 const postTotal = ref(0);
 const usersTotal = ref(0);
 
-const historyList = ref([]);
-const historyLoading = ref(false);
-
-const fetchHistory = async () => {
-  if (!userStore.userInfo?.username) return;
-  historyLoading.value = true;
-  try {
-    const res = await getSearchHistoryApi({ pageNum: 1, pageSize: 20 });
-    historyList.value = res.data.data || [];
-  } catch {
-    // silently fail
-  } finally {
-    historyLoading.value = false;
-  }
-};
-
-const deleteHistory = async (id) => {
-  try {
-    await deleteSearchHistoryApi(id);
-    historyList.value = historyList.value.filter((h) => h.id !== id);
-  } catch {
-    ElMessage.error("删除失败");
-  }
-};
-
-const clearHistory = async () => {
-  try {
-    await ElMessageBox.confirm(
-      "清空后无法恢复，确定清空全部搜索历史吗？",
-      "清空搜索历史",
-      {
-        confirmButtonText: "清空",
-        cancelButtonText: "取消",
-        type: "warning",
-      },
-    );
-  } catch {
-    return; // 用户取消
-  }
-  try {
-    await clearSearchHistoryApi();
-    historyList.value = [];
-    ElMessage.success("已清空搜索历史");
-  } catch {
-    ElMessage.error("清空失败");
-  }
-};
+// 搜索历史：拉取/删除/清空逻辑收敛于 useSearchHistory
+const { historyList, historyLoading, fetchHistory, deleteHistory, clearHistory } =
+  useSearchHistory({ pageSize: SEARCH_HISTORY_PAGE_SIZE });
 
 const historyClick = (item) => {
   if (
