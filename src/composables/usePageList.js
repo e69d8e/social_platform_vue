@@ -1,7 +1,7 @@
 import { ref, onMounted } from "vue";
 
 /**
- * 分页列表通用逻辑：管理页码 / 总数 / 加载状态，负责首屏加载与翻页。
+ * 分页列表通用逻辑：管理页码 / 总数 / 加载状态 / 错误重试，负责首屏加载与翻页。
  * fetchPage 需返回 { data: 列表, total: 总数 }
  *
  * @param {Object} options
@@ -19,9 +19,11 @@ export function usePageList({
   const pageSizeRef = ref(pageSize);
   const total = ref(0);
   const loading = ref(true);
+  const isError = ref(false);
 
   const fetchData = async () => {
     loading.value = true;
+    isError.value = false;
     try {
       const res = await fetchPage({
         pageNum: pageNum.value,
@@ -29,6 +31,9 @@ export function usePageList({
       });
       list.value = res?.data ?? [];
       total.value = res?.total ?? 0;
+    } catch {
+      // 请求级错误提示已由拦截器统一弹出，这里只标记状态供页面渲染重试入口
+      isError.value = true;
     } finally {
       loading.value = false;
     }
@@ -45,6 +50,9 @@ export function usePageList({
     await fetchData();
   };
 
+  /** 失败重试：重新请求当前页 */
+  const retry = () => fetchData();
+
   onMounted(() => {
     if (immediate) fetchData();
   });
@@ -55,8 +63,10 @@ export function usePageList({
     pageSize: pageSizeRef,
     total,
     loading,
+    isError,
     fetchData,
     pageChange,
     reset,
+    retry,
   };
 }

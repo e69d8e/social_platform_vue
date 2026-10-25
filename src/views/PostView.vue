@@ -32,6 +32,8 @@ import { ElMessage } from "element-plus";
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
+// 评论区锚点：由 CommentComponent expose，避免按类名全局查询 DOM
+const commentSectionRef = ref(null);
 
 const post = ref({
   id: "",
@@ -127,10 +129,7 @@ const copyPostLink = () => {
 };
 
 const scrollToComments = () => {
-  const el = document.querySelector(".comment-section");
-  if (el) {
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  commentSectionRef.value?.scrollTo();
 };
 
 const deletePost = async () => {
@@ -369,7 +368,11 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       </template>
     </el-dialog>
 
-    <CommentComponent v-if="!loadFailed" :post-id="route.params.id" />
+    <CommentComponent
+      v-if="!loadFailed"
+      ref="commentSectionRef"
+      :post-id="route.params.id"
+    />
 
     <!-- 帖子正文图片大图全屏预览 -->
     <el-image-viewer

@@ -7,6 +7,7 @@ import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
+import LoadStatus from "@/components/LoadStatus.vue";
 
 const {
   list: friendList,
@@ -14,7 +15,9 @@ const {
   pageSize,
   total,
   loading,
+  isError,
   pageChange,
+  retry,
 } = usePageList({
   pageSize: USER_PAGE_SIZE,
   fetchPage: ({ pageNum, pageSize }) =>
@@ -32,7 +35,14 @@ const {
     <SkeletonGrid
       v-if="loading && friendList.length === 0"
       type="user"
-      :count="12"
+      :count="USER_PAGE_SIZE"
+    />
+
+    <LoadStatus
+      v-else-if="isError"
+      :is-error="true"
+      :has-items="false"
+      @retry="retry"
     />
 
     <el-empty v-else-if="friendList.length === 0" description="暂无好友">

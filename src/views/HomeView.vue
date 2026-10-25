@@ -7,6 +7,7 @@ import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import { useUserStore } from "@/stores/user";
 import { getIndexPostsApi } from "@/api/postApi";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { POST_PAGE_SIZE } from "@/constants/pagination";
 
 const userStore = useUserStore();
 
@@ -48,7 +49,7 @@ const {
     </div>
 
     <!-- 首屏骨架 -->
-    <SkeletonGrid v-if="loading && posts.length === 0" :count="8" />
+    <SkeletonGrid v-if="loading && posts.length === 0" :count="POST_PAGE_SIZE" />
 
     <template v-else>
       <el-empty v-if="posts.length === 0" description="还没有帖子">

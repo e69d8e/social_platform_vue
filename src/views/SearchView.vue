@@ -216,7 +216,7 @@ watch(activeName, (name) => {
           </span>
         </template>
 
-        <SkeletonGrid v-if="loading && posts.length === 0" :count="8" />
+        <SkeletonGrid v-if="loading && posts.length === 0" :count="POST_PAGE_SIZE" />
 
         <div v-else-if="posts.length === 0" class="empty-state">
           <el-empty description="暂无相关帖子" />
@@ -243,7 +243,7 @@ watch(activeName, (name) => {
         <SkeletonGrid
           v-if="loading && users.length === 0"
           type="user"
-          :count="12"
+          :count="USER_PAGE_SIZE"
         />
 
         <div v-else-if="users.length === 0" class="empty-state">

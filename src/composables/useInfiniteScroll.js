@@ -24,7 +24,7 @@ export function useInfiniteScroll({
   const loadingMore = ref(false);
   const noMore = ref(false);
   const isError = ref(false);
-  const cursor = ref({ lastId: Date.parse(new Date()), offset: 0 });
+  const cursor = ref({ lastId: Date.now(), offset: 0 });
   const seenIds = new Set();
 
   const append = async () => {
@@ -49,6 +49,16 @@ export function useInfiniteScroll({
   };
 
   const retry = async () => {
+    isError.value = false;
+    await append();
+  };
+
+  /** 重置到第一页重新加载（刷新列表场景） */
+  const reload = async () => {
+    items.value = [];
+    seenIds.clear();
+    cursor.value = { lastId: Date.now(), offset: 0 };
+    noMore.value = false;
     isError.value = false;
     await append();
   };
@@ -102,5 +112,6 @@ export function useInfiniteScroll({
     isError,
     loadMore: append,
     retry,
+    reload,
   };
 }

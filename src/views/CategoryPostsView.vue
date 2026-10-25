@@ -10,6 +10,7 @@ import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
+import LoadStatus from "@/components/LoadStatus.vue";
 
 const route = useRoute();
 
@@ -38,8 +39,10 @@ const {
   pageSize,
   total,
   loading,
+  isError,
   pageChange,
   reset,
+  retry,
 } = usePageList({
   pageSize: POST_PAGE_SIZE,
   fetchPage: ({ pageNum, pageSize }) =>
@@ -69,7 +72,14 @@ watch(
   <div class="list-page" v-loading="loading && postList.length > 0">
     <PageHeader :title="pageTitle" :total="total" unit="篇" />
 
-    <SkeletonGrid v-if="loading && postList.length === 0" :count="8" />
+    <SkeletonGrid v-if="loading && postList.length === 0" :count="POST_PAGE_SIZE" />
+
+    <LoadStatus
+      v-else-if="isError"
+      :is-error="true"
+      :has-items="false"
+      @retry="retry"
+    />
 
     <el-empty v-else-if="postList.length === 0" description="该分类暂无帖子">
       <el-button type="primary" round @click="$router.push('/home')"

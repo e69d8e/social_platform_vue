@@ -11,6 +11,7 @@ import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
+import LoadStatus from "@/components/LoadStatus.vue";
 
 const route = useRoute();
 const userStore = useUserStore();
@@ -41,8 +42,10 @@ const {
   pageSize,
   total,
   loading,
+  isError,
   pageChange,
   reset,
+  retry,
 } = usePageList({
   pageSize: POST_PAGE_SIZE,
   // 首屏加载由下方 watch(immediate) 统一触发，避免与 onMounted 重复请求
@@ -70,7 +73,14 @@ watch(
   <div class="list-page" v-loading="loading && postList.length > 0">
     <PageHeader :title="pageTitle" :total="total" unit="篇" />
 
-    <SkeletonGrid v-if="loading && postList.length === 0" :count="8" />
+    <SkeletonGrid v-if="loading && postList.length === 0" :count="POST_PAGE_SIZE" />
+
+    <LoadStatus
+      v-else-if="isError"
+      :is-error="true"
+      :has-items="false"
+      @retry="retry"
+    />
 
     <el-empty
       v-else-if="postList.length === 0"

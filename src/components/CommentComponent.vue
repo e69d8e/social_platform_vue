@@ -32,8 +32,15 @@ const isInputExpanded = ref(false);
 const submitting = ref(false);
 const deletingId = ref(null);
 const inputBarRef = ref(null);
+const rootRef = ref(null);
 
 const replyContext = ref({ parentId: 0, replyUserId: null, replyUserName: "" });
+
+/** 供父组件（帖子详情页「评论」按钮）滚动到评论区 */
+const scrollTo = () => {
+  rootRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+defineExpose({ scrollTo });
 
 const getComments = async () => {
   if (noMore.value) return;
@@ -129,10 +136,7 @@ const handleCancelInput = () => {
 };
 
 const scrollToComments = () => {
-  const el = document.querySelector(".comment-section");
-  if (el) {
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  rootRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
 const reply = (parent, child) => {
@@ -213,7 +217,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="comment-section">
+  <div ref="rootRef" class="comment-section">
     <h3 class="comment-title">
       评论
       <span class="comment-count">{{ totalCount }}</span>

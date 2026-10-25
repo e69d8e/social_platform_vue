@@ -9,6 +9,7 @@ import PageHeader from "@/components/PageHeader.vue";
 import CardGrid from "@/components/CardGrid.vue";
 import ListPagination from "@/components/ListPagination.vue";
 import SearchInput from "@/components/SearchInput.vue";
+import LoadStatus from "@/components/LoadStatus.vue";
 
 const keyword = ref("");
 
@@ -18,8 +19,10 @@ const {
   pageSize,
   total,
   loading,
+  isError,
   pageChange,
   reset,
+  retry,
 } = usePageList({
   pageSize: POST_PAGE_SIZE,
   fetchPage: ({ pageNum, pageSize }) => {
@@ -48,7 +51,14 @@ const handleSearch = () => reset();
       @search="handleSearch"
     />
 
-    <SkeletonGrid v-if="loading && postList.length === 0" :count="8" />
+    <SkeletonGrid v-if="loading && postList.length === 0" :count="POST_PAGE_SIZE" />
+
+    <LoadStatus
+      v-else-if="isError"
+      :is-error="true"
+      :has-items="false"
+      @retry="retry"
+    />
 
     <el-empty v-else-if="postList.length === 0" description="暂无封禁帖子" />
 
