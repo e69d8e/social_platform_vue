@@ -63,7 +63,8 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
 </script>
 
 <template>
-  <el-header class="header" height="auto">
+  <!-- 纯 header 元素：避免依赖 el-container 的子组件名判断（AppHeader 包装后不被识别为纵向布局） -->
+  <header class="header">
     <div class="header-inner">
       <!-- 左侧：Logo + 签到 -->
       <div class="header-left">
@@ -85,9 +86,7 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
           :disabled="signing"
           @click="sign"
         >
-          <el-tag size="small" effect="plain" type="warning"
-            >点击签到</el-tag
-          >
+          <el-tag size="small" effect="plain" type="warning">点击签到</el-tag>
           <span class="sign-text"
             >本月已连续签到 {{ signStore.signDay }} 天</span
           >
@@ -218,7 +217,7 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
         </div>
       </div>
     </div>
-  </el-header>
+  </header>
 </template>
 
 <style lang="scss" scoped>

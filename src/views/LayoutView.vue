@@ -9,26 +9,24 @@ const { unreadCount } = useUnreadMessages();
 
 <template>
   <div class="layout">
-    <el-container>
-      <AppHeader :unread-count="unreadCount" />
+    <AppHeader :unread-count="unreadCount" />
 
-      <el-main class="main">
-        <el-row>
-          <el-col :xs="0" :sm="1" :md="1" :lg="2" :xl="3" />
-          <el-col :xs="24" :sm="22" :md="22" :lg="20" :xl="18">
-            <router-view v-slot="{ Component, route }">
-              <Transition name="page" mode="out-in">
-                <component :is="Component" :key="route.path" />
-              </Transition>
-            </router-view>
-          </el-col>
-          <el-col :xs="0" :sm="1" :md="1" :lg="2" :xl="3" />
-        </el-row>
-      </el-main>
+    <main class="main">
+      <el-row>
+        <el-col :xs="0" :sm="1" :md="1" :lg="2" :xl="3" />
+        <el-col :xs="24" :sm="22" :md="22" :lg="20" :xl="18">
+          <router-view v-slot="{ Component, route }">
+            <Transition name="page" mode="out-in">
+              <component :is="Component" :key="route.path" />
+            </Transition>
+          </router-view>
+        </el-col>
+        <el-col :xs="0" :sm="1" :md="1" :lg="2" :xl="3" />
+      </el-row>
+    </main>
 
-      <!-- 移动端底部导航栏 (<768px 显示) -->
-      <MobileBottomNav :unread-count="unreadCount" />
-    </el-container>
+    <!-- 移动端底部导航栏 (<768px 显示) -->
+    <MobileBottomNav :unread-count="unreadCount" />
   </div>
 </template>
 
@@ -38,6 +36,7 @@ const { unreadCount } = useUnreadMessages();
   background: var(--bg-page);
 
   .main {
+    display: block;
     padding: 0;
     min-height: calc(100vh - 64px);
     background: var(--bg-page);
