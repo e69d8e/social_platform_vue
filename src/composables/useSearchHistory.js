@@ -47,7 +47,11 @@ export function useSearchHistory({ pageSize = 10 } = {}) {
       await ElMessageBox.confirm(
         "清空后无法恢复，确定清空全部搜索历史吗？",
         "清空搜索历史",
-        { confirmButtonText: "清空", cancelButtonText: "取消", type: "warning" },
+        {
+          confirmButtonText: "清空",
+          cancelButtonText: "取消",
+          type: "warning",
+        },
       );
     } catch {
       return; // 用户取消

@@ -51,7 +51,10 @@ const handleSearch = () => reset();
       @search="handleSearch"
     />
 
-    <SkeletonGrid v-if="loading && postList.length === 0" :count="POST_PAGE_SIZE" />
+    <SkeletonGrid
+      v-if="loading && postList.length === 0"
+      :count="POST_PAGE_SIZE"
+    />
 
     <LoadStatus
       v-else-if="isError"
@@ -64,10 +67,7 @@ const handleSearch = () => reset();
 
     <CardGrid v-else :items="postList">
       <template #item="{ item, index }">
-        <PostCard
-          :post="item"
-          :delay="index < 12 ? index * 40 : 0"
-        />
+        <PostCard :post="item" :delay="index < 12 ? index * 40 : 0" />
       </template>
     </CardGrid>
 

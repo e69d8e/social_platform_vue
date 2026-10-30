@@ -1,6 +1,5 @@
 import { ref, watch } from "vue";
 import { starApi } from "@/api/starApi";
-import { ElMessage } from "element-plus";
 import { useRequireLogin } from "@/composables/useRequireLogin";
 
 /**
@@ -37,11 +36,11 @@ export function useStar({ postId, starred, starCount } = {}) {
     inFlight = true;
     try {
       const res = await starApi(postId());
-      if (res.data.code !== 1) throw new Error("操作失败");
+      // 业务失败提示由拦截器统一给出，这里只负责回滚
+      if (res.data.code !== 1) throw new Error(res.data.message || "操作失败");
     } catch {
       isStarred.value = oldStarred;
       count.value = oldCount;
-      ElMessage.error("收藏操作失败，请重试");
     } finally {
       inFlight = false;
     }

@@ -50,9 +50,9 @@ const toggleFollow = throttle(
         res.data.message || (followed.value ? "关注成功" : "已取消关注"),
       );
       emit("change", followed.value);
-    } catch (e) {
+    } catch {
+      // 提示已由拦截器统一给出，这里只回滚 UI 状态
       followed.value = oldFollowed;
-      ElMessage.error(e.message || "操作失败，请重试");
     } finally {
       followLoading.value = false;
     }

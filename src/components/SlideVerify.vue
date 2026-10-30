@@ -5,20 +5,24 @@ import { ArrowRight, Check, RefreshRight } from "@element-plus/icons-vue";
 const props = defineProps({
   w: { type: Number, default: 310 },
   h: { type: Number, default: 155 },
-  l: { type: Number, default: 42 },
-  r: { type: Number, default: 10 },
   sliderText: { type: String, default: "向右滑动完成验证" },
   // 后端渲染的图片：缺口位置由服务端掌握，前端不再知道答案
   bgImage: { type: String, default: "" },
   blockImage: { type: String, default: "" },
+  /** 缺口上边缘的纵坐标 */
   y: { type: Number, default: 0 },
+  // 拼图块几何由服务端下发：形状带内外圆弧，画布必须覆盖完整包围盒，
+  // 前端按固定边长推导会把拼图块右侧凸起/底部切掉（历史 bug）
+  blockWidth: { type: Number, default: 93 },
+  blockHeight: { type: Number, default: 105 },
+  /** 方形主体左边缘在拼图块画布内的偏移 */
+  blockOffsetX: { type: Number, default: 5 },
+  /** 方形主体上边缘在拼图块画布内的偏移 */
+  blockOffsetY: { type: Number, default: 20 },
 });
 
 const emit = defineEmits(["success", "refresh"]);
 
-// 与后端 SlideCaptchaImageUtil 对应：L = l + r*2 + 3，拼图块顶边 = y - r*2 - 1
-const pieceSize = computed(() => props.l + props.r * 2 + 3);
-const pieceTop = computed(() => props.y - props.r * 2 - 1);
 // 拖动距离低于该值视为误触，不提交校验（不消耗验证码）
 const MIN_DRAG = 10;
 
@@ -32,6 +36,18 @@ const sliderState = reactive({
   startTime: 0,
   trail: [],
 });
+
+// 服务端未下发几何时（旧缓存/降级）退回默认值，避免渲染成 0×0
+const pickGeom = (value, fallback) =>
+  Number.isFinite(value) && value > 0 ? value : fallback;
+
+/** 拼图块定位：把画布内部的主体方框对齐到 (blockLeft, y) */
+const blockStyle = computed(() => ({
+  left: `${sliderState.blockLeft - pickGeom(props.blockOffsetX, 5)}px`,
+  top: `${props.y - pickGeom(props.blockOffsetY, 20)}px`,
+  width: `${pickGeom(props.blockWidth, 93)}px`,
+  height: `${pickGeom(props.blockHeight, 105)}px`,
+}));
 
 const reset = () => {
   sliderState.status = "default";
@@ -64,8 +80,9 @@ const updatePosition = (clientX, clientY) => {
   const maxMove = props.w - 40;
   const moveX = Math.max(0, Math.min(clientX - sliderState.startX, maxMove));
   sliderState.sliderLeft = moveX;
-  const blockLeft = ((props.w - 40 - 20) / (props.w - 40)) * moveX;
-  sliderState.blockLeft = blockLeft;
+  // 拼图块与滑块 1:1 跟随指针：之前是 250/270 的缩放，块会「跟不上手指」，
+  // 视觉上要对准缺口得先把手指移过头，操作手感别扭
+  sliderState.blockLeft = moveX;
   if (clientY !== undefined) {
     sliderState.trail.push(clientY - sliderState.startY);
   }
@@ -144,12 +161,7 @@ onBeforeUnmount(() => {
         v-if="blockImage"
         :src="'data:image/png;base64,' + blockImage"
         class="block-img"
-        :style="{
-          left: `${sliderState.blockLeft}px`,
-          top: `${pieceTop}px`,
-          width: `${pieceSize}px`,
-          height: `${pieceSize}px`,
-        }"
+        :style="blockStyle"
         alt=""
         draggable="false"
       />

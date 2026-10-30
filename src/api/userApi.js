@@ -26,9 +26,9 @@ export const updateUserInfoApi = (data) => {
   return request.put("/user/profile", data);
 };
 
-// 修改密码
-export const updatePasswordApi = (password) => {
-  return request.put("/user/password", { password });
+// 修改密码（需携带原密码，服务端会校验操作者身份）
+export const updatePasswordApi = (password, oldPassword) => {
+  return request.put("/user/password", { password, oldPassword });
 };
 
 // 签到
@@ -41,12 +41,5 @@ export const getSignInDaysApi = () => {
   return request.get("/user/sign");
 };
 
-// 分页查询帖子
-export const getPostsApi = (params) => {
-  return request.get("/user/list/post", { params });
-};
-
-// 分页查询用户
-export const searchUsersApi = (params) => {
-  return request.get("/user/list/user", { params });
-};
+// 说明：帖子/用户搜索统一走 @/api/searchApi（searchPostsApi / searchUsersApi），
+// 避免同一后端接口在两处重复定义后参数不一致。

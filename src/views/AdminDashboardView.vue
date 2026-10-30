@@ -66,7 +66,6 @@ const fetchData = async () => {
     dailyActiveUsers.value = data.dailyActiveUsers || [];
   } catch {
     loadError.value = true;
-    ElMessage.error("数据加载失败，请重试");
   } finally {
     loading.value = false;
   }

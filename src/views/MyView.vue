@@ -9,6 +9,9 @@ import {
   getUserInfoApi,
 } from "@/api/userApi";
 import { uploadAvatar } from "@/api/uploadApi";
+import { getStarListApi } from "@/api/starApi";
+import { useSignStore } from "@/stores/sign";
+import { disconnect } from "@/utils/websocket";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import ImageCropper from "@/components/ImageCropper.vue";
@@ -28,10 +31,12 @@ import {
   DataAnalysis,
   CircleCheck,
   Edit,
+  CollectionTag,
 } from "@element-plus/icons-vue";
 
 const router = useRouter();
 const userStore = useUserStore();
+const signStore = useSignStore();
 
 // 始终跟随 store，避免 setInfo 整体替换后本地引用失效
 const userInfo = computed(() => userStore.userInfo);
@@ -53,6 +58,17 @@ const cropperFile = ref(null);
 
 const ruleForm = reactive({ ...userStore.userInfo });
 
+// 收藏总数：给「我的收藏」入口补一个可读的量化信息（拉 1 条只为拿 total）
+const starTotal = ref(null);
+const loadStarTotal = async () => {
+  try {
+    const res = await getStarListApi({ pageNum: 1, pageSize: 1 });
+    if (res.data.code === 1) starTotal.value = Number(res.data.total ?? 0);
+  } catch {
+    // 计数失败不影响入口本身可用，沿用兜底文案
+  }
+};
+
 const getUserInfo = async () => {
   const res = await getUserInfoApi();
   const data = res.data.data;
@@ -62,6 +78,7 @@ const getUserInfo = async () => {
 };
 
 onMounted(async () => {
+  loadStarTotal();
   try {
     await getUserInfo();
   } finally {
@@ -145,18 +162,40 @@ const submitForm = async (formEl) => {
       ruleForm.avatar = avatarUrl;
       imageUrl.value = avatarUrl;
     }
-    const res = await updateUserInfoApi({ ...ruleForm });
+    const res = await updateUserInfoApi({
+      ...ruleForm,
+      // 服务端据此清理被替换下来的旧头像/旧背景图，否则 MinIO 里的文件会长期堆积
+      oldAvatar: userStore.userInfo.avatar || "",
+      oldBackgroundUrl: userStore.userInfo.backgroundUrl || "",
+    });
     if (res.data.code !== 1) return;
     userStore.setInfo({ ...userStore.userInfo, ...ruleForm });
     file.value = null;
+    if (previewUrl.value) {
+      URL.revokeObjectURL(previewUrl.value);
+      previewUrl.value = "";
+    }
     ElMessage.success(res.data.message || "个人资料保存成功");
   } finally {
     loading.value = false;
   }
 };
 
-const passwordForm = ref({ password: "", confirmPassword: "" });
+const passwordForm = ref({
+  oldPassword: "",
+  password: "",
+  confirmPassword: "",
+});
 const passwordRules = reactive({
+  oldPassword: [
+    {
+      validator: (rule, value, callback) => {
+        if (!value) return callback(new Error("请输入原密码"));
+        callback();
+      },
+      trigger: "blur",
+    },
+  ],
   password: [
     {
       validator: (rule, value, callback) => {
@@ -192,11 +231,24 @@ const changePassword = async (formEl) => {
 
   loading.value = true;
   try {
-    const res = await updatePasswordApi(passwordForm.value.password);
+    const res = await updatePasswordApi(
+      passwordForm.value.password,
+      passwordForm.value.oldPassword,
+    );
     if (res.data.code === 1) {
-      ElMessage.success(res.data.message || "密码修改成功");
       dialogFormVisible.value = false;
-      passwordForm.value = { password: "", confirmPassword: "" };
+      passwordForm.value = {
+        oldPassword: "",
+        password: "",
+        confirmPassword: "",
+      };
+      // 服务端已注销全部会话（refreshToken 清空 + accessToken 拉黑），
+      // 这里必须同步清本地登录态并跳登录页，否则用户会停留在「假登录」状态反复 401
+      userStore.clearSession();
+      signStore.removeSignDay();
+      disconnect();
+      ElMessage.success("密码已修改，请使用新密码重新登录");
+      router.replace("/login");
     }
   } finally {
     loading.value = false;
@@ -206,14 +258,21 @@ const changePassword = async (formEl) => {
 const logout = async () => {
   try {
     const res = await logoutApi();
+    // 无论是服务端注销成功还是令牌已失效，本地都必须清干净，不能停在「半登录」状态
     if (res.data.code !== 1) return;
-    userStore.removeToken();
-    userStore.removeInfo();
+    userStore.clearSession();
+    signStore.removeSignDay();
+    disconnect();
     dialogVisible.value = false;
     ElMessage.success(res.data.message || "已退出登录");
-    router.push("/login");
+    router.replace("/login");
   } catch {
-    // handled by interceptor
+    // 网络异常时也允许本地退出，避免用户被卡住
+    userStore.clearSession();
+    signStore.removeSignDay();
+    disconnect();
+    dialogVisible.value = false;
+    router.replace("/login");
   }
 };
 
@@ -453,6 +512,20 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           </div>
         </div>
 
+        <div class="social-entry-card" @click="$router.push('/favorites')">
+          <div class="entry-icon star-icon">
+            <el-icon :size="24"><CollectionTag /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">我的收藏</span>
+            <span class="entry-desc">{{
+              starTotal === null
+                ? "收藏的帖子会保存在这里，仅自己可见"
+                : `共 ${starTotal} 篇帖子已收藏，仅自己可见`
+            }}</span>
+          </div>
+        </div>
+
         <div class="social-entry-card" @click="$router.push('/friends')">
           <div class="entry-icon friend-icon">
             <el-icon :size="24"><Share /></el-icon>
@@ -546,6 +619,14 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
         ref="passwordFormRef"
         label-position="top"
       >
+        <el-form-item label="原密码" prop="oldPassword">
+          <el-input
+            type="password"
+            v-model="passwordForm.oldPassword"
+            show-password
+            placeholder="请输入当前登录密码"
+          />
+        </el-form-item>
         <el-form-item label="请输入新密码" prop="password">
           <el-input
             type="password"
@@ -937,6 +1018,11 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 
     &.fan-icon {
       background: rgba(217, 148, 38, 0.12);
+      color: var(--el-color-warning);
+    }
+
+    &.star-icon {
+      background: rgba(230, 162, 60, 0.14);
       color: var(--el-color-warning);
     }
 

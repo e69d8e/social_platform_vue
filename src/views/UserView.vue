@@ -160,18 +160,22 @@ const posts = ref([]);
 const postsTotal = ref(0);
 const postsPageNum = ref(1);
 const postsLoading = ref(false);
+// 已加载标记：用「数组是否为空」判断会导致空列表用户每切一次 Tab 就重打一次接口
+const postsLoaded = ref(false);
 
 // ---- 关注列表状态 ----
 const followings = ref([]);
 const followingsTotal = ref(0);
 const followingsPageNum = ref(1);
 const followingsLoading = ref(false);
+const followingsLoaded = ref(false);
 
 // ---- 粉丝列表状态 ----
 const followers = ref([]);
 const followersTotal = ref(0);
 const followersPageNum = ref(1);
 const followersLoading = ref(false);
+const followersLoaded = ref(false);
 
 // ---- 获取用户基本信息 ----
 const loadUserInfo = async () => {
@@ -222,9 +226,10 @@ const loadPosts = async () => {
       postsTotal.value = Number(res.data.total ?? 0);
     }
   } catch {
-    ElMessage.error("加载帖子列表失败");
+    // 错误提示由拦截器统一给出
   } finally {
     postsLoading.value = false;
+    postsLoaded.value = true;
   }
 };
 
@@ -273,9 +278,10 @@ const loadFollowings = async () => {
       followingsTotal.value = Number(res.data.total ?? 0);
     }
   } catch {
-    ElMessage.error("加载关注列表失败");
+    // 错误提示由拦截器统一给出
   } finally {
     followingsLoading.value = false;
+    followingsLoaded.value = true;
   }
 };
 
@@ -302,20 +308,21 @@ const loadFollowers = async () => {
       followersTotal.value = Number(res.data.total ?? 0);
     }
   } catch {
-    ElMessage.error("加载粉丝列表失败");
+    // 错误提示由拦截器统一给出
   } finally {
     followersLoading.value = false;
+    followersLoaded.value = true;
   }
 };
 
 // Tab 切换时按需加载
 const switchTab = (tab) => {
   activeTab.value = tab;
-  if (tab === "posts" && posts.value.length === 0) {
+  if (tab === "posts" && !postsLoaded.value) {
     loadPosts();
-  } else if (tab === "follow" && followings.value.length === 0) {
+  } else if (tab === "follow" && !followingsLoaded.value) {
     loadFollowings();
-  } else if (tab === "fans" && followers.value.length === 0) {
+  } else if (tab === "fans" && !followersLoaded.value) {
     loadFollowers();
   }
 };
@@ -465,7 +472,12 @@ const submitEditForm = async () => {
       }
     }
 
-    const res = await updateUserInfoApi({ ...editForm });
+    const res = await updateUserInfoApi({
+      ...editForm,
+      // 通知服务端清理被替换的旧头像文件
+      oldAvatar: userInfo.value.avatar || "",
+      oldBackgroundUrl: userInfo.value.backgroundUrl || "",
+    });
     if (res.data.code === 1) {
       Object.assign(userInfo.value, editForm);
       userStore.setInfo({ ...userStore.userInfo, ...editForm });
@@ -508,6 +520,9 @@ watch(
     posts.value = [];
     followings.value = [];
     followers.value = [];
+    postsLoaded.value = false;
+    followingsLoaded.value = false;
+    followersLoaded.value = false;
     loadUserInfo().then(() => {
       loadPosts();
     });
@@ -530,18 +545,10 @@ watch(previewAsOther, (isOther) => {
       }
     }
   } else {
-    if (
-      isSelf.value &&
-      activeTab.value === "follow" &&
-      followings.value.length === 0
-    ) {
+    if (isSelf.value && activeTab.value === "follow") {
       loadFollowings();
     }
-    if (
-      isSelf.value &&
-      activeTab.value === "fans" &&
-      followers.value.length === 0
-    ) {
+    if (isSelf.value && activeTab.value === "fans") {
       loadFollowers();
     }
   }

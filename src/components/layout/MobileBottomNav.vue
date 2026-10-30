@@ -76,11 +76,7 @@ const goToMy = () => {
       <span class="tab-label">关注</span>
     </button>
 
-    <button
-      class="bottom-tab publish-tab"
-      type="button"
-      @click="goToPublish"
-    >
+    <button class="bottom-tab publish-tab" type="button" @click="goToPublish">
       <div class="publish-circle">
         <el-icon :size="20"><Plus /></el-icon>
       </div>

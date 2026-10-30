@@ -6,7 +6,7 @@ import {
   recordPostViewApi,
   updatePostPrivacyApi,
 } from "@/api/postApi";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
 import DOMPurify from "dompurify";
@@ -19,8 +19,6 @@ import formattedCount from "@/utils/formattedCount";
 import { formatExactTime } from "@/utils/formatTime";
 import pickGlyphChar from "@/utils/glyph";
 import {
-  Star,
-  StarFilled,
   CollectionTag,
   View,
   Delete,
@@ -32,11 +30,14 @@ import {
   Lock,
   Unlock,
 } from "@element-plus/icons-vue";
+import HeartIcon from "@/components/icons/HeartIcon.vue";
+import { useGoBack } from "@/composables/useGoBack";
 import { ElMessage } from "element-plus";
 
 const userStore = useUserStore();
 const route = useRoute();
-const router = useRouter();
+// 详情页可能是落地页（无站内历史），删除/返回都走统一回退策略
+const goBack = useGoBack("/home");
 // 评论区锚点：由 CommentComponent expose，避免按类名全局查询 DOM
 const commentSectionRef = ref(null);
 
@@ -103,17 +104,25 @@ const openViewer = (index = 0) => {
 const getPost = async (id) => {
   try {
     const res = await getPostDetailApi(id);
+    // 业务失败（帖子已删除/私密/被封禁）时后端仍返回 HTTP 200，
+    // 这里必须校验 code，否则 data 为 null 会演变成白屏而不是「不存在」态
+    if (res.data.code !== 1 || !res.data.data) {
+      loadFailed.value = true;
+      return false;
+    }
     post.value = res.data.data;
+    return true;
   } catch {
     loadFailed.value = true;
-    ElMessage.error("加载帖子失败");
+    return false;
   }
 };
 
 onMounted(async () => {
-  await getPost(route.params.id);
+  const ok = await getPost(route.params.id);
   loading.value = false;
-  recordPostViewApi(route.params.id);
+  // 只有读到了帖子才计浏览，不存在的帖子不该被计入
+  if (ok) recordPostViewApi(route.params.id);
 });
 
 // 点赞：乐观更新 + 失败回滚 + 防双击（逻辑收敛于 useLike）
@@ -181,7 +190,8 @@ const deletePost = async () => {
     }
     ElMessage.success(res.data.message || "删除成功");
     dialogVisible.value = false;
-    router.back();
+    // 删除后回到上一页；若详情页是落地页则回首页，避免停在已删除的空白页
+    goBack();
   } catch {
     ElMessage.error("删除失败，请重试");
   } finally {
@@ -197,10 +207,11 @@ const banPost = async () => {
       ElMessage.success(
         res.data.message || (post.value.enabled ? "封禁成功" : "解封成功"),
       );
+      // 封禁后帖子会从列表消失，回到列表页比留在原地更符合预期
+      goBack();
     }
-    router.back();
   } catch {
-    ElMessage.error("操作失败，请重试");
+    // 提示由拦截器统一给出
   }
 };
 
@@ -373,16 +384,15 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               :class="{ liked: postLiked }"
               type="button"
               :aria-pressed="postLiked"
+              :title="postLiked ? '取消点赞' : '点赞'"
               @click="toggleLike"
             >
-              <el-icon
+              <HeartIcon
                 :key="likePop"
                 :class="{ pop: likePop > 0 && postLiked }"
+                :filled="postLiked"
                 size="16"
-              >
-                <StarFilled v-if="postLiked" />
-                <Star v-else />
-              </el-icon>
+              />
               <span>{{ postLiked ? "已赞 " : "点赞 " }}{{ likeCount }}</span>
             </button>
           </div>

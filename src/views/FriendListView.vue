@@ -53,10 +53,7 @@ const {
 
     <CardGrid v-else :items="friendList">
       <template #item="{ item, index }">
-        <UserCard
-          :user="item"
-          :delay="index < 12 ? index * 40 : 0"
-        />
+        <UserCard :user="item" :delay="index < 12 ? index * 40 : 0" />
       </template>
     </CardGrid>
 

@@ -27,6 +27,12 @@ const userStore = useUserStore();
 const expanded = ref(false);
 const COLLAPSE_COUNT = 3;
 
+// 可删除：管理员/审核员，或评论作者本人
+const canDelete = (comment) =>
+  userStore.isModerator ||
+  (comment?.user?.id != null &&
+    String(comment.user.id) === String(userStore.userInfo.id));
+
 const getVisibleChildren = computed(() => {
   const children = props.item.children || [];
   if (children.length <= COLLAPSE_COUNT || expanded.value) return children;
@@ -68,8 +74,8 @@ const getVisibleChildren = computed(() => {
           回复
         </button>
         <el-popconfirm
-          v-if="userStore.isModerator"
-          title="确认删除该评论?"
+          v-if="canDelete(item)"
+          title="确认删除该评论?（其下的回复会一同删除）"
           @confirm="emit('delete', item.id)"
         >
           <template #reference>
@@ -122,8 +128,8 @@ const getVisibleChildren = computed(() => {
               回复
             </button>
             <el-popconfirm
-              v-if="userStore.isModerator"
-              title="确认删除该评论?"
+              v-if="canDelete(child)"
+              title="确认删除该回复?"
               @confirm="emit('delete', child.id)"
             >
               <template #reference>

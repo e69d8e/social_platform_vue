@@ -14,8 +14,7 @@ import { ElMessage } from "element-plus";
 import { useUserStore } from "@/stores/user";
 import { useSearchHistory } from "@/composables/useSearchHistory";
 import { HEADER_HISTORY_PAGE_SIZE } from "@/constants/pagination";
-import { searchPostsApi } from "@/api/searchApi";
-import { searchUsersApi } from "@/api/userApi";
+import { searchPostsApi, searchUsersApi } from "@/api/searchApi";
 import { highlightKeyword } from "@/utils/searchHighlight";
 import { debounce } from "lodash-es";
 
@@ -49,8 +48,13 @@ const suggestLoading = ref(false);
 const suggestPosts = ref([]);
 const suggestUsers = ref([]);
 
+// 请求序号：联想请求是并发的，慢的那次返回时会覆盖新关键词的结果，
+// 必须只接受「最后一次输入」对应的响应。
+let suggestSeq = 0;
+
 const fetchSuggestions = debounce(async (keyword) => {
   const kw = keyword.trim();
+  const seq = ++suggestSeq;
   if (!kw) {
     suggestPosts.value = [];
     suggestUsers.value = [];
@@ -61,23 +65,22 @@ const fetchSuggestions = debounce(async (keyword) => {
   suggestLoading.value = true;
   try {
     const [postsRes, usersRes] = await Promise.allSettled([
-      searchPostsApi({ pageNum: 1, pageSize: 4, keyword: kw }),
-      searchUsersApi({ pageNum: 1, pageSize: 3, keyword: kw }),
+      // record: 0 —— 联想不应该写进搜索历史
+      searchPostsApi({ pageNum: 1, pageSize: 4, keyword: kw, record: 0 }),
+      searchUsersApi({ pageNum: 1, pageSize: 3, keyword: kw, record: 0 }),
     ]);
+    if (seq !== suggestSeq) return;
 
-    if (postsRes.status === "fulfilled" && postsRes.value?.data?.code === 1) {
-      suggestPosts.value = postsRes.value.data.data || [];
-    } else {
-      suggestPosts.value = [];
-    }
-
-    if (usersRes.status === "fulfilled" && usersRes.value?.data?.code === 1) {
-      suggestUsers.value = usersRes.value.data.data || [];
-    } else {
-      suggestUsers.value = [];
-    }
+    suggestPosts.value =
+      postsRes.status === "fulfilled" && postsRes.value?.data?.code === 1
+        ? postsRes.value.data.data || []
+        : [];
+    suggestUsers.value =
+      usersRes.status === "fulfilled" && usersRes.value?.data?.code === 1
+        ? usersRes.value.data.data || []
+        : [];
   } finally {
-    suggestLoading.value = false;
+    if (seq === suggestSeq) suggestLoading.value = false;
   }
 }, 220);
 
@@ -85,6 +88,9 @@ watch(searchContent, (val) => {
   if (val.trim()) {
     fetchSuggestions(val);
   } else {
+    // 清空输入：作废在途请求，避免旧结果回填
+    suggestSeq += 1;
+    suggestLoading.value = false;
     suggestPosts.value = [];
     suggestUsers.value = [];
   }

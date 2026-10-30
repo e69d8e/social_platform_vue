@@ -108,7 +108,24 @@ export function useChat({ messagesAreaRef } = {}) {
     loadHistory();
   };
 
+  /** 深链（/chat/5）里没有 receiverId：从会话列表反查对方身份，否则头部只能显示「私信」 */
+  const resolveReceiverFromConversations = async () => {
+    if (receiverId.value || isNewChat.value || !conversationId.value) return;
+    try {
+      const convRes = await getConversationsApi({ pageNum: 1, pageSize: 50 });
+      const payload = convRes.data.data;
+      const convs = Array.isArray(payload) ? payload : payload?.list || [];
+      const hit = convs.find(
+        (c) => String(c.conversationId) === String(conversationId.value),
+      );
+      if (hit?.otherUserId) receiverId.value = hit.otherUserId;
+    } catch {
+      // 拿不到就保持占位标题，不影响聊天
+    }
+  };
+
   const loadOtherUserInfo = async () => {
+    await resolveReceiverFromConversations();
     if (!receiverId.value) return;
     try {
       const res = await getUserInfoByIdApi(receiverId.value);
@@ -197,12 +214,11 @@ export function useChat({ messagesAreaRef } = {}) {
         if (res.data.data?.id) msg.id = res.data.data.id;
         if (isNewChat.value) await adoptConversation();
       } else {
+        // 失败提示由拦截器统一给出，这里只把气泡标成「发送失败」供点击重试
         msg.status = "failed";
-        ElMessage.error(res.data.message || "发送失败");
       }
     } catch {
       msg.status = "failed";
-      ElMessage.error("发送失败，请重试");
     }
   };
 
@@ -243,6 +259,13 @@ export function useChat({ messagesAreaRef } = {}) {
       const data = JSON.parse(body);
       // 判断消息是否来自当前聊天对象
       if (data.senderId + "" === receiverId.value + "") {
+        // 重连/补发可能重复推送同一条；已存在（按 id）就不重复插入
+        if (
+          data.id != null &&
+          messages.value.some((m) => String(m.id) === String(data.id))
+        ) {
+          return;
+        }
         messages.value.push({
           id: data.id,
           senderId: data.senderId,

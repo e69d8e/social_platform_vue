@@ -34,18 +34,20 @@ const toFavorites = () => router.push({ path: "/favorites" });
 const signing = ref(false);
 const sign = async () => {
   if (signing.value) return; // 防连点并发多次签到请求
+  if (signStore.signedToday) {
+    ElMessage.info("今天已经签到过了");
+    return;
+  }
   signing.value = true;
   try {
     const res = await signInApi();
     if (res.data.code === 1) {
-      if (signStore.signDay < res.data.data) {
-        ElMessage.success("签到成功");
-      } else {
-        ElMessage.info("今天已经签到过了");
-      }
-      signStore.signDay = res.data.data;
-    } else {
-      ElMessage.error(res.data.message);
+      const before = signStore.signDay;
+      signStore.applySignState(res.data.data);
+      // 天数没增长说明服务端判定今天已签过（本地状态过期等）
+      ElMessage.success(
+        signStore.signDay > before ? "签到成功" : "今天已经签到过了",
+      );
     }
   } catch {
     // 错误提示已由请求拦截器统一处理
@@ -74,12 +76,22 @@ const sign = async () => {
         <button
           v-if="userStore.userInfo.username"
           class="sign"
+          :class="{ 'is-signed': signStore.signedToday }"
           type="button"
-          :title="`已连续签到 ${signStore.signDay} 天`"
-          :disabled="signing"
+          :title="
+            signStore.signedToday
+              ? `今天已签到，已连续签到 ${signStore.signDay} 天`
+              : `点击签到，已连续签到 ${signStore.signDay} 天`
+          "
+          :disabled="signing || signStore.signedToday"
           @click="sign"
         >
-          <el-tag size="small" effect="plain" type="warning">点击签到</el-tag>
+          <el-tag
+            size="small"
+            effect="plain"
+            :type="signStore.signedToday ? 'success' : 'warning'"
+            >{{ signStore.signedToday ? "已签到" : "点击签到" }}</el-tag
+          >
           <span class="sign-text">已连续签到 {{ signStore.signDay }} 天</span>
         </button>
       </div>
@@ -311,8 +323,13 @@ const sign = async () => {
   }
 
   &:disabled {
-    cursor: wait;
-    opacity: 0.7;
+    cursor: default;
+    opacity: 1;
+  }
+
+  &.is-signed {
+    background: var(--el-color-success-light-9);
+    border-color: var(--el-color-success-light-7);
   }
 
   &:focus-visible {

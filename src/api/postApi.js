@@ -50,7 +50,10 @@ export const recordPostViewApi = (id) => {
   return request.post(`/post/view/${id}`);
 };
 
-// 设置帖子私密状态
+// 设置帖子私密状态（silent：调用方自带更贴切的行内提示，避免与拦截器重复弹窗）
 export const updatePostPrivacyApi = (id, isPrivate) => {
-  return request.put(`/post/privacy/${id}`, null, { params: { isPrivate } });
+  return request.put(`/post/privacy/${id}`, null, {
+    params: { isPrivate },
+    silent: true,
+  });
 };

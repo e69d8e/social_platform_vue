@@ -1,27 +1,30 @@
 <script setup>
 import { useAttrs } from "vue";
-import { useRouter } from "vue-router";
 import { ArrowLeft } from "@element-plus/icons-vue";
+import { useGoBack } from "@/composables/useGoBack";
 
 defineOptions({ inheritAttrs: false });
 
-defineProps({
+const props = defineProps({
   /** 图标尺寸 */
   size: { type: [Number, String], default: 18 },
   /** 按钮文字，传空字符串只显示图标 */
   text: { type: String, default: "返回" },
+  /** 站内没有可回退历史时的落地页 */
+  fallback: { type: String, default: "/home" },
 });
 
 const emit = defineEmits(["click"]);
 const attrs = useAttrs();
-const router = useRouter();
 
-// 父组件绑定 @click 时由父组件接管返回行为，否则默认 router.back()
+const goBack = useGoBack(props.fallback);
+
+// 父组件绑定 @click 时由父组件接管返回行为，否则走统一回退（无站内历史时回兜底页）
 const handleClick = () => {
   if (typeof attrs.onClick === "function") {
     emit("click");
   } else {
-    router.back();
+    goBack();
   }
 };
 </script>

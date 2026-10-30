@@ -4,9 +4,12 @@ import { ArrowLeft, ArrowDownBold } from "@element-plus/icons-vue";
 import ChatMessages from "@/components/chat/ChatMessages.vue";
 import ChatInputBox from "@/components/chat/ChatInputBox.vue";
 import { useChat } from "@/composables/useChat";
+import { useGoBack } from "@/composables/useGoBack";
 
 const messagesAreaRef = ref(null);
 const inputBoxRef = ref(null);
+// 聊天页常被直接分享/新标签打开，站内无历史时回会话列表
+const goBack = useGoBack("/conversations");
 
 const {
   messages,
@@ -45,7 +48,7 @@ onMounted(() => {
           class="back"
           type="button"
           aria-label="返回会话列表"
-          @click="$router.back()"
+          @click="goBack"
         >
           <el-icon size="18"><ArrowLeft /></el-icon>
         </button>

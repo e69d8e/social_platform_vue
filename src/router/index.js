@@ -139,7 +139,14 @@ const router = createRouter({
 // 路由守卫：校验页面访问权限与角色权限
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore();
-  const isLoggedIn = Boolean(userStore.token?.accessToken);
+  const isLoggedIn = userStore.isLoggedIn;
+
+  // 0. 已登录用户访问登录页：直接回到目标页/首页，避免重复登录
+  if (to.name === "login" && isLoggedIn) {
+    const redirect = to.query.redirect;
+    next(redirect ? decodeURIComponent(String(redirect)) : "/home");
+    return;
+  }
 
   // 1. 未登录拦截：需要登录的页面直接重定向到 /login
   if (to.meta.requiresAuth && !isLoggedIn) {
@@ -154,7 +161,9 @@ router.beforeEach((to, from, next) => {
     const userRole = userStore.userInfo?.authorityId;
     if (!requiredRoles.includes(userRole)) {
       ElMessage.error("无权访问该页面");
-      next("/");
+      // 回退而非硬跳首页：用户在深链场景下也能留在原路径上下文
+      if (from.name) next(false);
+      else next("/home");
       return;
     }
   }

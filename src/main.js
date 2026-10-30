@@ -12,11 +12,15 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import ElementPlus from "element-plus";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { useThemeStore } from "./stores/theme";
+import { registerNavigator } from "./utils/navigation";
 
 const app = createApp(App);
 const pinia = createPinia().use(piniaPluginPersistedstate);
 app.use(pinia);
 app.use(router);
+
+// 把路由实例注入 utils 层（请求拦截器 401 跳登录用），避免 utils -> main 的循环依赖
+registerNavigator((target) => router.push(target));
 
 // Initialize theme store so dark mode applies on ALL routes (not just layout pages)
 const themeStore = useThemeStore();

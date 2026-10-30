@@ -1,8 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { ElMessage } from "element-plus";
-import { addCommentApi, getCommentApi, likeCommentApi } from "@/api/commentApi";
-import { deleteCommentApi } from "@/api/reviewerApi";
+import {
+  addCommentApi,
+  getCommentApi,
+  likeCommentApi,
+  deleteCommentApi,
+} from "@/api/commentApi";
 import { useRequireLogin } from "@/composables/useRequireLogin";
 import { debounce } from "lodash-es";
 import CommentItem from "@/components/comment/CommentItem.vue";
@@ -43,14 +47,32 @@ const scrollTo = () => {
 };
 defineExpose({ scrollTo });
 
-const getComments = async () => {
-  if (noMore.value) return;
+// 请求串行化：首屏加载、触底加载与「发表后重置」可能同时触发，
+// 并发请求会读到同一个游标并互相覆盖 offset / lastId（表现为漏评论或重复加载）。
+// 这里用 promise 队列表把评论请求变成串行执行，后到的请求排在队尾而不是被丢弃。
+let requestQueue = Promise.resolve();
+const runSerial = (task) => {
+  const run = requestQueue.then(task, task);
+  requestQueue = run.catch(() => {});
+  return run;
+};
+
+const getComments = () =>
+  runSerial(async () => {
+    if (noMore.value) return;
+    await fetchComments();
+  });
+
+const fetchComments = async () => {
   const timestamp = lastId.value || Date.now();
   const res = await getCommentApi(props.postId, {
     lastId: timestamp,
     offset: offset.value,
   });
-  const list = res.data.data.list;
+  if (res.data.code !== 1) {
+    throw new Error(res.data.message || "评论加载失败");
+  }
+  const list = res.data.data?.list || [];
   // 接口若携带总数则采用，徽标与标题不再显示"已加载条数"冒充总数
   if (res.data.total !== undefined && res.data.total !== null) {
     commentTotal.value = Number(res.data.total);
@@ -140,13 +162,15 @@ const scrollToComments = () => {
   rootRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
+const displayNameOf = (userInfo) =>
+  userInfo?.nickname || userInfo?.username || "用户";
+
 const reply = (parent, child) => {
   if (!requireLogin("请先登录后再回复")) return;
+  const target = child ?? parent;
   replyContext.value.parentId = parent.id;
-  replyContext.value.replyUserId = child ? child.user.id : parent.user.id;
-  replyContext.value.replyUserName = child
-    ? child.user.nickname
-    : parent.user.nickname;
+  replyContext.value.replyUserId = target.user?.id ?? null;
+  replyContext.value.replyUserName = displayNameOf(target.user);
   isInputExpanded.value = true;
   inputBarRef.value?.focus();
 };
@@ -155,13 +179,15 @@ const clearReply = () => {
   replyContext.value = { parentId: 0, replyUserId: null, replyUserName: "" };
 };
 
-const resetComments = async () => {
-  lastId.value = "";
-  offset.value = 0;
-  noMore.value = false;
-  comments.value = [];
-  await getComments();
-};
+// 重置必须与在途请求串行：否则在途分页结果会在清空之后回填，造成游标错乱
+const resetComments = () =>
+  runSerial(async () => {
+    lastId.value = "";
+    offset.value = 0;
+    noMore.value = false;
+    comments.value = [];
+    await fetchComments();
+  });
 
 const submitComment = async () => {
   if (submitting.value) return;
@@ -186,7 +212,7 @@ const submitComment = async () => {
       await resetComments();
     }
   } catch {
-    ElMessage.error("评论失败，请重试");
+    // 失败提示已由请求拦截器统一弹出，保留输入内容供用户重试
   } finally {
     submitting.value = false;
   }
@@ -206,7 +232,7 @@ const likeComment = async (item, child) => {
       target.likeCount = likeCount;
     }
   } catch {
-    ElMessage.error("点赞失败，请重试");
+    // 提示由拦截器统一给出
   } finally {
     likeLoadingId.value = null;
   }
@@ -215,13 +241,13 @@ const likeComment = async (item, child) => {
 const deleteComment = async (id) => {
   deletingId.value = id;
   try {
-    const res = await deleteCommentApi(props.postId, id);
+    const res = await deleteCommentApi(id);
     if (res.data.code === 1) {
       ElMessage.success("删除成功");
       await resetComments();
     }
   } catch {
-    ElMessage.error("删除失败，请重试");
+    // 提示由拦截器统一给出
   } finally {
     deletingId.value = null;
   }

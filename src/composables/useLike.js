@@ -1,7 +1,6 @@
 import { ref, watch } from "vue";
 import { throttle } from "lodash-es";
 import { likeApi } from "@/api/postApi";
-import { ElMessage } from "element-plus";
 import { useRequireLogin } from "@/composables/useRequireLogin";
 
 /**
@@ -40,12 +39,12 @@ export function useLike({ postId, liked, likeCount } = {}) {
     inFlight = true;
     try {
       const res = await likeApi(postId());
-      if (res.data.code !== 1) throw new Error("操作失败");
+      // code !== 1 属于业务失败：提示已由请求拦截器统一弹出，这里只需要回滚
+      if (res.data.code !== 1) throw new Error(res.data.message || "操作失败");
       // 数字与心跳动画已是即时反馈，信息流里不再弹 toast 轰炸
     } catch {
       isLiked.value = oldLiked;
       count.value = oldCount;
-      ElMessage.error("点赞失败，请重试");
     } finally {
       inFlight = false;
     }

@@ -26,7 +26,7 @@ const rotr = (x, n) => (x >>> n) | (x << (32 - n));
 // 纯 JS SHA-256 实现（输入按字节处理，等价于 crypto.subtle.digest("SHA-256")）
 function sha256Fallback(bytes) {
   const l = bytes.length;
-  const total = (Math.ceil((l + 9) / 64)) * 64;
+  const total = Math.ceil((l + 9) / 64) * 64;
   const msg = new Uint8Array(total);
   msg.set(bytes);
   msg[l] = 0x80;
@@ -93,7 +93,9 @@ export async function computeFileHash(file) {
   const buf = await file.arrayBuffer();
   if (globalThis.crypto?.subtle) {
     const digest = await globalThis.crypto.subtle.digest("SHA-256", buf);
-    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+    return Array.from(new Uint8Array(digest), (b) =>
+      b.toString(16).padStart(2, "0"),
+    ).join("");
   }
   return sha256Fallback(new Uint8Array(buf));
 }

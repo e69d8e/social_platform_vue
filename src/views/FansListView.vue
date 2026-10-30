@@ -43,6 +43,8 @@ const {
   total,
   loading,
   isError,
+  isBlocked,
+  blockedMessage,
   pageChange,
   reset,
   retry,
@@ -57,6 +59,9 @@ const {
         ? getFollowerListApi(params)
         : getUserFollowerListApi(params, route.params.id);
     return req.then((res) => ({
+      // code !== 1：对方把列表设为私密，服务端用 message 说明原因
+      blocked: res.data.code !== 1,
+      message: res.data.message,
       data: res.data.data,
       total: Number(res.data.total ?? 0),
     }));
@@ -92,6 +97,12 @@ watch(
       @retry="retry"
     />
 
+    <!-- 对方隐藏了关注/粉丝列表：直接说明原因，而不是给出「还没有」的错误结论 -->
+    <el-empty
+      v-else-if="isBlocked"
+      :description="blockedMessage || '该用户的列表未公开'"
+    />
+
     <el-empty
       v-else-if="fansList.length === 0"
       :description="
@@ -111,10 +122,7 @@ watch(
 
     <CardGrid v-else :items="fansList">
       <template #item="{ item, index }">
-        <UserCard
-          :user="item"
-          :delay="index < 12 ? index * 40 : 0"
-        />
+        <UserCard :user="item" :delay="index < 12 ? index * 40 : 0" />
       </template>
     </CardGrid>
 

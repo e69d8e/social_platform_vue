@@ -6,7 +6,7 @@ import LoadStatus from "@/components/LoadStatus.vue";
 import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import { getFollowPostsApi } from "@/api/postApi";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
-import { POST_PAGE_SIZE } from "@/constants/pagination";
+import { FEED_PAGE_SIZE } from "@/constants/pagination";
 
 const {
   items: posts,
@@ -27,7 +27,6 @@ const {
       offset: res.data.data.offset,
     };
   },
-  onError: () => ElMessage.error("加载帖子失败"),
 });
 </script>
 
@@ -35,7 +34,10 @@ const {
   <div class="follow-page" v-loading="loading && posts.length > 0">
     <PageHeader title="我的关注" />
 
-    <SkeletonGrid v-if="loading && posts.length === 0" :count="POST_PAGE_SIZE" />
+    <SkeletonGrid
+      v-if="loading && posts.length === 0"
+      :count="FEED_PAGE_SIZE"
+    />
 
     <el-empty v-else-if="posts.length === 0" description="关注的人还没有发帖">
       <el-button type="primary" round @click="$router.push('/home')"
@@ -45,10 +47,7 @@ const {
 
     <CardGrid v-else :items="posts">
       <template #item="{ item, index }">
-        <PostCard
-          :post="item"
-          :delay="index < 12 ? index * 40 : 0"
-        />
+        <PostCard :post="item" :delay="index < 12 ? index * 40 : 0" />
       </template>
     </CardGrid>
 

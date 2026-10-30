@@ -147,36 +147,31 @@ export function useAiChat({ messagesListRef, inputRef } = {}) {
     await loadSessions(false);
   };
 
+  /**
+   * 开启新对话。
+   *
+   * 刻意不立刻调 CREATE /session：会话真正在「发出第一条消息」时才落库
+   * （sendMessage 内部会创建），否则用户每点一次「新对话」都会在侧边栏
+   * 留下一个空会话，历史列表很快就被垃圾占满。
+   */
   const createNewSession = async () => {
     if (isLoading.value) {
       ElMessage.info("AI 正在回复中，请稍候再开新对话");
       return;
     }
-    try {
-      const res = await createSessionApi();
-      if (res.data.code === 1) {
-        currentSessionId.value = res.data.data;
-        rawMessages.value = [];
-        isNearBottom.value = true;
-        sidebarOpen.value = false;
-        await refreshSessions();
-        // 聚焦到输入框
-        await nextTick();
-        inputRef?.value?.focus();
-      }
-    } catch (error) {
-      console.error("创建会话失败:", error);
-      ElMessage.error("创建会话失败");
-    }
+    abortActiveStream();
+    currentSessionId.value = null;
+    rawMessages.value = [];
+    isNearBottom.value = true;
+    sidebarOpen.value = false;
+    await nextTick();
+    inputRef?.value?.focus();
   };
 
   // 点击建议问题：直接发送（主流 AI 聊天交互）
   const useSuggestion = async (text) => {
     if (isLoading.value) return;
-    if (!currentSessionId.value) {
-      await createNewSession();
-    }
-    if (!currentSessionId.value) return;
+    // 没有会话也没关系：sendMessage 会在发送时自动创建
     inputMessage.value = text;
     await nextTick();
     sendMessage();
@@ -225,17 +220,21 @@ export function useAiChat({ messagesListRef, inputRef } = {}) {
     try {
       const res = await deleteSessionApi(sessionId);
       if (res.data.code === 1) {
-        if (currentSessionId.value === sessionId) {
+        const deletingActive = currentSessionId.value === sessionId;
+        if (deletingActive) {
           abortActiveStream();
           currentSessionId.value = null;
           rawMessages.value = [];
         }
         await refreshSessions();
+        // 删掉的正是当前会话时，自动切到下一个会话，而不是让用户回到空白欢迎页
+        if (deletingActive && sessions.value.length > 0) {
+          await selectSession(sessions.value[0].id);
+        }
         ElMessage.success("会话已删除");
       }
     } catch (error) {
       console.error("删除会话失败:", error);
-      ElMessage.error("删除会话失败");
     }
   };
 

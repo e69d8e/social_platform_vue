@@ -43,8 +43,18 @@ export const useUserStore = defineStore(
       };
     };
 
-    // 登录态以用户信息为准：登录成功后才会写入
-    const isLoggedIn = computed(() => Boolean(userInfo.value.username));
+    // 登录态以 accessToken 为准（接口鉴权真正依赖的凭据）：
+    // 只刷新过页面、资料还没拉回来时也算「已登录」，避免守卫误踢。
+    const isLoggedIn = computed(
+      () =>
+        Boolean(token.value.accessToken) || Boolean(userInfo.value.username),
+    );
+
+    /** 一次性清除登录态（登出 / 令牌失效时使用，避免只清一半） */
+    const clearSession = () => {
+      removeToken();
+      removeInfo();
+    };
     // 审核员(3)/管理员(2)可执行内容管理操作；兼容 authorityId 与 authority 两种表示
     const isModerator = computed(
       () =>
@@ -64,6 +74,7 @@ export const useUserStore = defineStore(
       token,
       setToken,
       removeToken,
+      clearSession,
       isLoggedIn,
       isModerator,
       isAdmin,

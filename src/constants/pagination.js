@@ -3,6 +3,13 @@
 /** 帖子卡片网格（每行 4 列 × 2 行） */
 export const POST_PAGE_SIZE = 8;
 
+/**
+ * 推荐流/关注流每页条数。
+ * 这两条接口是游标分页，页大小由后端 system-constants.default-page-size 决定（12），
+ * 前端只用它渲染骨架屏，必须与后端保持一致，否则首屏会缺 4 张占位卡。
+ */
+export const FEED_PAGE_SIZE = 12;
+
 /** 用户卡片网格（每行 4 列 × 3 行） */
 export const USER_PAGE_SIZE = 12;
 

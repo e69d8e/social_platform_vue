@@ -9,7 +9,7 @@ import SkeletonGrid from "@/components/SkeletonGrid.vue";
 import { useUserStore } from "@/stores/user";
 import { getIndexPostsApi } from "@/api/postApi";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
-import { POST_PAGE_SIZE } from "@/constants/pagination";
+import { FEED_PAGE_SIZE } from "@/constants/pagination";
 
 const userStore = useUserStore();
 const reshuffling = ref(false);
@@ -34,7 +34,6 @@ const {
     };
   },
   autoFill: true,
-  onError: () => ElMessage.error("加载帖子失败"),
 });
 
 // 换一换：把当前已加载的推荐流就地洗牌，立即换一批阅读顺序（游标续传不受影响）
@@ -80,7 +79,7 @@ const reshuffle = () => {
     <!-- 首屏骨架 -->
     <SkeletonGrid
       v-if="loading && posts.length === 0"
-      :count="POST_PAGE_SIZE"
+      :count="FEED_PAGE_SIZE"
     />
 
     <template v-else>

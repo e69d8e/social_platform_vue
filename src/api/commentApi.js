@@ -14,3 +14,8 @@ export const getCommentApi = (id, params) => {
 export const likeCommentApi = (commentId) => {
   return request.put(`/comment/like/${commentId}`);
 };
+
+// 删除评论（作者本人可删自己的；管理员/审核员可删任意评论）
+export const deleteCommentApi = (id) => {
+  return request.delete(`/comment/${id}`);
+};

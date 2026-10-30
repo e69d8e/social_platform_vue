@@ -8,6 +8,7 @@ import {
 } from "@/api/postApi";
 import { deletePostImgApi, uploadPostImgApi } from "@/api/uploadApi";
 import { useRouter, onBeforeRouteLeave } from "vue-router";
+import { useGoBack } from "@/composables/useGoBack";
 import "@wangeditor/editor/dist/css/style.css";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -18,6 +19,7 @@ import compressImage from "@/utils/compressImage";
 import { uploadWithDedup } from "@/utils/uploadDedup";
 
 const router = useRouter();
+const goBack = useGoBack("/home");
 
 // ---- Form & Editor State ----
 const id = ref("");
@@ -93,7 +95,7 @@ const onEditorImageCropped = async (croppedFile) => {
       ElMessage.success("插图上传成功");
     }
   } catch {
-    ElMessage.error("图片上传失败，请重试");
+    // 服务端/网络错误提示由拦截器统一给出，这里只做状态清理
   } finally {
     editorPendingInsertFn = null;
     editorCropperFile.value = null;
@@ -160,22 +162,24 @@ const publicPost = async () => {
       categoryId: categoryId.value === "" ? null : categoryId.value,
       isPrivate: isPrivate.value,
     });
-    dialogConfirmVisible.value = false;
+    // 失败时保留确认弹窗（提示已由拦截器给出），用户可以直接重试，不用重新点发布
     if (res.data.code !== 1) return;
+    dialogConfirmVisible.value = false;
     ElMessage.success(res.data.message);
     isPublished.value = true;
     // 直接跳到新帖详情：router.back() 会回到进入发布页前的任意页面，
     // 用户发完帖第一件事是想确认帖子长什么样
     router.replace(`/post/${id.value}`);
   } catch {
-    ElMessage.error("发布失败，请重试");
+    // 失败原因由拦截器给出（如标题/内容超长），确认弹窗保持打开可直接重试
   } finally {
     loading.value = false;
   }
 };
 
 const handleBackClick = () => {
-  router.back();
+  // 发布页可能是深链/新标签打开，站内无历史时回首页，避免「返回没反应」
+  goBack();
 };
 
 onBeforeRouteLeave(async (to, from, next) => {
@@ -210,8 +214,6 @@ onBeforeRouteLeave(async (to, from, next) => {
 });
 
 onMounted(async () => {
-  // 清理可能遗留的旧草稿
-  localStorage.removeItem("y_community_post_draft");
   await getCategoryList();
   const res = await getPostIdApi();
   id.value = res.data.data;
@@ -341,6 +343,7 @@ onBeforeUnmount(async () => {
           type="primary"
           size="large"
           class="submit-btn"
+          :loading="loading"
           @click="handleOpenPublishDialog"
           >发布</el-button
         >
@@ -352,6 +355,8 @@ onBeforeUnmount(async () => {
       title="确认发布?"
       width="min(90vw, 400px)"
       center
+      :close-on-click-modal="!loading"
+      :show-close="!loading"
     >
       <p
         style="
@@ -367,7 +372,9 @@ onBeforeUnmount(async () => {
         }}
       </p>
       <template #footer>
-        <el-button @click="dialogConfirmVisible = false">取消</el-button>
+        <el-button :disabled="loading" @click="dialogConfirmVisible = false"
+          >取消</el-button
+        >
         <el-button type="primary" :loading="loading" @click="publicPost"
           >确认发布</el-button
         >

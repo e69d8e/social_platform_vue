@@ -6,6 +6,8 @@ export const uploadAvatar = (file) => {
   formData.append("file", file);
   return request.post("/upload/avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    // 图片上传远慢于普通接口，沿用 10s 默认超时会导致大图上传被判超时
+    timeout: 60000,
   });
 };
 
@@ -15,6 +17,7 @@ export const uploadBackground = (file) => {
   formData.append("file", file);
   return request.post("/upload/background", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 60000,
   });
 };
 
@@ -25,6 +28,7 @@ export const uploadPostImgApi = (file, id) => {
   formData.append("postId", id);
   return request.post("/upload/post", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 60000,
   });
 };
 

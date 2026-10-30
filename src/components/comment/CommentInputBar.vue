@@ -1,6 +1,12 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
-import { Close, ChatDotRound, User, EditPen, Loading } from "@element-plus/icons-vue";
+import {
+  Close,
+  ChatDotRound,
+  User,
+  EditPen,
+  Loading,
+} from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
 
 const props = defineProps({
@@ -110,11 +116,7 @@ onUnmounted(() => {
       <div class="compact-trigger" @click="emit('open')">
         <el-icon class="input-icon" :size="15"><EditPen /></el-icon>
         <span class="placeholder">
-          {{
-            replyUserName
-              ? `回复 @${replyUserName}...`
-              : "写下你的评论..."
-          }}
+          {{ replyUserName ? `回复 @${replyUserName}...` : "写下你的评论..." }}
         </span>
         <span class="shortcut-badge"> <kbd>Ctrl</kbd>+<kbd>Enter</kbd> </span>
       </div>

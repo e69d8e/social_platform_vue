@@ -4,7 +4,15 @@ import { useRouter } from "vue-router";
 import formattedCount from "@/utils/formattedCount";
 import { formatExactTime } from "@/utils/formatTime";
 import pickGlyphChar from "@/utils/glyph";
-import { Star, View, User, Lock, Unlock } from "@element-plus/icons-vue";
+import {
+  Star,
+  StarFilled,
+  View,
+  User,
+  Lock,
+  Unlock,
+} from "@element-plus/icons-vue";
+import HeartIcon from "@/components/icons/HeartIcon.vue";
 import { useLike } from "@/composables/useLike";
 import { useStar } from "@/composables/useStar";
 import { highlightKeyword } from "@/utils/searchHighlight";
@@ -216,7 +224,7 @@ const openUser = (e) => {
               type="button"
               :aria-pressed="starred"
               :aria-label="starred ? '取消收藏' : '收藏'"
-              title="收藏"
+              :title="starred ? '取消收藏' : '收藏'"
               @click.stop="toggleStar"
             >
               <el-icon
@@ -225,7 +233,8 @@ const openUser = (e) => {
                 size="15"
                 :color="starred ? 'var(--el-color-warning)' : ''"
               >
-                <Star />
+                <StarFilled v-if="starred" />
+                <Star v-else />
               </el-icon>
               <span class="count" :class="{ active: starred }">
                 {{ formattedCount(starCount) }}
@@ -236,17 +245,19 @@ const openUser = (e) => {
               type="button"
               :aria-pressed="liked"
               :aria-label="liked ? '取消点赞' : '点赞'"
-              title="点赞"
+              :title="liked ? '取消点赞' : '点赞'"
               @click.stop="toggleLike"
             >
-              <el-icon
+              <span
                 :key="popTick"
+                class="like-glyph"
                 :class="{ pop: popTick > 0 && liked }"
-                size="15"
-                :color="liked ? 'var(--el-color-danger)' : ''"
+                :style="{
+                  color: liked ? 'var(--el-color-danger)' : 'currentColor',
+                }"
               >
-                <Star />
-              </el-icon>
+                <HeartIcon :filled="liked" size="15" />
+              </span>
               <span class="count" :class="{ active: liked }">
                 {{ formattedCount(likeCount) }}
               </span>
@@ -624,6 +635,13 @@ const openUser = (e) => {
 
     .pop {
       animation: heartBeat 0.5s ease;
+    }
+
+    // 心形点赞图标：与 el-icon 同一基线，避免行高跳动
+    .like-glyph {
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
     }
   }
 }

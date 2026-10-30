@@ -1,5 +1,5 @@
 import { useUserStore } from "@/stores/user";
-import { router } from "@/main.js";
+import { navigateTo, loginLocation } from "@/utils/navigation";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -8,15 +8,19 @@ async function refreshToken() {
   const token = userStore.token?.refreshToken;
   if (!token) throw new Error("No refresh token");
 
+  const oldAccessToken = userStore.token?.accessToken;
   const res = await fetch(`${BASE_URL}/user/refresh`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(oldAccessToken ? { Authorization: `Bearer ${oldAccessToken}` } : {}),
+    },
     credentials: "include",
     body: JSON.stringify({ refreshToken: token }),
   });
 
   const data = await res.json();
-  if (data.code !== 1) throw new Error("刷新令牌失败");
+  if (data.code !== 1) throw new Error(data.message || "刷新令牌失败");
 
   const { accessToken, refreshToken: newRefreshToken } = data.data;
   userStore.setToken({ accessToken, refreshToken: newRefreshToken });
@@ -25,9 +29,8 @@ async function refreshToken() {
 
 function redirectLogin() {
   const userStore = useUserStore();
-  userStore.removeToken();
-  userStore.removeInfo();
-  router.push("/login");
+  userStore.clearSession();
+  navigateTo(loginLocation());
 }
 
 /**
@@ -40,6 +43,7 @@ export async function authFetch(url, options, retry = true) {
 
   const response = await fetch(url, options);
 
+  // 401 且尚未重试：刷新令牌后重放一次
   if (response.status === 401 && retry) {
     try {
       const newToken = await refreshToken();

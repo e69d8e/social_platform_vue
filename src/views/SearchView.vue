@@ -1,8 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { searchPostsApi } from "@/api/searchApi";
-import { searchUsersApi } from "@/api/userApi";
+import { searchPostsApi, searchUsersApi } from "@/api/searchApi";
 import PostCard from "@/components/PostCard.vue";
 import UserCard from "@/components/UserCard.vue";
 import SkeletonGrid from "@/components/SkeletonGrid.vue";
@@ -27,23 +26,35 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const pageNum = ref(1);
+
 const postPageSize = POST_PAGE_SIZE;
 const userPageSize = USER_PAGE_SIZE;
-const loading = ref(true);
-const tabLoading = ref(false);
-const postFetchedPage = ref(1);
-const userFetchedPage = ref(1);
-const activeName = ref("1");
 
 const localKeyword = ref("");
 const searchQuery = computed(() => route.query.keyword || "");
+/** 当前维度：'1' 帖子 / '2' 用户 */
+const activeName = ref("1");
 
+// ---- 两个维度各自维护分页状态 ----
+// 之前共用一个 pageNum，导致「帖子翻到第 3 页 → 切到用户 → 切回来」页码错位。
 const posts = ref([]);
-const users = ref([]);
 const postTotal = ref(0);
-const usersTotal = ref(0);
+const postPage = ref(1);
+const postLoading = ref(false);
+const postError = ref(false);
+const postLoadedPage = ref(0);
 
+const users = ref([]);
+const usersTotal = ref(0);
+const userPage = ref(1);
+const userLoading = ref(false);
+const userError = ref(false);
+const userLoadedPage = ref(0);
+
+const loading = computed(() => postLoading.value || userLoading.value);
+const tabLoading = computed(() =>
+  activeName.value === "1" ? postLoading.value : userLoading.value,
+);
 const HOT_SEARCHES = [
   "黑神话",
   "游戏",
@@ -64,21 +75,20 @@ const {
   clearHistory,
 } = useSearchHistory({ pageSize: SEARCH_HISTORY_PAGE_SIZE });
 
-// 搜索历史不再区分帖子/用户：点击后进入综合搜索（默认综合 Tab）
 const historyClick = (item) => {
-  if (searchQuery.value === item.keyword) {
-    return;
-  }
-  router.push({
-    path: "/search",
-    query: { keyword: item.keyword },
-  });
+  if (searchQuery.value === item.keyword) return;
+  router.push({ path: "/search", query: { keyword: item.keyword } });
 };
 
 const handlePageSearch = () => {
   const kw = localKeyword.value.trim();
   if (!kw) {
     ElMessage.warning("请输入搜索关键词");
+    return;
+  }
+  if (kw === searchQuery.value) {
+    // 关键词没变就没必要重复请求，只保证当前维度是第一页
+    resetToFirstPage();
     return;
   }
   router.push({
@@ -100,116 +110,159 @@ const clearSearch = () => {
   router.push({ path: "/search" });
 };
 
-const fetchData = async () => {
-  loading.value = true;
+// ---- 数据加载 ----
+const fetchPosts = async (page = postPage.value) => {
   const keyword = searchQuery.value;
-  localKeyword.value = keyword;
+  if (!keyword) return;
+  postLoading.value = true;
+  postError.value = false;
+  try {
+    const res = await searchPostsApi({
+      pageNum: page,
+      pageSize: postPageSize,
+      keyword,
+    });
+    if (res.data.code !== 1) throw new Error(res.data.message || "搜索失败");
+    posts.value = res.data.data || [];
+    postTotal.value = Number(res.data.total ?? 0);
+    postLoadedPage.value = page;
+  } catch {
+    // 提示已由拦截器统一给出，这里只标记错误态并提供重试入口
+    postError.value = true;
+  } finally {
+    postLoading.value = false;
+  }
+};
 
+const fetchUsers = async (page = userPage.value) => {
+  const keyword = searchQuery.value;
+  if (!keyword) return;
+  userLoading.value = true;
+  userError.value = false;
+  try {
+    const res = await searchUsersApi({
+      pageNum: page,
+      pageSize: userPageSize,
+      keyword,
+    });
+    if (res.data.code !== 1) throw new Error(res.data.message || "搜索失败");
+    users.value = res.data.data || [];
+    usersTotal.value = Number(res.data.total ?? 0);
+    userLoadedPage.value = page;
+  } catch {
+    userError.value = true;
+  } finally {
+    userLoading.value = false;
+  }
+};
+
+/** 首次搜索/关键词变化：两侧同时请求，另一个 tab 的计数徽标即时可用 */
+const fetchAll = async () => {
+  const keyword = searchQuery.value;
   if (!keyword) {
     posts.value = [];
     users.value = [];
     postTotal.value = 0;
     usersTotal.value = 0;
-    loading.value = false;
+    postLoadedPage.value = 0;
+    userLoadedPage.value = 0;
     return;
   }
+  postPage.value = 1;
+  userPage.value = 1;
+  await Promise.all([fetchPosts(1), fetchUsers(1)]);
+};
 
-  // 两个维度同时搜索：另一侧的计数徽标即时可用，切 tab 不用再等
-  await Promise.all([searchPosts(keyword), searchUsers(keyword)]);
-  loading.value = false;
+const resetToFirstPage = () => {
+  if (activeName.value === "1") {
+    postPage.value = 1;
+    fetchPosts(1);
+  } else {
+    userPage.value = 1;
+    fetchUsers(1);
+  }
+};
+
+const retryActive = () => {
+  if (activeName.value === "1") fetchPosts(postPage.value);
+  else fetchUsers(userPage.value);
 };
 
 const syncTabFromQuery = () => {
   const t = route.query.type;
-  if (t !== undefined) {
-    activeName.value = String(Number(t) + 1);
+  if (t === undefined) {
+    activeName.value = "1";
+    return;
   }
+  const parsed = Number(t);
+  activeName.value = parsed === 1 ? "2" : "1";
 };
 
-onMounted(() => {
-  syncTabFromQuery();
-  fetchData();
-  fetchHistory();
-});
-
-const searchPosts = async (keyword) => {
-  try {
-    const res = await searchPostsApi({
-      pageNum: pageNum.value,
-      pageSize: postPageSize,
-      keyword,
-    });
-    posts.value = res.data.data || [];
-    postTotal.value = Number(res.data.total || 0);
-    postFetchedPage.value = pageNum.value;
-  } catch {
-    ElMessage.error("搜索帖子失败");
-  }
-};
-
-const searchUsers = async (keyword) => {
-  try {
-    const res = await searchUsersApi({
-      pageNum: pageNum.value,
-      pageSize: userPageSize,
-      keyword,
-    });
-    users.value = res.data.data || [];
-    usersTotal.value = Number(res.data.total || 0);
-    userFetchedPage.value = pageNum.value;
-  } catch {
-    ElMessage.error("搜索用户失败");
-  }
-};
-
-const pageChange = async (newPageNum) => {
-  pageNum.value = newPageNum;
+const pageChange = (newPageNum) => {
   if (activeName.value === "1") {
-    await searchPosts(searchQuery.value);
+    if (newPageNum === postLoadedPage.value) return;
+    postPage.value = newPageNum;
+    fetchPosts(newPageNum);
   } else {
-    await searchUsers(searchQuery.value);
+    if (newPageNum === userLoadedPage.value) return;
+    userPage.value = newPageNum;
+    fetchUsers(newPageNum);
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 const handleTabChange = (name) => {
-  pageNum.value = 1;
-  const isPosts = name === "1";
-  const targetType = isPosts ? 0 : 1;
+  activeName.value = name;
   router.replace({
     path: "/search",
-    query: { ...route.query, type: targetType },
+    query: {
+      ...route.query,
+      type: name === "1" ? 0 : 1,
+    },
   });
+  // 该维度还没加载过（或停留在别的页码）才补一次请求，避免切 tab 时重复打接口
+  if (name === "1" && postTotal.value > 0 && postLoadedPage.value === 0) {
+    fetchPosts(postPage.value);
+  }
+  if (name === "2" && usersTotal.value > 0 && userLoadedPage.value === 0) {
+    fetchUsers(userPage.value);
+  }
 };
 
+onMounted(async () => {
+  localKeyword.value = searchQuery.value;
+  syncTabFromQuery();
+  await fetchAll();
+  // 搜索历史是「搜索请求」的副作用（服务端在结果返回时才写入），
+  // 必须等结果回来再拉，否则刚搜过的关键词不会出现在历史条里
+  fetchHistory();
+});
+
 watch(
-  () => route.query.keyword,
-  () => {
-    pageNum.value = 1;
-    posts.value = [];
-    users.value = [];
-    postTotal.value = 0;
-    usersTotal.value = 0;
+  () => searchQuery.value,
+  async () => {
+    localKeyword.value = searchQuery.value;
     syncTabFromQuery();
-    fetchData();
+    await fetchAll();
     fetchHistory();
   },
 );
 
-watch(activeName, (name) => {
-  pageNum.value = 1;
-  const isPosts = name === "1";
-  const fetchedPage = isPosts ? postFetchedPage.value : userFetchedPage.value;
-  if (fetchedPage !== 1 && searchQuery.value) {
-    tabLoading.value = true;
-    const req = isPosts
-      ? searchPosts(searchQuery.value)
-      : searchUsers(searchQuery.value);
-    req.finally(() => {
-      tabLoading.value = false;
-    });
-  }
-});
+watch(
+  () => route.query.type,
+  () => syncTabFromQuery(),
+);
+
+// 页面需要展示的当前维度分页参数
+const activePage = computed(() =>
+  activeName.value === "1" ? postPage.value : userPage.value,
+);
+const activeTotal = computed(() =>
+  activeName.value === "1" ? postTotal.value : usersTotal.value,
+);
+const activePageSize = computed(() =>
+  activeName.value === "1" ? postPageSize : userPageSize,
+);
 </script>
 
 <template>
@@ -376,6 +429,16 @@ watch(activeName, (name) => {
           :count="POST_PAGE_SIZE"
         />
 
+        <!-- 请求失败：给出重试入口，而不是伪装成「没有结果」 -->
+        <div v-else-if="postError && posts.length === 0" class="no-result-card">
+          <el-icon :size="40"><Document /></el-icon>
+          <h4>搜索结果加载失败</h4>
+          <p>可能是网络波动，点击下方按钮重试</p>
+          <el-button type="primary" round @click="retryActive"
+            >重新搜索</el-button
+          >
+        </div>
+
         <div v-else-if="posts.length === 0" class="no-result-card">
           <div class="no-result-icon">
             <el-icon :size="40"><Document /></el-icon>
@@ -418,6 +481,15 @@ watch(activeName, (name) => {
           :count="USER_PAGE_SIZE"
         />
 
+        <div v-else-if="userError && users.length === 0" class="no-result-card">
+          <el-icon :size="40"><User /></el-icon>
+          <h4>搜索结果加载失败</h4>
+          <p>可能是网络波动，点击下方按钮重试</p>
+          <el-button type="primary" round @click="retryActive"
+            >重新搜索</el-button
+          >
+        </div>
+
         <div v-else-if="users.length === 0" class="no-result-card">
           <div class="no-result-icon">
             <el-icon :size="40"><User /></el-icon>
@@ -438,14 +510,11 @@ watch(activeName, (name) => {
       </div>
 
       <!-- 分页组件 -->
-      <div
-        v-if="(activeName === '1' ? postTotal : usersTotal) > 0"
-        class="pagination-wrap"
-      >
+      <div v-if="activeTotal > 0" class="pagination-wrap">
         <ListPagination
-          v-model:page-num="pageNum"
-          :total="activeName === '1' ? postTotal : usersTotal"
-          :page-size="activeName === '1' ? postPageSize : userPageSize"
+          :page-num="activePage"
+          :total="activeTotal"
+          :page-size="activePageSize"
           show-when="zero"
           @change="pageChange"
         />

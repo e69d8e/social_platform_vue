@@ -6,6 +6,7 @@ import { ArrowLeft, ChatDotRound, Loading } from "@element-plus/icons-vue";
 import { debounce } from "lodash-es";
 import formatRelativeTime from "@/utils/formatTime";
 import { CHAT_PAGE_SIZE } from "@/constants/pagination";
+import { useGoBack } from "@/composables/useGoBack";
 
 const router = useRouter();
 const conversations = ref([]);
@@ -49,13 +50,7 @@ const retry = () => {
 };
 
 // 站内历史为空时兜底回首页，避免返回键“无反应/退出站点”
-const goBack = () => {
-  if (window.history.length > 1) {
-    router.back();
-  } else {
-    router.push("/home");
-  }
-};
+const goBack = useGoBack("/home");
 
 const onScroll = debounce(() => {
   const { scrollTop, clientHeight, scrollHeight } = document.documentElement;

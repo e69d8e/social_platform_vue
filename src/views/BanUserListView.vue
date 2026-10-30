@@ -68,10 +68,7 @@ const handleSearch = () => reset();
 
     <CardGrid v-else :items="usersList">
       <template #item="{ item, index }">
-        <UserCard
-          :user="item"
-          :delay="index < 12 ? index * 40 : 0"
-        />
+        <UserCard :user="item" :delay="index < 12 ? index * 40 : 0" />
       </template>
     </CardGrid>
 

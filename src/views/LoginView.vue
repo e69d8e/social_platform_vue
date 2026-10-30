@@ -31,8 +31,17 @@ const isCheck = ref(false);
 const isLogin = ref(true);
 const slideVerified = ref(false);
 const slideCaptchaId = ref("");
-// 服务端渲染的验证码图片，缺口位置（答案）不再下发到前端
-const slideCaptcha = ref({ bgImage: "", blockImage: "", y: 0 });
+// 服务端渲染的验证码图片，缺口位置（答案）不再下发到前端；
+// 拼图块的画布尺寸与内部偏移也由服务端给出，避免前后端几何各自硬编码后错位
+const slideCaptcha = ref({
+  bgImage: "",
+  blockImage: "",
+  y: 0,
+  blockWidth: 0,
+  blockHeight: 0,
+  blockOffsetX: 0,
+  blockOffsetY: 0,
+});
 const verifyToken = ref("");
 const captchaLoading = ref(false);
 const captchaError = ref(false);
@@ -83,8 +92,8 @@ const loadSlideCaptcha = async () => {
   try {
     const res = await getSlideCaptchaApi();
     if (res.data.code !== 1) {
+      // 失败文案由请求拦截器统一弹出，这里只标记状态渲染「点击重试」入口
       captchaError.value = true;
-      ElMessage.error(res.data.message || "验证码加载失败");
       return;
     }
     slideCaptchaId.value = res.data.data.captchaId;
@@ -92,10 +101,13 @@ const loadSlideCaptcha = async () => {
       bgImage: res.data.data.bgImage,
       blockImage: res.data.data.blockImage,
       y: res.data.data.y,
+      blockWidth: res.data.data.blockWidth,
+      blockHeight: res.data.data.blockHeight,
+      blockOffsetX: res.data.data.blockOffsetX,
+      blockOffsetY: res.data.data.blockOffsetY,
     };
   } catch {
     captchaError.value = true;
-    ElMessage.error("验证码加载失败，请重试");
   } finally {
     captchaLoading.value = false;
   }
@@ -109,8 +121,9 @@ const onSlideSuccess = async (detail) => {
       detail.timestamp,
     );
     if (res.data.code !== 1) {
+      // 滑块未对齐：服务端原因（验证不通过/验证异常/已过期）由拦截器弹一次即可，
+      // 这里之前又弹了一次，导致「验证不通过」同时出现两个提示
       slideVerified.value = false;
-      ElMessage.error(res.data.message || "验证失败");
       loadSlideCaptcha();
       return;
     }
@@ -159,14 +172,20 @@ const submitForm = (formEl) => {
           }
           userStore.setToken(res.data.data);
           ElMessage.success(res.data.message);
-          const userInfo = await getUserInfoApi();
-          userStore.setInfo(userInfo.data.data);
-          const data = await getSignInDaysApi();
-          signStore.setSignDay(data.data.data);
+          // 令牌已到手即视为登录成功：资料/签到天数是「锦上添花」的数据，
+          // 拉取失败不能把用户留在登录页（否则会出现「提示失败但其实已登录」）
+          try {
+            const userInfo = await getUserInfoApi();
+            if (userInfo.data.code === 1) userStore.setInfo(userInfo.data.data);
+            const data = await getSignInDaysApi();
+            if (data.data.code === 1) signStore.applySignState(data.data.data);
+          } catch {
+            // 忽略：进入站内后会由各页面按需重新拉取
+          }
           const redirect = route.query.redirect
-            ? decodeURIComponent(route.query.redirect)
-            : "/";
-          router.push(redirect);
+            ? decodeURIComponent(String(route.query.redirect))
+            : "/home";
+          router.replace(redirect);
         } else {
           const res = await registerApi(ruleForm.value, verifyToken.value);
           if (res.data.code !== 1) {
@@ -179,7 +198,9 @@ const submitForm = (formEl) => {
           resetSlideVerify();
         }
       } catch {
-        ElMessage.error("操作失败，请重试");
+        // 网络/HTTP 错误的原因由拦截器给出，这里只把验证码换成新的：
+        // 请求可能已被服务端消费掉 verifyToken，必须重新滑一次
+        resetSlideVerify();
       } finally {
         loading.value = false;
       }
@@ -292,6 +313,10 @@ const openAgreement = () => {
             :bg-image="slideCaptcha.bgImage"
             :block-image="slideCaptcha.blockImage"
             :y="slideCaptcha.y"
+            :block-width="slideCaptcha.blockWidth"
+            :block-height="slideCaptcha.blockHeight"
+            :block-offset-x="slideCaptcha.blockOffsetX"
+            :block-offset-y="slideCaptcha.blockOffsetY"
             slider-text="向右滑动完成验证"
             @success="onSlideSuccess"
             @refresh="onSlideRefresh"
@@ -319,7 +344,7 @@ const openAgreement = () => {
             >我已阅读并同意</span
           >
           <el-link @click="openAgreement" underline="never" type="primary"
-            >《用户协议》（新窗口打开，不丢失已填内容）</el-link
+            >《用户协议》</el-link
           >
         </div>
 
@@ -460,13 +485,16 @@ const openAgreement = () => {
     .agreement {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 2px 4px;
       margin-bottom: 20px;
 
       .agree-text {
         cursor: pointer;
         font-size: 14px;
         color: var(--text-secondary);
-        margin: 0 4px;
+        // 文案很短，不允许在词中间折行（原来窄屏会断成「同 / 意」）
+        white-space: nowrap;
       }
     }
 
