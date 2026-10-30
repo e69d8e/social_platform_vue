@@ -6,6 +6,7 @@ const DEFAULT_USER_INFO = {
   id: 0,
   username: "",
   avatar: "",
+  backgroundUrl: "",
   bio: "",
   gender: 0,
   authorityId: 1,

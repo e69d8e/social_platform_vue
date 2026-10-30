@@ -9,6 +9,15 @@ export const uploadAvatar = (file) => {
   });
 };
 
+// 上传个人主页背景图
+export const uploadBackground = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return request.post("/upload/background", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
 // 上传帖子图片
 export const uploadPostImgApi = (file, id) => {
   const formData = new FormData();

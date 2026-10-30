@@ -9,3 +9,8 @@ export const addCommentApi = (data) => {
 export const getCommentApi = (id, params) => {
   return request.get(`/comment/${id}`, { params });
 };
+
+// 评论点赞/取消点赞
+export const likeCommentApi = (commentId) => {
+  return request.put(`/comment/like/${commentId}`);
+};

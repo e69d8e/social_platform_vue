@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, shallowRef, onBeforeUnmount } from "vue";
+import { Lock } from "@element-plus/icons-vue";
 import {
   getPostCategoryApi,
   getPostIdApi,
@@ -22,6 +23,7 @@ const router = useRouter();
 const id = ref("");
 const title = ref("");
 const categoryId = ref("");
+const isPrivate = ref(false);
 const categoryList = ref([]);
 const valueHtml = ref("");
 const editorRef = shallowRef();
@@ -110,7 +112,8 @@ const handleBeforeUnload = (e) => {
     e.preventDefault();
     e.returnValue = "";
   }
-};const cleanupResources = async () => {
+};
+const cleanupResources = async () => {
   if (isPublished.value) return;
   if (id.value && hasUploadedImg.value) {
     try {
@@ -155,12 +158,15 @@ const publicPost = async () => {
       content: valueHtml.value,
       // 未选择分类时传 null，后端默认归入“其他”分类
       categoryId: categoryId.value === "" ? null : categoryId.value,
+      isPrivate: isPrivate.value,
     });
     dialogConfirmVisible.value = false;
     if (res.data.code !== 1) return;
     ElMessage.success(res.data.message);
     isPublished.value = true;
-    router.back();
+    // 直接跳到新帖详情：router.back() 会回到进入发布页前的任意页面，
+    // 用户发完帖第一件事是想确认帖子长什么样
+    router.replace(`/post/${id.value}`);
   } catch {
     ElMessage.error("发布失败，请重试");
   } finally {
@@ -211,6 +217,41 @@ onMounted(async () => {
   id.value = res.data.data;
   if (id.value === null) ElMessage.error("网络错误");
   window.addEventListener("beforeunload", handleBeforeUnload);
+
+  // 检查是否从 AI 助手携带了草稿
+  const state = history.state;
+  if (
+    state &&
+    (state.draftTitle || state.draftContent || state.draftCategory)
+  ) {
+    if (state.draftTitle) {
+      title.value = state.draftTitle;
+    }
+    if (state.draftCategory && categoryList.value?.length) {
+      const matched = categoryList.value.find(
+        (c) =>
+          c.name === state.draftCategory ||
+          state.draftCategory.includes(c.name) ||
+          c.name.includes(state.draftCategory),
+      );
+      if (matched) {
+        categoryId.value = matched.id;
+      }
+    }
+    if (state.draftContent) {
+      // 将文本换行格式化为富文本编辑器段落
+      const paragraphs = state.draftContent
+        .split("\n")
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map((p) => `<p>${p}</p>`)
+        .join("");
+      valueHtml.value = paragraphs || `<p>${state.draftContent}</p>`;
+    }
+    ElMessage.success(
+      "已自动填入小Y为你生成的发帖草稿，请继续完善封面或内容！",
+    );
+  }
 });
 
 onBeforeUnmount(async () => {
@@ -279,6 +320,22 @@ onBeforeUnmount(async () => {
         </el-select>
       </div>
 
+      <div class="section">
+        <div class="section-label">可见范围</div>
+        <div class="privacy-row">
+          <div class="privacy-info">
+            <span class="privacy-title">
+              <el-icon><Lock /></el-icon>
+              设为私密帖子
+            </span>
+            <span class="privacy-desc"
+              >开启后仅自己可见，不进入首页推荐流，也不会推送给粉丝</span
+            >
+          </div>
+          <el-switch v-model="isPrivate" />
+        </div>
+      </div>
+
       <div class="submit-area">
         <el-button
           type="primary"
@@ -303,7 +360,11 @@ onBeforeUnmount(async () => {
           margin-bottom: 8px;
         "
       >
-        发布后所有社区成员均可浏览该帖子
+        {{
+          isPrivate
+            ? "该帖子将设为私密，仅自己可见"
+            : "发布后所有社区成员均可浏览该帖子"
+        }}
       </p>
       <template #footer>
         <el-button @click="dialogConfirmVisible = false">取消</el-button>
@@ -373,6 +434,37 @@ onBeforeUnmount(async () => {
 
 .category-select {
   width: 240px;
+}
+
+.privacy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+
+  .privacy-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .privacy-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-ink);
+  }
+
+  .privacy-desc {
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
 }
 
 .submit-area {

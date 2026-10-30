@@ -6,7 +6,6 @@ import { useUserStore } from "@/stores/user";
 import { useThemeStore } from "@/stores/theme";
 import { useSignStore } from "@/stores/sign";
 import { signInApi } from "@/api/userApi";
-import formattedCount from "@/utils/formattedCount";
 import { ElMessage } from "element-plus";
 import { logoUrl } from "@/utils/request";
 import GlobalSearch from "@/components/layout/GlobalSearch.vue";
@@ -25,16 +24,12 @@ const signStore = useSignStore();
 const isConversationsActive = computed(
   () => route.path === "/conversations" || route.path.startsWith("/chat/"),
 );
-const isMyPostsActive = computed(
-  () => route.path === "/postList/" + userStore.userInfo.id,
-);
 const isMyFollowPostsActive = computed(() => route.path === "/followPosts");
+const isFavoritesActive = computed(() => route.path === "/favorites");
 const isAiChatActive = computed(() => route.path === "/aiChat");
 
 const myFollowPosts = () => router.push({ path: "/followPosts" });
-const myPosts = () =>
-  router.push({ path: "/postList/" + userStore.userInfo.id });
-const toFans = () => router.push({ path: "/fans/" + userStore.userInfo.id });
+const toFavorites = () => router.push({ path: "/favorites" });
 
 const signing = ref(false);
 const sign = async () => {
@@ -58,8 +53,6 @@ const sign = async () => {
     signing.value = false;
   }
 };
-
-const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
 </script>
 
 <template>
@@ -82,14 +75,12 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
           v-if="userStore.userInfo.username"
           class="sign"
           type="button"
-          :title="`本月已连续签到 ${signStore.signDay} 天`"
+          :title="`已连续签到 ${signStore.signDay} 天`"
           :disabled="signing"
           @click="sign"
         >
           <el-tag size="small" effect="plain" type="warning">点击签到</el-tag>
-          <span class="sign-text"
-            >本月已连续签到 {{ signStore.signDay }} 天</span
-          >
+          <span class="sign-text">已连续签到 {{ signStore.signDay }} 天</span>
         </button>
       </div>
 
@@ -153,15 +144,15 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
               私信
             </button>
             <button
-              class="nav-pill"
-              :class="{ 'is-nav-active': isMyPostsActive }"
+              class="nav-pill nav-pill-fav"
+              :class="{ 'is-nav-active': isFavoritesActive }"
               type="button"
-              @click="myPosts"
+              @click="toFavorites"
             >
-              我的帖子
+              收藏
             </button>
             <button
-              class="nav-pill"
+              class="nav-pill nav-pill-follow"
               :class="{ 'is-nav-active': isMyFollowPostsActive }"
               type="button"
               @click="myFollowPosts"
@@ -204,14 +195,6 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
               <span class="user-nickname">
                 {{ userStore.userInfo.nickname }}
               </span>
-            </button>
-            <button
-              class="user-fans"
-              type="button"
-              :title="`查看我的 ${fansCount} 个粉丝`"
-              @click="toFans"
-            >
-              {{ fansCount }} 粉
             </button>
           </template>
         </div>
@@ -511,27 +494,6 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
   transition: color var(--transition-base);
 }
 
-.user-fans {
-  border: none;
-  background: none;
-  padding: 4px 6px;
-  cursor: pointer;
-  font-size: 11px;
-  font-family: inherit;
-  color: var(--el-color-primary);
-  border-radius: var(--radius-full);
-  transition: background var(--transition-base);
-
-  &:hover {
-    background: var(--el-color-primary-light-9);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--border-focus);
-    outline-offset: 2px;
-  }
-}
-
 // 未读徽标数字变化时的小弹跳
 @keyframes badge-pop {
   0% {
@@ -547,6 +509,7 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
   }
 }
 
+// 响应式隐藏梯度：严格保障中间搜索框在所有尺寸下均有充裕空间，绝不折叠为单个图标
 @media (max-width: 1280px) {
   .header-inner {
     gap: 12px;
@@ -572,7 +535,13 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1140px) {
+  // 梯度1：空间紧凑时优先隐藏次级文字导航（收藏、关注），腾出空间给搜索框
+  .nav-pill-fav,
+  .nav-pill-follow {
+    display: none !important;
+  }
+
   .ai-text {
     display: none;
   }
@@ -580,104 +549,64 @@ const fansCount = computed(() => formattedCount(userStore.userInfo.fansCount));
   .ai-nav-pill {
     padding: 5px 8px;
   }
-
-  .header-actions {
-    gap: 3px;
-  }
-
-  .nav-pill {
-    padding: 5px 8px;
-    font-size: 12.5px;
-  }
 }
 
-@media (max-width: 992px) {
+@media (max-width: 960px) {
+  // 梯度2：平板端彻底隐藏顶栏所有动作按钮与签到（底部导航已集成完整的关注、发布、消息、我的）
   .header-actions {
-    gap: 4px;
+    display: none !important;
+  }
+
+  .sign {
+    display: none !important;
   }
 }
 
 @media (max-width: 768px) {
   .header-inner {
-    padding: 0 14px;
-    gap: 8px;
+    padding: 0 12px;
+    gap: 10px;
     height: 56px;
   }
 
-  .header-actions {
-    display: none;
-  }
-}
-
-@media (max-width: 640px) {
-  .header-inner {
-    padding: 0 10px;
-    gap: 6px;
-    height: 54px;
+  // 梯度3：移动端隐藏 AI 助手与用户文字昵称，仅保留头像
+  .ai-nav-pill {
+    display: none !important;
   }
 
-  .logo-text {
-    font-size: 15px;
-  }
-
-  .logo-img {
-    width: 30px;
-    height: 30px;
+  .user-nickname {
+    display: none !important;
   }
 
   .logo-icon {
     display: none;
   }
-
-  .sign-text {
-    display: none;
-  }
-
-  .sign {
-    padding: 2px 6px;
-  }
-
-  .theme-toggle-btn {
-    width: 30px;
-    height: 30px;
-  }
-
-  .ai-nav-pill {
-    padding: 4px 6px;
-    font-size: 12px;
-
-    .ai-text {
-      display: none;
-    }
-  }
-
-  .user-avatar {
-    width: 32px !important;
-    height: 32px !important;
-  }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
   .header-inner {
-    padding: 0 6px;
-    gap: 4px;
+    padding: 0 8px;
+    gap: 8px;
+    height: 52px;
   }
 
-  .header-left {
-    gap: 6px;
-  }
-
-  .header-right {
-    gap: 4px;
+  // 梯度4：小屏手机优先隐藏主题切换按钮，全额空间让给 Logo、搜索框与头像
+  .theme-toggle-btn {
+    display: none !important;
   }
 
   .logo-text {
-    font-size: 14px;
+    font-size: 14.5px;
   }
 
-  .sign :deep(.el-tag) {
-    padding: 0 4px;
-    font-size: 11px;
+  .logo-img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .user-avatar {
+    width: 30px !important;
+    height: 30px !important;
   }
 }
 </style>

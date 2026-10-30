@@ -4,12 +4,14 @@ import {
   getPostDetailApi,
   deletePostApi,
   recordPostViewApi,
+  updatePostPrivacyApi,
 } from "@/api/postApi";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
 import DOMPurify from "dompurify";
 import { useLike } from "@/composables/useLike";
+import { useStar } from "@/composables/useStar";
 import CommentComponent from "@/components/CommentComponent.vue";
 import BackButton from "@/components/BackButton.vue";
 import FollowButton from "@/components/FollowButton.vue";
@@ -19,6 +21,7 @@ import pickGlyphChar from "@/utils/glyph";
 import {
   Star,
   StarFilled,
+  CollectionTag,
   View,
   Delete,
   RemoveFilled,
@@ -26,6 +29,8 @@ import {
   ChatDotRound,
   Loading,
   Picture,
+  Lock,
+  Unlock,
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 
@@ -44,6 +49,9 @@ const post = ref({
   cover: "",
   liked: false,
   likeCount: 0,
+  starred: false,
+  starCount: 0,
+  isPrivate: false,
   userId: "",
   nickname: "",
   avatar: "",
@@ -120,6 +128,18 @@ const {
   likeCount: () => post.value.likeCount,
 });
 
+// 收藏：乐观更新 + 失败回滚（逻辑收敛于 useStar）
+const {
+  starred,
+  starCount,
+  popTick: starPopTick,
+  toggleStar,
+} = useStar({
+  postId: () => post.value.id,
+  starred: () => post.value.starred,
+  starCount: () => post.value.starCount,
+});
+
 const copyPostLink = () => {
   const url = window.location.href;
   navigator.clipboard?.writeText(url).then(
@@ -130,6 +150,24 @@ const copyPostLink = () => {
 
 const scrollToComments = () => {
   commentSectionRef.value?.scrollTo();
+};
+
+const updatingPrivacy = ref(false);
+const togglePrivacy = async () => {
+  if (updatingPrivacy.value) return;
+  updatingPrivacy.value = true;
+  try {
+    const target = !post.value.isPrivate;
+    const res = await updatePostPrivacyApi(post.value.id, target);
+    if (res.data.code === 1) {
+      post.value.isPrivate = target;
+      ElMessage.success(target ? "已设为私密，仅自己可见" : "已设为公开");
+    }
+  } catch {
+    ElMessage.error("更新私密状态失败");
+  } finally {
+    updatingPrivacy.value = false;
+  }
 };
 
 const deletePost = async () => {
@@ -177,6 +215,7 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 });
 
 const likeCount = computed(() => formattedCount(likedCount.value));
+const starCountText = computed(() => formattedCount(starCount.value));
 const viewCount = computed(() => formattedCount(post.value.viewCount));
 const sanitizedContent = computed(() => DOMPurify.sanitize(post.value.content));
 
@@ -205,8 +244,14 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       <span class="paper-glyph" aria-hidden="true">{{ glyph }}</span>
 
       <header class="paper-head">
-        <div v-if="post.category" class="category-chip">
-          {{ post.category }}
+        <div class="chip-row">
+          <div v-if="post.category" class="category-chip">
+            {{ post.category }}
+          </div>
+          <div v-if="post.isPrivate" class="private-chip" title="仅自己可见">
+            <el-icon :size="12"><Lock /></el-icon>
+            <span>私密</span>
+          </div>
         </div>
         <h1 class="title">{{ post.title }}</h1>
 
@@ -222,7 +267,7 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               <span
                 class="nickname"
                 @click="$router.push('/user/' + post.userId)"
-                >{{ post.nickname }}</span
+                >{{ post.nickname || post.username }}</span
               >
               <span class="publish-time" :title="post.createTime">{{
                 timeText
@@ -234,6 +279,26 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               size="small"
               :round="true"
             />
+            <button
+              v-if="
+                userStore.userInfo.id &&
+                String(userStore.userInfo.id) === String(post.userId)
+              "
+              type="button"
+              class="privacy-pill-btn"
+              :class="{ 'is-private': post.isPrivate }"
+              :disabled="updatingPrivacy"
+              :title="
+                post.isPrivate ? '点击设为公开' : '点击设为私密（仅自己可见）'
+              "
+              @click="togglePrivacy"
+            >
+              <el-icon :size="13">
+                <Lock v-if="post.isPrivate" />
+                <Unlock v-else />
+              </el-icon>
+              <span>{{ post.isPrivate ? "私密" : "设为私密" }}</span>
+            </button>
             <el-icon
               v-if="
                 userStore.userInfo.id &&
@@ -283,6 +348,25 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
             >
               <el-icon size="15"><ChatDotRound /></el-icon>
               <span>评论</span>
+            </button>
+            <button
+              class="star-pill"
+              :class="{ starred }"
+              type="button"
+              :aria-pressed="starred"
+              title="收藏"
+              @click="toggleStar"
+            >
+              <el-icon
+                :key="starPopTick"
+                :class="{ pop: starPopTick > 0 && starred }"
+                size="16"
+              >
+                <CollectionTag />
+              </el-icon>
+              <span
+                >{{ starred ? "已收藏 " : "收藏 " }}{{ starCountText }}</span
+              >
             </button>
             <button
               class="like-pill"
@@ -429,12 +513,18 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
     .paper-head {
       position: relative;
 
+      .chip-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
       .category-chip {
         display: inline-flex;
         align-items: center;
         gap: 6px;
         padding: 4px 14px;
-        margin-bottom: 16px;
         font-size: 12.5px;
         font-weight: 500;
         color: var(--el-color-primary);
@@ -449,6 +539,19 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
           border-radius: 50%;
           background: var(--el-color-primary);
         }
+      }
+
+      .private-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--el-color-warning);
+        background: var(--el-color-warning-light-9);
+        border: 1px solid var(--el-color-warning-light-7);
+        border-radius: var(--radius-full);
       }
 
       .title {
@@ -516,6 +619,38 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
             color: var(--text-placeholder);
           }
 
+          .privacy-pill-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-default);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all var(--transition-base);
+
+            &:hover:not(:disabled) {
+              border-color: var(--el-color-primary);
+              color: var(--el-color-primary);
+              background: var(--el-color-primary-light-9);
+            }
+
+            &.is-private {
+              background: var(--el-color-warning-light-9);
+              border-color: var(--el-color-warning-light-7);
+              color: var(--el-color-warning-dark-2);
+
+              &:hover:not(:disabled) {
+                background: var(--el-color-warning-light-8);
+                border-color: var(--el-color-warning);
+              }
+            }
+          }
+
           .admin-icon {
             font-size: 20px;
             color: var(--el-color-danger);
@@ -571,6 +706,48 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
 
             &:active {
               transform: scale(0.95);
+            }
+          }
+
+          .star-pill {
+            appearance: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 18px;
+            font-size: 13px;
+            font-family: inherit;
+            color: var(--text-secondary);
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: all var(--transition-base);
+
+            &:hover {
+              border-color: var(--el-color-warning-light-7);
+              color: var(--el-color-warning);
+              background: var(--el-color-warning-light-9);
+            }
+
+            &.starred {
+              background: var(--el-color-warning);
+              border-color: var(--el-color-warning);
+              color: #fff;
+              box-shadow: 0 2px 10px rgba(217, 148, 38, 0.3);
+            }
+
+            &:active {
+              transform: scale(0.95);
+            }
+
+            &:focus-visible {
+              outline: 2px solid var(--border-focus);
+              outline-offset: 2px;
+            }
+
+            .pop {
+              animation: heartBeat 0.5s ease;
             }
           }
 

@@ -15,13 +15,28 @@ import ImageCropper from "@/components/ImageCropper.vue";
 import compressImage from "@/utils/compressImage";
 import { uploadWithDedup } from "@/utils/uploadDedup";
 import formattedCount from "@/utils/formattedCount";
-import { Male, Female, Plus } from "@element-plus/icons-vue";
+import {
+  Male,
+  Female,
+  Plus,
+  User,
+  Lock,
+  Document,
+  Share,
+  SwitchButton,
+  Key,
+  DataAnalysis,
+  CircleCheck,
+  Edit,
+} from "@element-plus/icons-vue";
 
 const router = useRouter();
 const userStore = useUserStore();
 
 // 始终跟随 store，避免 setInfo 整体替换后本地引用失效
 const userInfo = computed(() => userStore.userInfo);
+
+const activeTab = ref("profile"); // "profile" | "social" | "security"
 
 const imageUrl = ref(userStore.userInfo.avatar || "");
 const previewUrl = ref("");
@@ -73,7 +88,6 @@ const rules = reactive({
 });
 
 const beforeAvatarUpload = (rawFile) => {
-  // 大小校验放在裁切压缩之后，这里只校验格式
   if (rawFile.type !== "image/jpeg" && rawFile.type !== "image/png") {
     ElMessage.error("图像格式应为 jpeg/png");
     return false;
@@ -84,18 +98,14 @@ const beforeAvatarUpload = (rawFile) => {
 const handleAvatarChange = (uploadFile) => {
   const raw = uploadFile.raw;
   if (!raw) return;
-
-  // auto-upload=false 时 before-upload 不一定触发，这里只兜底校验格式
   if (!["image/jpeg", "image/png"].includes(raw.type)) {
     ElMessage.error("图像格式应为 jpeg/png");
     return;
   }
-
   cropperFile.value = raw;
   cropperVisible.value = true;
 };
 
-// 头像裁切完成：先压缩再校验大小（针对压缩结果），通过后替换待上传文件
 const onAvatarCropped = async (croppedFile) => {
   try {
     const compressed = await compressImage(croppedFile, {
@@ -128,7 +138,6 @@ const submitForm = async (formEl) => {
   loading.value = true;
   try {
     if (file.value) {
-      // 秒传：命中哈希直接复用服务端已有 URL，跳过文件传输
       const avatarUrl = await uploadWithDedup(file.value, {
         upload: uploadAvatar,
       });
@@ -138,10 +147,9 @@ const submitForm = async (formEl) => {
     }
     const res = await updateUserInfoApi({ ...ruleForm });
     if (res.data.code !== 1) return;
-    // 同步 store，让全局头像/昵称即时更新
     userStore.setInfo({ ...userStore.userInfo, ...ruleForm });
     file.value = null;
-    ElMessage.success(res.data.message || "修改成功");
+    ElMessage.success(res.data.message || "个人资料保存成功");
   } finally {
     loading.value = false;
   }
@@ -186,7 +194,7 @@ const changePassword = async (formEl) => {
   try {
     const res = await updatePasswordApi(passwordForm.value.password);
     if (res.data.code === 1) {
-      ElMessage.success(res.data.message || "修改成功");
+      ElMessage.success(res.data.message || "密码修改成功");
       dialogFormVisible.value = false;
       passwordForm.value = { password: "", confirmPassword: "" };
     }
@@ -202,14 +210,13 @@ const logout = async () => {
     userStore.removeToken();
     userStore.removeInfo();
     dialogVisible.value = false;
-    ElMessage.success(res.data.message || "已注销");
+    ElMessage.success(res.data.message || "已退出登录");
     router.push("/login");
   } catch {
-    // 错误提示已由请求拦截器统一处理
+    // handled by interceptor
   }
 };
 
-// 「取消」= 放弃本次改动并还原为当前资料，语义上不该离开页面
 const resetProfile = () => {
   Object.assign(ruleForm, { ...userStore.userInfo });
   imageUrl.value = userStore.userInfo.avatar || "";
@@ -219,166 +226,317 @@ const resetProfile = () => {
     previewUrl.value = "";
   }
   ruleFormRef.value?.clearValidate();
-  ElMessage.info("已还原为当前资料");
+  ElMessage.info("已重置为当前资料");
 };
 
 const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 </script>
 
 <template>
-  <div class="my-page" v-loading="initLoading">
+  <div class="my-page-container" v-loading="initLoading">
     <PageHeader title="个人中心" large />
 
-    <div class="profile-card">
-      <el-upload
-        class="avatar-uploader"
-        action="#"
-        :auto-upload="false"
-        :show-file-list="false"
-        :on-change="handleAvatarChange"
-        :before-upload="beforeAvatarUpload"
-      >
-        <img v-if="imageUrl" :src="imageUrl" class="avatar" alt="头像" />
-        <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-      </el-upload>
-      <p v-if="file" class="avatar-pending-tip">
-        新头像将在点击「确认修改」后生效
-      </p>
-
-      <div class="user-meta">
-        <h3 class="nickname">{{ userInfo.nickname || "未设置昵称" }}</h3>
-        <span class="username-line">@{{ userInfo.username }}</span>
-        <AuthorityComponent :authority-id="userInfo.authorityId" />
+    <!-- 顶部概览横幅 -->
+    <div class="hub-header-card">
+      <div class="hub-header-left">
+        <div class="hub-avatar-wrap">
+          <img v-if="imageUrl" :src="imageUrl" class="hub-avatar" alt="头像" />
+          <el-icon v-else class="hub-avatar-icon"><User /></el-icon>
+        </div>
+        <div class="hub-info-text">
+          <div class="hub-title-row">
+            <h2 class="hub-nickname">
+              {{ userInfo.nickname || "未设置昵称" }}
+            </h2>
+            <AuthorityComponent :authority-id="userInfo.authorityId" />
+          </div>
+          <span class="hub-username">@{{ userInfo.username }}</span>
+          <p class="hub-bio">{{ userInfo.bio || "还没有添加个性简介" }}</p>
+        </div>
       </div>
 
-      <div class="stat-buttons">
-        <el-button
-          size="small"
-          @click="$router.push('/postList/' + userInfo.id)"
-          type="primary"
-          plain
-          >我的帖子</el-button
+      <div class="hub-header-right">
+        <button
+          class="visit-profile-btn"
+          type="button"
+          @click="$router.push(`/user/${userInfo.id}`)"
         >
-        <el-button
-          size="small"
-          @click="$router.push('/fans/' + userInfo.id)"
-          type="primary"
-          plain
-          >{{ fansCount }} 粉丝</el-button
-        >
-        <el-button
-          size="small"
-          @click="$router.push('/follow/' + userInfo.id)"
-          type="primary"
-          plain
-          >我的关注</el-button
-        >
-        <el-button
-          size="small"
-          @click="$router.push('/friends')"
-          type="primary"
-          plain
-          >我的好友</el-button
-        >
-      </div>
-
-      <!-- 管理功能与社交入口分区，避免混排误触 -->
-      <div v-if="userStore.isModerator" class="admin-actions">
-        <el-button size="small" @click="$router.push('/posts/banned')"
-          >封禁帖子</el-button
-        >
-        <el-button
-          v-if="userStore.isAdmin"
-          size="small"
-          @click="$router.push('/users/banned')"
-          >封禁用户</el-button
-        >
-        <el-button
-          v-if="userStore.isAdmin"
-          size="small"
-          @click="$router.push('/admin/dashboard')"
-          >数据面板</el-button
-        >
-      </div>
-
-      <div class="security-actions">
-        <el-button size="small" @click="dialogFormVisible = true"
-          >修改密码</el-button
-        >
-        <el-button
-          size="small"
-          type="danger"
-          plain
-          :loading="loading"
-          @click="dialogVisible = true"
-          >退出登录</el-button
-        >
+          <el-icon><Share /></el-icon>
+          <span>查看公开主页</span>
+        </button>
       </div>
     </div>
 
-    <div class="form-card">
-      <el-form
-        ref="ruleFormRef"
-        :model="ruleForm"
-        status-icon
-        :rules="rules"
-        label-width="auto"
-        label-position="top"
+    <!-- 功能导航 Tabs -->
+    <div class="hub-nav-tabs">
+      <button
+        class="hub-tab"
+        :class="{ active: activeTab === 'profile' }"
+        type="button"
+        @click="activeTab = 'profile'"
       >
-        <el-form-item label="昵称" prop="nickname">
-          <el-input
-            v-model="ruleForm.nickname"
-            maxlength="16"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="性别" prop="gender">
-          <el-radio-group v-model="ruleForm.gender">
-            <el-radio :value="0">未知</el-radio>
-            <el-radio :value="1"
-              ><el-icon><Male /></el-icon> 男</el-radio
-            >
-            <el-radio :value="2"
-              ><el-icon><Female /></el-icon> 女</el-radio
-            >
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="隐藏我的关注" prop="followPrivate">
-          <el-radio-group v-model="ruleForm.followPrivate">
-            <el-radio :value="true">隐私</el-radio>
-            <el-radio :value="false">可见</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="隐藏我的粉丝" prop="fansPrivate">
-          <el-radio-group v-model="ruleForm.fansPrivate">
-            <el-radio :value="true">隐私</el-radio>
-            <el-radio :value="false">可见</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="简介" prop="bio">
-          <el-input
-            v-model="ruleForm.bio"
-            type="textarea"
-            :rows="3"
-            maxlength="200"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button
-            type="primary"
-            @click="submitForm(ruleFormRef)"
-            :loading="loading"
-            >确认修改</el-button
+        <el-icon><Edit /></el-icon>
+        <span>基本资料设置</span>
+      </button>
+      <button
+        class="hub-tab"
+        :class="{ active: activeTab === 'social' }"
+        type="button"
+        @click="activeTab = 'social'"
+      >
+        <el-icon><Document /></el-icon>
+        <span>我的社交与内容</span>
+      </button>
+      <button
+        class="hub-tab"
+        :class="{ active: activeTab === 'security' }"
+        type="button"
+        @click="activeTab = 'security'"
+      >
+        <el-icon><Lock /></el-icon>
+        <span>账号安全与管理</span>
+      </button>
+    </div>
+
+    <!-- Tab 1: 基本资料设置 -->
+    <div v-if="activeTab === 'profile'" class="hub-tab-body">
+      <div class="settings-card">
+        <div class="avatar-edit-box">
+          <el-upload
+            class="avatar-uploader"
+            action="#"
+            :auto-upload="false"
+            :show-file-list="false"
+            :on-change="handleAvatarChange"
+            :before-upload="beforeAvatarUpload"
           >
-          <el-button @click="resetProfile">取消</el-button>
-        </el-form-item>
-      </el-form>
+            <img
+              v-if="imageUrl"
+              :src="imageUrl"
+              class="avatar-preview"
+              alt="头像"
+            />
+            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            <div class="avatar-hover-tip">点击更换头像</div>
+          </el-upload>
+          <div class="avatar-info-col">
+            <h4>头像设置</h4>
+            <p>支持 JPG、PNG 格式图片，系统将自动裁切与智能压缩优化</p>
+            <span v-if="file" class="avatar-pending-tag"
+              >新头像将在保存后正式生效</span
+            >
+          </div>
+        </div>
+
+        <el-divider />
+
+        <el-form
+          ref="ruleFormRef"
+          :model="ruleForm"
+          status-icon
+          :rules="rules"
+          label-width="auto"
+          label-position="top"
+          class="profile-form"
+        >
+          <el-form-item label="社区昵称" prop="nickname">
+            <el-input
+              v-model="ruleForm.nickname"
+              maxlength="16"
+              show-word-limit
+              placeholder="请输入您的昵称"
+            />
+          </el-form-item>
+
+          <el-form-item label="性别" prop="gender">
+            <el-radio-group v-model="ruleForm.gender">
+              <el-radio :value="0">保密</el-radio>
+              <el-radio :value="1">
+                <el-icon><Male /></el-icon> 男
+              </el-radio>
+              <el-radio :value="2">
+                <el-icon><Female /></el-icon> 女
+              </el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-form-item label="个性简介" prop="bio">
+            <el-input
+              v-model="ruleForm.bio"
+              type="textarea"
+              :rows="3"
+              maxlength="200"
+              show-word-limit
+              placeholder="记录你的兴趣、思考或个性签名..."
+            />
+          </el-form-item>
+
+          <div class="privacy-switches">
+            <div class="privacy-item">
+              <div class="privacy-text">
+                <span class="p-title">隐藏我的关注列表</span>
+                <span class="p-desc"
+                  >开启后其他用户访问你的个人主页时将无法查看你的关注列表</span
+                >
+              </div>
+              <el-switch v-model="ruleForm.followPrivate" />
+            </div>
+
+            <div class="privacy-item">
+              <div class="privacy-text">
+                <span class="p-title">隐藏我的粉丝列表</span>
+                <span class="p-desc"
+                  >开启后其他用户访问你的个人主页时将无法查看你的粉丝列表</span
+                >
+              </div>
+              <el-switch v-model="ruleForm.fansPrivate" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <el-button
+              type="primary"
+              size="large"
+              @click="submitForm(ruleFormRef)"
+              :loading="loading"
+              class="save-btn"
+            >
+              保存修改
+            </el-button>
+            <el-button size="large" @click="resetProfile">放弃改动</el-button>
+          </div>
+        </el-form>
+      </div>
     </div>
 
+    <!-- Tab 2: 社交与内容入口 -->
+    <div v-else-if="activeTab === 'social'" class="hub-tab-body">
+      <div class="social-grid">
+        <div
+          class="social-entry-card"
+          @click="$router.push('/postList/' + userInfo.id)"
+        >
+          <div class="entry-icon post-icon">
+            <el-icon :size="24"><Document /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">我的帖子</span>
+            <span class="entry-desc">管理我发布的所有公开与历史帖子</span>
+          </div>
+        </div>
+
+        <div
+          class="social-entry-card"
+          @click="$router.push('/follow/' + userInfo.id)"
+        >
+          <div class="entry-icon follow-icon">
+            <el-icon :size="24"><User /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">我的关注</span>
+            <span class="entry-desc">查看我正在关注的创作者与好友</span>
+          </div>
+        </div>
+
+        <div
+          class="social-entry-card"
+          @click="$router.push('/fans/' + userInfo.id)"
+        >
+          <div class="entry-icon fan-icon">
+            <el-icon :size="24"><CircleCheck /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">我的粉丝</span>
+            <span class="entry-desc"
+              >共 {{ fansCount }} 位粉丝正在关注你的动态</span
+            >
+          </div>
+        </div>
+
+        <div class="social-entry-card" @click="$router.push('/friends')">
+          <div class="entry-icon friend-icon">
+            <el-icon :size="24"><Share /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">我的好友</span>
+            <span class="entry-desc">互相关注的社区好友列表</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: 账号安全与管理 -->
+    <div v-else-if="activeTab === 'security'" class="hub-tab-body">
+      <div class="security-card">
+        <div class="security-row">
+          <div class="security-info">
+            <div class="row-title">
+              <el-icon><Key /></el-icon>
+              <span>账号登录密码</span>
+            </div>
+            <p class="row-desc">定期更换密码有助于保护您的账号数据与隐私安全</p>
+          </div>
+          <el-button type="primary" plain @click="dialogFormVisible = true"
+            >修改密码</el-button
+          >
+        </div>
+
+        <el-divider />
+
+        <!-- 管理员控制台入口 (若具备权限) -->
+        <template v-if="userStore.isModerator">
+          <div class="security-row">
+            <div class="security-info">
+              <div class="row-title">
+                <el-icon><DataAnalysis /></el-icon>
+                <span>社区管理工具</span>
+              </div>
+              <p class="row-desc">审核与管理社区帖子、违规用户处理及数据看板</p>
+            </div>
+            <div class="admin-btn-group">
+              <el-button size="small" @click="$router.push('/posts/banned')"
+                >封禁帖子列表</el-button
+              >
+              <el-button
+                v-if="userStore.isAdmin"
+                size="small"
+                @click="$router.push('/users/banned')"
+                >封禁用户列表</el-button
+              >
+              <el-button
+                v-if="userStore.isAdmin"
+                size="small"
+                type="primary"
+                plain
+                @click="$router.push('/admin/dashboard')"
+                >数据大屏</el-button
+              >
+            </div>
+          </div>
+          <el-divider />
+        </template>
+
+        <div class="security-row">
+          <div class="security-info">
+            <div class="row-title danger">
+              <el-icon><SwitchButton /></el-icon>
+              <span>退出当前登录</span>
+            </div>
+            <p class="row-desc">
+              退出后将清除本设备的登录凭证，需重新登录才能使用互动功能
+            </p>
+          </div>
+          <el-button type="danger" plain @click="dialogVisible = true"
+            >退出登录</el-button
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- 修改密码弹窗 -->
     <el-dialog
       v-model="dialogFormVisible"
-      title="修改密码"
+      title="修改账号密码"
       width="min(92vw, 420px)"
       center
     >
@@ -393,13 +551,15 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
             type="password"
             v-model="passwordForm.password"
             show-password
+            placeholder="6-16 位密码"
           />
         </el-form-item>
-        <el-form-item label="确认密码" prop="confirmPassword">
+        <el-form-item label="确认新密码" prop="confirmPassword">
           <el-input
             type="password"
             v-model="passwordForm.confirmPassword"
             show-password
+            placeholder="请再次输入新密码"
           />
         </el-form-item>
       </el-form>
@@ -409,22 +569,24 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           type="primary"
           :loading="loading"
           @click="changePassword(passwordFormRef)"
-          >确认</el-button
         >
+          确认修改
+        </el-button>
       </template>
     </el-dialog>
 
+    <!-- 确认注销弹窗 -->
     <el-dialog
       v-model="dialogVisible"
       title="确认退出登录？"
-      width="min(92vw, 420px)"
+      width="min(92vw, 400px)"
       center
     >
-      <p class="logout-tip">退出后将返回登录页，当前登录状态会被清除。</p>
+      <p class="logout-tip">退出登录后当前会话将终止，您随时可以重新登录。</p>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="loading" @click="logout"
-          >确认</el-button
+        <el-button type="danger" :loading="loading" @click="logout"
+          >确认退出</el-button
         >
       </template>
     </el-dialog>
@@ -440,164 +602,434 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 </template>
 
 <style lang="scss" scoped>
-.my-page {
-  max-width: 520px;
+.my-page-container {
+  max-width: 920px;
   margin: 0 auto;
-  padding: 16px 16px 40px;
+  padding: 16px 20px 60px;
 }
 
-.profile-card {
-  text-align: center;
+// 顶部概览横幅
+.hub-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
   background: var(--bg-card);
-  border-radius: var(--radius-xl);
-  padding: 28px 24px 20px;
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-2xl);
+  padding: 24px 28px;
   border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
+  transition: all var(--transition-base);
+}
 
-  .avatar-uploader {
-    display: block;
-    margin: 0 auto 16px;
-  }
+.hub-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
 
-  .avatar {
-    width: 96px;
-    height: 96px;
+.hub-avatar-wrap {
+  flex-shrink: 0;
+
+  .hub-avatar {
+    width: 76px;
+    height: 76px;
     border-radius: 50%;
     object-fit: cover;
-    cursor: pointer;
-    box-shadow: var(--shadow-md);
     border: 3px solid transparent;
-    background-image: var(--gradient-primary);
-    background-origin: border-box;
+    background-image:
+      linear-gradient(var(--bg-card), var(--bg-card)), var(--gradient-primary);
+    background-origin: padding-box, border-box;
     background-clip: padding-box, border-box;
-    transition: transform var(--transition-base);
-
-    &:hover {
-      transform: scale(1.05);
-    }
+    box-shadow: var(--shadow-sm);
   }
 
-  .user-meta {
+  .hub-avatar-icon {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: var(--bg-subtle);
+    color: var(--text-placeholder);
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    margin: 14px 0 8px;
+    justify-content: center;
+    font-size: 36px;
+  }
+}
+
+.hub-info-text {
+  min-width: 0;
+
+  .hub-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
-  .nickname {
+  .hub-nickname {
+    margin: 0;
     font-size: 20px;
     font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
+    color: var(--text-ink);
   }
 
-  .username-line {
+  .hub-username {
     font-size: 13px;
     color: var(--text-muted);
+    display: block;
+    margin: 2px 0 6px;
   }
 
-  .avatar-pending-tip {
-    margin: 8px 0 0;
-    font-size: 12px;
-    color: var(--el-color-warning-dark-2);
+  .hub-bio {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-body);
+    line-height: 1.5;
+    max-width: 500px;
+  }
+}
+
+.visit-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  background: var(--bg-subtle);
+  color: var(--text-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-base);
+
+  &:hover {
+    background: var(--el-color-primary-light-9);
+    border-color: var(--el-color-primary-light-7);
+    color: var(--el-color-primary);
+    transform: translateY(-1px);
+  }
+}
+
+// 导航 Tabs
+.hub-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 4px;
+}
+
+.hub-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-base);
+
+  &:hover {
+    color: var(--text-ink);
+    background: var(--bg-subtle);
+  }
+
+  &.active {
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    font-weight: 600;
+  }
+}
+
+// 资料设置卡
+.settings-card,
+.security-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  padding: 28px;
+  box-shadow: var(--shadow-sm);
+}
+
+.avatar-edit-box {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  .avatar-uploader {
+    position: relative;
+    cursor: pointer;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  .avatar-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    box-shadow: var(--shadow-sm);
   }
 
   .avatar-uploader-icon {
-    font-size: 28px;
-    color: var(--text-placeholder);
-    width: 96px;
-    height: 96px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     border: 1px dashed var(--border-default);
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: border-color var(--transition-base);
+    font-size: 24px;
+    color: var(--text-placeholder);
+  }
+
+  .avatar-hover-tip {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+
+    .avatar-uploader:hover & {
+      opacity: 1;
+    }
+  }
+
+  .avatar-info-col {
+    h4 {
+      margin: 0 0 4px;
+      font-size: 15px;
+      color: var(--text-ink);
+    }
+
+    p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .avatar-pending-tag {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--el-color-warning);
+    }
+  }
+}
+
+.profile-form {
+  max-width: 600px;
+}
+
+.privacy-switches {
+  margin: 16px 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  .privacy-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+    background: var(--bg-subtle);
+    border-radius: var(--radius-md);
+
+    .privacy-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .p-title {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--text-ink);
+      }
+
+      .p-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+    }
+  }
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+
+  .save-btn {
+    padding: 0 28px;
+    background: var(--gradient-primary);
+    border: none;
+    box-shadow: 0 2px 8px rgba(204, 109, 78, 0.25);
 
     &:hover {
-      border-color: var(--el-color-primary);
+      box-shadow: var(--glow-primary);
+    }
+  }
+}
+
+// 社交网格入口
+.social-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.social-entry-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--el-color-primary-light-7);
+  }
+
+  .entry-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.post-icon {
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
+
+    &.follow-icon {
+      background: rgba(90, 148, 122, 0.12);
+      color: var(--el-color-success);
+    }
+
+    &.fan-icon {
+      background: rgba(217, 148, 38, 0.12);
+      color: var(--el-color-warning);
+    }
+
+    &.friend-icon {
+      background: rgba(74, 144, 226, 0.12);
+      color: #4a90e2;
     }
   }
 
-  .stat-buttons {
+  .entry-details {
     display: flex;
-    justify-content: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin: 16px 0;
+    flex-direction: column;
+    gap: 3px;
 
-    :deep(.el-button) {
-      border-radius: var(--radius-full);
+    .entry-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-ink);
+    }
+
+    .entry-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+  }
+}
+
+// 账号安全行
+.security-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  .security-info {
+    .row-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-ink);
+      margin-bottom: 4px;
+
+      &.danger {
+        color: var(--el-color-danger);
+      }
+    }
+
+    .row-desc {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-muted);
     }
   }
 
-  .admin-actions {
+  .admin-btn-group {
     display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
-    margin: 0 0 16px;
-    padding-top: 14px;
-    border-top: 1px dashed var(--border-light);
-
-    :deep(.el-button) {
-      border-radius: var(--radius-full);
-      color: var(--text-secondary);
-    }
-  }
-
-  .security-actions {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-light);
+    flex-wrap: wrap;
   }
 }
 
 .logout-tip {
   text-align: center;
   color: var(--text-secondary);
-  margin: 0 0 8px;
+  margin: 8px 0;
 }
 
-.form-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-xl);
-  padding: 24px 24px 16px;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-light);
-}
-
-@media (max-width: 640px) {
-  .my-page {
-    padding: 10px 8px 36px;
+@media (max-width: 768px) {
+  .hub-header-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .profile-card {
-    padding: 20px 14px 16px;
-    border-radius: var(--radius-lg);
+  .hub-header-right {
+    width: 100%;
 
-    .stat-buttons {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-
-      :deep(.el-button) {
-        width: 100%;
-        margin: 0 !important;
-        padding: 6px 4px;
-        font-size: 12px;
-      }
+    .visit-profile-btn {
+      width: 100%;
+      justify-content: center;
     }
   }
 
-  .form-card {
-    padding: 18px 14px 12px;
-    border-radius: var(--radius-lg);
+  .social-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .security-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }
 </style>

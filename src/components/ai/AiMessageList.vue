@@ -82,8 +82,7 @@ const onScroll = () => {
               v-if="msg.role === 'assistant'"
               class="message-text markdown-body"
               :class="{
-                streaming:
-                  isStreamingHere && index === messages.length - 1,
+                streaming: isStreamingHere && index === messages.length - 1,
               }"
               v-html="renderCached(msg.content)"
             ></div>
@@ -362,6 +361,131 @@ const onScroll = () => {
 
 .markdown-body :deep(a:hover) {
   border-bottom-color: currentColor;
+}
+
+/* 站内链接高亮显示 */
+.markdown-body :deep(.internal-link) {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--chat-primary);
+  background: var(--chat-primary-soft);
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-bottom: none;
+
+  &:hover {
+    background: var(--chat-primary);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(204, 109, 78, 0.25);
+  }
+}
+
+/* AI 发帖草稿卡片 */
+.markdown-body :deep(.ai-draft-card) {
+  margin: 14px 0;
+  padding: 16px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--chat-primary-soft) 40%, #fff),
+    var(--chat-white)
+  );
+  border: 1px solid var(--chat-primary-light);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.markdown-body :deep(.ai-draft-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.markdown-body :deep(.ai-draft-badge) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(
+    135deg,
+    var(--chat-primary) 0%,
+    var(--chat-primary-light) 100%
+  );
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.markdown-body :deep(.ai-draft-cat-tag) {
+  font-size: 12px;
+  color: var(--chat-primary);
+  background: var(--chat-primary-soft);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.markdown-body :deep(.ai-draft-title) {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--chat-text);
+  line-height: 1.4;
+}
+
+.markdown-body :deep(.ai-draft-content) {
+  font-size: 13px;
+  color: var(--chat-text-secondary);
+  line-height: 1.6;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  border: 1px dashed var(--chat-border);
+}
+
+.markdown-body :deep(.ai-draft-footer) {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.markdown-body :deep(.draft-apply-btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--chat-primary) 0%,
+    var(--chat-primary-light) 100%
+  );
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(204, 109, 78, 0.28);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(204, 109, 78, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 .markdown-body :deep(hr) {

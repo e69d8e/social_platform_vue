@@ -1,6 +1,12 @@
 <script setup>
 import { ref, computed } from "vue";
-import { Delete, ArrowDown, ArrowUp, Loading } from "@element-plus/icons-vue";
+import {
+  Delete,
+  ArrowDown,
+  ArrowUp,
+  Loading,
+  CaretTop,
+} from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
 import formatRelativeTime from "@/utils/formatTime";
 
@@ -9,9 +15,11 @@ const props = defineProps({
   item: { type: Object, required: true },
   /** 当前正在删除的评论 id，用于行内 loading */
   deletingId: { type: [String, Number], default: null },
+  /** 当前正在点赞的评论 id，用于行内 loading */
+  likeLoadingId: { type: [String, Number], default: null },
 });
 
-const emit = defineEmits(["reply", "delete"]);
+const emit = defineEmits(["reply", "delete", "like"]);
 
 const userStore = useUserStore();
 
@@ -36,7 +44,27 @@ const getVisibleChildren = computed(() => {
       </div>
       <div class="comment-content">{{ item.content }}</div>
       <div class="comment-actions">
-        <button class="reply-btn" type="button" @click="emit('reply', item, null)">
+        <button
+          class="like-btn"
+          :class="{ liked: item.liked }"
+          type="button"
+          :aria-pressed="item.liked"
+          :aria-label="item.liked ? '取消点赞' : '点赞'"
+          @click="emit('like', item, null)"
+        >
+          <el-icon
+            size="14"
+            :color="item.liked ? 'var(--el-color-primary)' : ''"
+          >
+            <CaretTop />
+          </el-icon>
+          <span class="like-count">{{ item.likeCount || 0 }}</span>
+        </button>
+        <button
+          class="reply-btn"
+          type="button"
+          @click="emit('reply', item, null)"
+        >
           回复
         </button>
         <el-popconfirm
@@ -70,6 +98,22 @@ const getVisibleChildren = computed(() => {
           >
           <span class="child-text">{{ child.content }}</span>
           <span class="child-actions">
+            <button
+              class="like-btn"
+              :class="{ liked: child.liked }"
+              type="button"
+              :aria-pressed="child.liked"
+              :aria-label="child.liked ? '取消点赞' : '点赞'"
+              @click="emit('like', item, child)"
+            >
+              <el-icon
+                size="12"
+                :color="child.liked ? 'var(--el-color-primary)' : ''"
+              >
+                <CaretTop />
+              </el-icon>
+              <span class="like-count">{{ child.likeCount || 0 }}</span>
+            </button>
             <button
               class="reply-btn"
               type="button"
@@ -210,6 +254,38 @@ const getVisibleChildren = computed(() => {
     padding: 0;
     font-size: 12px;
   }
+
+  .like-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    padding: 4px 8px;
+    margin: -4px -8px;
+    font-size: inherit;
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+    transition: color $transition-fast;
+
+    &:hover {
+      color: var(--el-color-primary);
+    }
+
+    &.liked {
+      color: var(--el-color-primary);
+      font-weight: 600;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 1px;
+      border-radius: var(--radius-xs);
+    }
+  }
 }
 
 .child-comments {
@@ -259,6 +335,31 @@ const getVisibleChildren = computed(() => {
 
         &:hover {
           color: var(--el-color-primary);
+        }
+      }
+
+      .like-btn {
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        border: none;
+        background: none;
+        padding: 2px 4px;
+        font-size: 12px;
+        font-family: inherit;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-variant-numeric: tabular-nums;
+        transition: color $transition-fast;
+
+        &:hover {
+          color: var(--el-color-primary);
+        }
+
+        &.liked {
+          color: var(--el-color-primary);
+          font-weight: 600;
         }
       }
 

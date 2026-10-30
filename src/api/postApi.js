@@ -49,3 +49,8 @@ export const getPostIdApi = () => {
 export const recordPostViewApi = (id) => {
   return request.post(`/post/view/${id}`);
 };
+
+// 设置帖子私密状态
+export const updatePostPrivacyApi = (id, isPrivate) => {
+  return request.put(`/post/privacy/${id}`, null, { params: { isPrivate } });
+};

@@ -104,21 +104,22 @@ const initCrop = () => {
   const bh = bboxH.value;
   if (!bw || !bh) return;
   const r = currentRatio.value;
-  let w = Math.min(stageW.value, stageH.value) * 0.75;
+  let w;
   let h;
   if (r > 0) {
-    h = w / r;
-    if (w > bw) {
-      w = bw;
-      h = w / r;
+    // 找出在图片区域 (bw, bh) 内保持比例 r 的最大尺寸
+    let maxFittingW = bw;
+    let maxFittingH = bw / r;
+    if (maxFittingH > bh) {
+      maxFittingH = bh;
+      maxFittingW = bh * r;
     }
-    if (h > bh) {
-      h = bh;
-      w = h * r;
-    }
+    // 初始裁切框占据可用区域的 90%，避免选框过小
+    w = maxFittingW * 0.9;
+    h = maxFittingH * 0.9;
   } else {
-    w = Math.min(bw * 0.85, stageW.value * 0.8);
-    h = Math.min(bh * 0.85, stageH.value * 0.8);
+    w = Math.min(bw * 0.9, stageW.value * 0.9);
+    h = Math.min(bh * 0.9, stageH.value * 0.9);
   }
   crop.w = w;
   crop.h = h;
@@ -238,8 +239,8 @@ const resizeBy = (dx, dy) => {
     return;
   }
 
-  const minW = Math.min(MIN_CROP * r, maxW);
   const minH = Math.min(MIN_CROP, maxH);
+  const minW = Math.min(MIN_CROP * (r > 0 ? r : 1), maxW);
   const rawW = startRect.w + dx * sx;
   const rawH = startRect.h + dy * sy;
   // 以相对变化更大的一侧为准，保持宽高比
@@ -255,7 +256,7 @@ const resizeBy = (dx, dy) => {
       h = maxH;
       w = h * r;
     }
-    if (h < minW) {
+    if (h < minH) {
       h = minH;
       w = h * r;
     }
@@ -266,7 +267,7 @@ const resizeBy = (dx, dy) => {
       w = maxW;
       h = w / r;
     }
-    if (h < minW) {
+    if (w < minW) {
       w = minW;
       h = w / r;
     }
@@ -506,7 +507,7 @@ const boxStyle = computed(() => ({
   <el-dialog
     v-model="visible"
     :title="title"
-    width="min(660px, 94vw)"
+    width="min(840px, 94vw)"
     align-center
     :close-on-click-modal="false"
     destroy-on-close
@@ -663,7 +664,7 @@ const boxStyle = computed(() => ({
 .cropper {
   .stage {
     position: relative;
-    height: 340px;
+    height: 380px;
     background: var(--el-fill-color-darker);
     border-radius: 8px;
     overflow: hidden;

@@ -1,4 +1,6 @@
 <script setup>
+import { ref } from "vue";
+import { Refresh } from "@element-plus/icons-vue";
 import PostCard from "@/components/PostCard.vue";
 import CategoryComponent from "@/components/CategoryComponent.vue";
 import CardGrid from "@/components/CardGrid.vue";
@@ -10,6 +12,7 @@ import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { POST_PAGE_SIZE } from "@/constants/pagination";
 
 const userStore = useUserStore();
+const reshuffling = ref(false);
 
 const {
   items: posts,
@@ -33,6 +36,21 @@ const {
   autoFill: true,
   onError: () => ElMessage.error("加载帖子失败"),
 });
+
+// 换一换：把当前已加载的推荐流就地洗牌，立即换一批阅读顺序（游标续传不受影响）
+const reshuffle = () => {
+  if (reshuffling.value || posts.value.length < 2) return;
+  reshuffling.value = true;
+  const arr = [...posts.value];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  posts.value = arr;
+  setTimeout(() => {
+    reshuffling.value = false;
+  }, 300);
+};
 </script>
 
 <template>
@@ -46,10 +64,24 @@ const {
         <span class="section-title feed-title">推荐流</span>
         <span class="feed-subtitle">探索最新创作与社区热门讨论</span>
       </div>
+      <button
+        class="reshuffle-btn"
+        type="button"
+        :class="{ spinning: reshuffling }"
+        :disabled="reshuffling"
+        title="换一换"
+        @click="reshuffle"
+      >
+        <el-icon :size="14"><Refresh /></el-icon>
+        <span>换一换</span>
+      </button>
     </div>
 
     <!-- 首屏骨架 -->
-    <SkeletonGrid v-if="loading && posts.length === 0" :count="POST_PAGE_SIZE" />
+    <SkeletonGrid
+      v-if="loading && posts.length === 0"
+      :count="POST_PAGE_SIZE"
+    />
 
     <template v-else>
       <el-empty v-if="posts.length === 0" description="还没有帖子">
@@ -67,10 +99,7 @@ const {
 
       <CardGrid v-else :items="posts">
         <template #item="{ item, index }">
-          <PostCard
-            :post="item"
-            :delay="index < 12 ? index * 40 : 0"
-          />
+          <PostCard :post="item" :delay="index < 12 ? index * 40 : 0" />
         </template>
       </CardGrid>
     </template>
@@ -89,22 +118,53 @@ const {
 .home {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 16px 12px 40px;
+  padding: 16px 20px 40px;
 
   .category {
-    padding: 0 8px 16px;
+    padding: 0 0 16px;
   }
 
   .feed-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 4px 16px;
+    padding: 6px 0 16px;
 
     .feed-head-left {
       display: flex;
       align-items: baseline;
       gap: 12px;
+    }
+
+    .reshuffle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-default);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--transition-base);
+
+      &:hover:not(:disabled) {
+        color: var(--el-color-primary);
+        border-color: var(--el-color-primary-light-7);
+        background: var(--el-color-primary-light-9);
+      }
+
+      &:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      &.spinning .el-icon {
+        animation: reshuffle-spin 0.6s ease;
+      }
     }
 
     .feed-title {
@@ -115,6 +175,15 @@ const {
       font-size: 13px;
       color: var(--text-muted);
     }
+  }
+}
+
+@keyframes reshuffle-spin {
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -131,6 +200,11 @@ const {
 
       .feed-title {
         font-size: 15px;
+      }
+
+      .reshuffle-btn {
+        padding: 4px 10px;
+        font-size: 12px;
       }
 
       .feed-subtitle {

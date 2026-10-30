@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { ElMessage } from "element-plus";
-import { addCommentApi, getCommentApi } from "@/api/commentApi";
+import { addCommentApi, getCommentApi, likeCommentApi } from "@/api/commentApi";
 import { deleteCommentApi } from "@/api/reviewerApi";
 import { useRequireLogin } from "@/composables/useRequireLogin";
 import { debounce } from "lodash-es";
@@ -31,6 +31,7 @@ const content = ref("");
 const isInputExpanded = ref(false);
 const submitting = ref(false);
 const deletingId = ref(null);
+const likeLoadingId = ref(null);
 const inputBarRef = ref(null);
 const rootRef = ref(null);
 
@@ -191,6 +192,26 @@ const submitComment = async () => {
   }
 };
 
+// 评论点赞：接口返回最新的 liked 状态与点赞数，就地更新对应评论
+const likeComment = async (item, child) => {
+  if (!requireLogin("请先登录后再点赞评论")) return;
+  const target = child ?? item;
+  if (likeLoadingId.value === target.id) return;
+  likeLoadingId.value = target.id;
+  try {
+    const res = await likeCommentApi(target.id);
+    if (res.data.code === 1) {
+      const { liked, likeCount } = res.data.data || {};
+      target.liked = liked;
+      target.likeCount = likeCount;
+    }
+  } catch {
+    ElMessage.error("点赞失败，请重试");
+  } finally {
+    likeLoadingId.value = null;
+  }
+};
+
 const deleteComment = async (id) => {
   deletingId.value = id;
   try {
@@ -259,8 +280,10 @@ onUnmounted(() => {
         :key="item.id"
         :item="item"
         :deleting-id="deletingId"
+        :like-loading-id="likeLoadingId"
         @reply="reply"
         @delete="deleteComment"
+        @like="likeComment"
       />
     </template>
   </div>

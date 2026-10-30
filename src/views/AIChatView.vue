@@ -37,7 +37,9 @@
           <el-avatar :size="88" :src="logoUrl"></el-avatar>
         </div>
         <h1>你好，我是小Y</h1>
-        <p>你的智能 AI 助手，随时为你答疑解惑、创作内容。</p>
+        <p>
+          你的社区专属智能伙伴，随时为你发现优质内容、推荐创作者、辅助发帖创作。
+        </p>
         <button class="start-btn" @click="createNewSession">
           <el-icon :size="16"><ChatDotRound /></el-icon>
           开始对话
@@ -54,7 +56,6 @@
           </button>
         </div>
       </div>
-
       <!-- 聊天容器 -->
       <div v-else class="chat-container">
         <div class="chat-header">
@@ -99,6 +100,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import { ChatDotRound, Menu, Plus } from "@element-plus/icons-vue";
 import { logoUrl } from "@/utils/request";
 import AiSessionSidebar from "@/components/ai/AiSessionSidebar.vue";
@@ -106,6 +108,7 @@ import AiMessageList from "@/components/ai/AiMessageList.vue";
 import AiChatInput from "@/components/ai/AiChatInput.vue";
 import { useAiChat } from "@/composables/useAiChat";
 
+const router = useRouter();
 const messagesListRef = ref(null);
 const inputBarRef = ref(null);
 
@@ -137,8 +140,42 @@ const {
   inputRef: inputBarRef,
 });
 
-// 点击消息内容：点到代码块时复制整段代码
+// 点击消息内容：处理发帖草稿卡片、站内链接跳转及代码块复制
 const onMessageClick = (e) => {
+  // 1. 发帖草稿卡片「一键填入发帖页」
+  const draftBtn = e.target.closest(".draft-apply-btn");
+  if (draftBtn) {
+    const rawTitle = draftBtn.getAttribute("data-draft-title") || "";
+    const rawCategory = draftBtn.getAttribute("data-draft-category") || "";
+    const rawContent = draftBtn.getAttribute("data-draft-content") || "";
+
+    const draftTitle = decodeURIComponent(rawTitle);
+    const draftCategory = decodeURIComponent(rawCategory);
+    const draftContent = decodeURIComponent(rawContent);
+
+    router.push({
+      path: "/publicPost",
+      state: {
+        draftTitle,
+        draftCategory,
+        draftContent,
+      },
+    });
+    return;
+  }
+
+  // 2. 站内链接无刷新路由跳转
+  const internalLink = e.target.closest("a[data-internal-link]");
+  if (internalLink) {
+    e.preventDefault();
+    const href = internalLink.getAttribute("data-internal-link");
+    if (href) {
+      router.push(href);
+    }
+    return;
+  }
+
+  // 3. 点击代码块复制
   const pre = e.target.closest("pre");
   if (!pre) return;
   const text = pre.querySelector("code")?.textContent ?? pre.textContent ?? "";

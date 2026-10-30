@@ -31,9 +31,10 @@ export function useAiChat({ messagesListRef, inputRef } = {}) {
   const pageSize = AI_SESSION_PAGE_SIZE;
 
   const suggestions = [
-    "帮我写一段周报",
-    "解释一下什么是机器学习",
-    "给我推荐几本好书",
+    "🔥 社区最近有什么热门讨论和帖子？",
+    "📷 推荐几位摄影或数码领域的创作者",
+    "✍️ 帮我写一篇关于周末生活的发帖草稿",
+    "🤖 社区里大家都在讨论哪些 AI 或科技话题？",
   ];
 
   // 是否停留在底部附近（决定流式输出时是否自动跟随滚动）
@@ -83,7 +84,8 @@ export function useAiChat({ messagesListRef, inputRef } = {}) {
 
   // 当前会话是否正在流式输出（与 isLoading 区分：别的会话可能仍在后台收尾）
   const isStreamingHere = computed(
-    () => isLoading.value && streamingSessionId.value === currentSessionId.value,
+    () =>
+      isLoading.value && streamingSessionId.value === currentSessionId.value,
   );
 
   // 是否显示打字指示器：当前会话正在加载且 AI 尚未输出任何文字

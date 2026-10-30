@@ -8,16 +8,8 @@ defineProps({
 </script>
 
 <template>
-  <el-row :gutter="16" class="skeleton-grid" aria-hidden="true">
-    <el-col
-      v-for="i in count"
-      :key="i"
-      :xs="24"
-      :sm="12"
-      :md="8"
-      :lg="6"
-      :xl="4"
-    >
+  <div class="skeleton-grid card-grid" aria-hidden="true">
+    <div v-for="i in count" :key="i" class="cell">
       <!-- 帖子卡片骨架 -->
       <div v-if="type === 'post'" class="sk-card">
         <div class="skeleton sk-media" />
@@ -42,17 +34,42 @@ defineProps({
           <div class="skeleton sk-line w-70" />
         </div>
       </div>
-    </el-col>
-  </el-row>
+    </div>
+  </div>
 </template>
 
 <style lang="scss" scoped>
 .skeleton-grid {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
 
-  :deep(.el-col) {
-    margin-bottom: 16px;
+@media (min-width: 680px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 980px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1240px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px;
+  }
+}
+
+@media (max-width: 440px) {
+  .skeleton-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 

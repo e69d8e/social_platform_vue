@@ -12,17 +12,11 @@ const { unreadCount } = useUnreadMessages();
     <AppHeader :unread-count="unreadCount" />
 
     <main class="main">
-      <el-row>
-        <el-col :xs="0" :sm="1" :md="1" :lg="2" :xl="3" />
-        <el-col :xs="24" :sm="22" :md="22" :lg="20" :xl="18">
-          <router-view v-slot="{ Component, route }">
-            <Transition name="page" mode="out-in">
-              <component :is="Component" :key="route.path" />
-            </Transition>
-          </router-view>
-        </el-col>
-        <el-col :xs="0" :sm="1" :md="1" :lg="2" :xl="3" />
-      </el-row>
+      <router-view v-slot="{ Component, route }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" :key="route.path" />
+        </Transition>
+      </router-view>
     </main>
 
     <!-- 移动端底部导航栏 (<768px 显示) -->

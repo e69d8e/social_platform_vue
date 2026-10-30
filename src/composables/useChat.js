@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import {
@@ -60,7 +60,8 @@ export function useChat({ messagesAreaRef } = {}) {
   };
 
   const loadHistory = async () => {
-    if (isNewChat.value || loadingHistory.value || historyFinished.value) return;
+    if (isNewChat.value || loadingHistory.value || historyFinished.value)
+      return;
     loadingHistory.value = true;
     historyError.value = false;
     try {
@@ -158,6 +159,32 @@ export function useChat({ messagesAreaRef } = {}) {
       // 会话接管失败不影响消息已送达，保持当前界面
     }
   };
+
+  // App.vue 对 /chat 路由共用 key（避免接管时重挂载白屏），组件实例会跨
+  // /chat/:id 复用：接管流程先更新 conversationId 再 replace，此处无需处理；
+  // 但直接改 URL 在会话间跳转时仍需整体重置状态，防止显示错会话的消息。
+  watch(
+    () => route.params.conversationId,
+    async (next) => {
+      if (next === undefined || String(next) === String(conversationId.value)) {
+        return;
+      }
+      disconnect();
+      conversationId.value = next;
+      isNewChat.value = next === "new";
+      messages.value = [];
+      pageNum.value = 1;
+      historyFinished.value = false;
+      isNearBottom.value = true;
+      firstPageCount.value = 0;
+      await loadOtherUserInfo();
+      await loadHistory();
+      markAsRead();
+      if (!isNewChat.value) {
+        connect(onWsMessage);
+      }
+    },
+  );
 
   const deliver = async (msg) => {
     try {

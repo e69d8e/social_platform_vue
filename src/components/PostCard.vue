@@ -4,14 +4,21 @@ import { useRouter } from "vue-router";
 import formattedCount from "@/utils/formattedCount";
 import { formatExactTime } from "@/utils/formatTime";
 import pickGlyphChar from "@/utils/glyph";
-import { Star, View, User } from "@element-plus/icons-vue";
+import { Star, View, User, Lock, Unlock } from "@element-plus/icons-vue";
 import { useLike } from "@/composables/useLike";
+import { useStar } from "@/composables/useStar";
+import { highlightKeyword } from "@/utils/searchHighlight";
+import { useUserStore } from "@/stores/user";
+import { updatePostPrivacyApi } from "@/api/postApi";
+import { ElMessage } from "element-plus";
 
 const props = defineProps({
   /** 帖子数据对象（列表接口返回的原样 item） */
   post: { type: Object, required: true },
   // 入场动画延迟（ms），首页网格用它做级联错峰
   delay: { type: Number, default: 0 },
+  // 搜索关键词高亮
+  keyword: { type: String, default: "" },
 });
 
 const router = useRouter();
@@ -21,6 +28,18 @@ const { liked, likeCount, popTick, toggleLike } = useLike({
   postId: () => props.post.id,
   liked: () => props.post.liked,
   likeCount: () => props.post.likeCount,
+});
+
+// ---- 收藏：与点赞同构的乐观更新 ----
+const {
+  starred,
+  starCount,
+  popTick: starPopTick,
+  toggleStar,
+} = useStar({
+  postId: () => props.post.id,
+  starred: () => props.post.starred,
+  starCount: () => props.post.starCount,
 });
 
 // ---- 纯文本摘要 ----
@@ -37,6 +56,13 @@ const htmlToText = (html) => {
 };
 
 const textContent = computed(() => htmlToText(props.post.content));
+
+const highlightedTitle = computed(() =>
+  highlightKeyword(props.post.title, props.keyword),
+);
+const highlightedExcerpt = computed(() =>
+  highlightKeyword(textContent.value, props.keyword),
+);
 
 // 文本卡水印字：取标题首个非符号字符，形似书页章纹
 const glyph = computed(() => pickGlyphChar(props.post.title));
@@ -55,8 +81,51 @@ watch(
   },
 );
 
-// 封面加载失败时回退为纯文本卡片（章纹水印布局）
-const hasCover = computed(() => Boolean(props.post.cover) && !coverFailed.value);
+// 封面加载失败时回退为文本预览卡（章纹水印布局）
+const hasCover = computed(
+  () => Boolean(props.post.cover) && !coverFailed.value,
+);
+
+const emit = defineEmits(["privacyChange"]);
+
+const localIsPrivate = ref(Boolean(props.post.isPrivate));
+watch(
+  () => props.post.isPrivate,
+  (val) => {
+    localIsPrivate.value = Boolean(val);
+  },
+);
+const isPrivate = computed(() => localIsPrivate.value);
+
+const authorDisplayName = computed(
+  () => props.post.nickname || props.post.username || "",
+);
+
+const userStore = useUserStore();
+const isAuthor = computed(
+  () =>
+    userStore.userInfo.id &&
+    String(userStore.userInfo.id) === String(props.post.userId),
+);
+
+const updatingPrivacy = ref(false);
+const togglePrivacy = async () => {
+  if (updatingPrivacy.value) return;
+  updatingPrivacy.value = true;
+  try {
+    const target = !isPrivate.value;
+    const res = await updatePostPrivacyApi(props.post.id, target);
+    if (res.data.code === 1) {
+      localIsPrivate.value = target;
+      emit("privacyChange", { id: props.post.id, isPrivate: target });
+      ElMessage.success(target ? "已设为私密，仅自己可见" : "已设为公开");
+    }
+  } catch {
+    ElMessage.error("更新私密状态失败");
+  } finally {
+    updatingPrivacy.value = false;
+  }
+};
 
 const openUser = (e) => {
   e?.stopPropagation?.();
@@ -69,8 +138,15 @@ const openUser = (e) => {
 <template>
   <div class="postcard" :style="{ '--rise-delay': `${props.delay}ms` }">
     <article class="card">
-      <div v-if="hasCover" class="media">
+      <!-- 拉伸链接：覆盖整张卡片作为点击/键盘导航目标 -->
+      <RouterLink class="title-link" :to="`/post/${post.id}`">
+        <span class="sr-only">{{ post.title }} — 阅读帖子</span>
+      </RouterLink>
+
+      <!-- 封面（无图帖子回退为章纹预览块） -->
+      <div class="media">
         <img
+          v-if="hasCover"
           :src="post.cover"
           :alt="post.title"
           loading="lazy"
@@ -79,52 +155,88 @@ const openUser = (e) => {
           @load="coverLoaded = true"
           @error="coverFailed = true"
         />
+        <div v-else class="media-fallback">
+          <span class="glyph" aria-hidden="true">{{ glyph }}</span>
+          <p class="fallback-excerpt" v-html="highlightedExcerpt"></p>
+        </div>
+
+        <!-- 封面浮层：浏览量（左）与私密状态（右），仿 B 站信息条 -->
+        <div class="media-chips">
+          <span class="chip view-chip">
+            <el-icon :size="13"><View /></el-icon>
+            <span>{{ formattedCount(post.viewCount || 0) }}</span>
+          </span>
+          <button
+            v-if="isAuthor"
+            class="chip author-privacy-btn"
+            :class="{ 'is-private': isPrivate }"
+            type="button"
+            :disabled="updatingPrivacy"
+            :title="
+              isPrivate ? '当前私密，点击设为公开' : '当前公开，点击设为私密'
+            "
+            @click.stop.prevent="togglePrivacy"
+          >
+            <el-icon :size="12"
+              ><Lock v-if="isPrivate" /><Unlock v-else
+            /></el-icon>
+            <span>{{ isPrivate ? "私密" : "设为私密" }}</span>
+          </button>
+          <span v-else-if="isPrivate" class="chip private-chip">
+            <el-icon :size="12"><Lock /></el-icon>
+            <span>私密</span>
+          </span>
+        </div>
       </div>
 
       <div class="body">
-        <h4 class="title">
-          <!-- 拉伸链接：覆盖整张卡片作为点击/键盘导航目标，替代外层 div 伪链接 -->
-          <RouterLink class="title-link" :to="`/post/${post.id}`">
-            {{ post.title }}
-            <span class="sr-only">— 阅读帖子</span>
-          </RouterLink>
-        </h4>
-
-        <p v-if="hasCover" class="excerpt">{{ textContent }}</p>
-
-        <div v-else class="text-wrap">
-          <span class="glyph" aria-hidden="true">{{ glyph }}</span>
-          <p class="excerpt text-content">{{ textContent }}</p>
-        </div>
+        <h4 class="title" v-html="highlightedTitle"></h4>
 
         <div class="meta">
           <div class="meta-left">
             <span
-              v-if="post.username"
+              v-if="authorDisplayName"
               class="author"
               :class="{ clickable: Boolean(post.userId) }"
               :title="
                 post.userId
-                  ? `查看 @${post.username} 的主页`
-                  : `@${post.username}`
+                  ? `查看 ${authorDisplayName} 的主页`
+                  : authorDisplayName
               "
               @click.stop="openUser"
             >
               <el-icon size="12"><User /></el-icon>
-              <span class="author-name">@{{ post.username }}</span>
+              <span class="author-name">{{ authorDisplayName }}</span>
             </span>
             <span class="time" :title="post.createTime">{{ timeText }}</span>
           </div>
           <div class="stats">
-            <span class="view">
-              <el-icon size="14"><View /></el-icon>
-              <span class="count">{{ formattedCount(post.viewCount) }}</span>
-            </span>
             <button
-              class="like"
+              class="stat-btn"
+              type="button"
+              :aria-pressed="starred"
+              :aria-label="starred ? '取消收藏' : '收藏'"
+              title="收藏"
+              @click.stop="toggleStar"
+            >
+              <el-icon
+                :key="starPopTick"
+                :class="{ pop: starPopTick > 0 && starred }"
+                size="15"
+                :color="starred ? 'var(--el-color-warning)' : ''"
+              >
+                <Star />
+              </el-icon>
+              <span class="count" :class="{ active: starred }">
+                {{ formattedCount(starCount) }}
+              </span>
+            </button>
+            <button
+              class="stat-btn"
               type="button"
               :aria-pressed="liked"
               :aria-label="liked ? '取消点赞' : '点赞'"
+              title="点赞"
               @click.stop="toggleLike"
             >
               <el-icon
@@ -183,12 +295,47 @@ const openUser = (e) => {
   }
 }
 
+// 拉伸链接：铺满整卡作为点击与键盘目标
+.title-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: -2px;
+    border-radius: var(--radius-lg);
+  }
+}
+
+// 可交互元素浮在拉伸链接之上，保证各自的点击热区
+.author,
+.stat-btn {
+  position: relative;
+  z-index: 2;
+}
+
 // ---- 封面（图卡） ----
 .media {
+  position: relative;
   aspect-ratio: 16 / 10;
   overflow: hidden;
   background: var(--bg-subtle);
-  position: relative;
 
   img {
     width: 100%;
@@ -211,6 +358,122 @@ const openUser = (e) => {
   }
 }
 
+// 无图帖子：章纹水印 + 摘要预览，保持 B 站卡片的统一高度节奏
+.media-fallback {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 14px 16px;
+  background:
+    radial-gradient(
+      circle at 85% 15%,
+      var(--el-color-primary-light-9),
+      transparent 55%
+    ),
+    var(--bg-subtle);
+
+  .glyph {
+    position: absolute;
+    right: -6px;
+    bottom: -18px;
+    font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+    font-size: 96px;
+    line-height: 1;
+    font-weight: 700;
+    color: var(--text-primary);
+    opacity: 0.06;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .fallback-excerpt {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    word-break: break-word;
+    white-space: pre-wrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    :deep(.search-highlight) {
+      background: var(--el-color-primary-light-8);
+      color: var(--el-color-primary-dark-2);
+      padding: 0 2px;
+      border-radius: 2px;
+      font-weight: 600;
+    }
+  }
+}
+
+// ---- 封面信息条（仿 B 站左下播放量 / 右下时长角标） ----
+.media-chips {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 10px 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+
+  .private-chip {
+    padding: 1px 8px;
+    border-radius: var(--radius-full);
+    background: rgba(0, 0, 0, 0.55);
+    font-size: 11px;
+  }
+
+  .author-privacy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #fff;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all var(--transition-fast);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.85);
+      border-color: #fff;
+      transform: scale(1.02);
+    }
+
+    &.is-private {
+      background: rgba(230, 162, 60, 0.9);
+      border-color: rgba(255, 255, 255, 0.7);
+
+      &:hover {
+        background: rgba(230, 162, 60, 1);
+      }
+    }
+  }
+}
+
 // ---- 卡片主体 ----
 .body {
   display: flex;
@@ -218,12 +481,12 @@ const openUser = (e) => {
   flex: 1;
   min-width: 0;
   gap: 8px;
-  padding: 14px 16px 12px;
+  padding: 12px 14px 10px;
 }
 
 .title {
   margin: 0;
-  font-size: 15.5px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.45;
   letter-spacing: -0.015em;
@@ -239,76 +502,16 @@ const openUser = (e) => {
     color: var(--el-color-primary);
   }
 
-  // 拉伸链接：铺满整卡作为点击与键盘目标
-  .title-link {
-    color: inherit;
-    text-decoration: none;
-    outline: none;
-
-    &::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-    }
-
-    &:focus-visible::after {
-      outline: 2px solid var(--border-focus);
-      outline-offset: -2px;
-      border-radius: var(--radius-lg);
-    }
-  }
-}
-
-// 可交互元素浮在拉伸链接之上，保证各自的点击热区
-.author,
-.like {
-  position: relative;
-  z-index: 2;
-}
-
-.excerpt {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.65;
-  color: var(--text-muted);
-  word-break: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-// ---- 文本卡：章纹水印 + 长摘要 ----
-.text-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 150px;
-
-  .glyph {
-    position: absolute;
-    right: -12px;
-    bottom: -24px;
-    font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
-    font-size: 110px;
-    line-height: 1;
+  :deep(.search-highlight) {
+    background: var(--el-color-primary-light-8);
+    color: var(--el-color-primary-dark-2);
+    padding: 0 2px;
+    border-radius: 2px;
     font-weight: 700;
-    color: var(--text-primary);
-    opacity: 0.05;
-    user-select: none;
-    pointer-events: none;
-  }
-
-  .text-content {
-    white-space: pre-wrap;
-    -webkit-line-clamp: 7;
-    line-clamp: 7;
-    min-height: 140px;
   }
 }
 
-// ---- 底栏：作者 + 时间 + 浏览 + 点赞 ----
+// ---- 底栏：作者 + 时间 + 收藏 + 点赞 ----
 .meta {
   display: flex;
   align-items: center;
@@ -364,25 +567,16 @@ const openUser = (e) => {
   .stats {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 2px;
     flex-shrink: 0;
   }
 
-  .view,
-  .like {
+  .stat-btn {
     display: inline-flex;
     align-items: center;
     gap: 3px;
     color: var(--text-muted);
     font-size: 12px;
-  }
-
-  .count {
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .like {
     appearance: none;
     background: none;
     border: none;
@@ -396,8 +590,8 @@ const openUser = (e) => {
       transform var(--transition-fast);
 
     &:hover {
-      background: var(--el-color-danger-light-9);
-      color: var(--el-color-danger);
+      background: var(--bg-muted);
+      color: var(--text-body);
     }
 
     &:active {
@@ -410,9 +604,22 @@ const openUser = (e) => {
       outline-offset: 1px;
     }
 
+    .count {
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
     .count.active {
-      color: var(--el-color-danger);
       font-weight: 600;
+    }
+
+    // 收藏按钮在首位、点赞按钮居次，激活色分别呼应图标色
+    &:first-child .count.active {
+      color: var(--el-color-warning);
+    }
+
+    &:nth-child(2) .count.active {
+      color: var(--el-color-danger);
     }
 
     .pop {
@@ -423,32 +630,27 @@ const openUser = (e) => {
 
 @media (max-width: 640px) {
   .body {
-    padding: 12px 14px 10px;
+    padding: 10px 12px 8px;
     gap: 6px;
   }
 
   .title {
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.4;
   }
 
-  .excerpt {
-    font-size: 12.5px;
-  }
-
-  .text-wrap {
-    min-height: 120px;
+  .media-fallback {
+    padding: 10px 12px;
 
     .glyph {
-      font-size: 88px;
+      font-size: 76px;
       right: -8px;
-      bottom: -16px;
+      bottom: -14px;
     }
 
-    .text-content {
-      min-height: 110px;
-      -webkit-line-clamp: 5;
-      line-clamp: 5;
+    .fallback-excerpt {
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
     }
   }
 
@@ -462,8 +664,8 @@ const openUser = (e) => {
       font-size: 11px;
     }
 
-    .like {
-      padding: 4px 8px;
+    .stat-btn {
+      padding: 4px 6px;
     }
   }
 }
