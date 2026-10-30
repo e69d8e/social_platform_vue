@@ -527,7 +527,9 @@ const openUser = (e) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  // 卡片变窄（移动端 2 列 / 宽屏 5 列）时让统计项换行，避免挤压作者与时间
+  flex-wrap: wrap;
+  gap: 4px 8px;
   margin-top: auto;
   padding-top: 6px;
   border-top: 1px solid var(--border-light);
@@ -580,6 +582,8 @@ const openUser = (e) => {
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
+    // 换行后仍靠右对齐
+    margin-left: auto;
   }
 
   .stat-btn {

@@ -25,7 +25,9 @@ const attrs = useAttrs();
     <span v-if="total !== null" class="total-count">
       共 {{ total }} {{ unit }}
     </span>
-    <slot name="extra" />
+    <div v-if="$slots.extra" class="header-extra">
+      <slot name="extra" />
+    </div>
   </div>
 </template>
 
@@ -53,6 +55,11 @@ const attrs = useAttrs();
     font-weight: 600;
     color: var(--text-primary);
     padding-left: 12px;
+    // 标题保持单行，空间不足时省略而不是折断
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 
     // 珊瑚段落标：呼应首页小节标题语法
     &::before {
@@ -71,6 +78,8 @@ const attrs = useAttrs();
   .total-count {
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0;
+    white-space: nowrap;
     padding: 2px 12px 3px;
     font-size: 12px;
     color: var(--text-muted);
@@ -79,12 +88,24 @@ const attrs = useAttrs();
     border-radius: $radius-full;
     font-variant-numeric: tabular-nums;
   }
+
+  .header-extra {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 640px) {
   .page-header {
     gap: 8px;
     padding: 4px 2px 12px;
+    // 窄屏允许换行：附加信息（如提示文案）整行展示，标题不折断
+    flex-wrap: wrap;
+
+    .header-extra {
+      flex: 1 0 100%;
+      order: 3;
+    }
 
     &.large {
       margin-bottom: 14px;

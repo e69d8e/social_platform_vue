@@ -1022,6 +1022,8 @@ const activePageSize = computed(() =>
 
   .hero-search-box {
     flex-direction: column;
+    // 列布局下拉伸子项，否则输入框会被 align-items: center 压成内容宽度
+    align-items: stretch;
     gap: 8px;
 
     .hero-search-submit {
@@ -1033,8 +1035,14 @@ const activePageSize = computed(() =>
 
   .search-history-bar {
     flex-direction: column;
-    align-items: flex-start;
+    // 列布局下拉伸子项，否则标签行会以内容宽度撑破页面
+    align-items: stretch;
     gap: 8px;
+
+    .history-scroll-tags {
+      flex: 1;
+      min-width: 0;
+    }
 
     .clear-all-btn {
       align-self: flex-end;

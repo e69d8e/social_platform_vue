@@ -1546,6 +1546,11 @@ watch(previewAsOther, (isOther) => {
   padding-top: 18px;
   border-top: 1px solid var(--border-light);
   overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .stat-item {
@@ -1559,6 +1564,9 @@ watch(previewAsOther, (isOther) => {
   cursor: pointer;
   font-family: inherit;
   transition: all var(--transition-base);
+  // 窄屏时不压缩折行，改为整条横向滚动
+  flex-shrink: 0;
+  white-space: nowrap;
 
   &:hover {
     background: var(--bg-subtle);

@@ -851,6 +851,11 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 
   .avatar-uploader {
     position: relative;
+    // 固定尺寸且不参与收缩：否则会被右侧长文案挤成椭圆（img 的 max-width 生效、高度不变）
+    display: flex;
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
     cursor: pointer;
     border-radius: 50%;
     overflow: hidden;
@@ -895,6 +900,8 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
   }
 
   .avatar-info-col {
+    min-width: 0;
+
     h4 {
       margin: 0 0 4px;
       font-size: 15px;
@@ -1097,6 +1104,24 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
   .hub-header-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  // Tabs 窄屏横向滚动，标签保持单行不折断
+  .hub-nav-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hub-tab {
+      flex-shrink: 0;
+      white-space: nowrap;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
   }
 
   .hub-header-right {
