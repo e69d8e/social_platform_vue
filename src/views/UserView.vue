@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, reactive, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { getUserInfoByIdApi, updateUserInfoApi } from "@/api/userApi";
 import { getPostListApi } from "@/api/postApi";
 import {
@@ -11,6 +11,7 @@ import {
   getFollowerListApi,
 } from "@/api/followApi";
 import { banUserApi, setReviewerApi, setUserApi } from "@/api/adminApi";
+import { blockUserApi, unblockUserApi } from "@/api/blacklistApi";
 import { uploadAvatar, uploadBackground } from "@/api/uploadApi";
 import compressImage from "@/utils/compressImage";
 import { uploadWithDedup } from "@/utils/uploadDedup";
@@ -42,6 +43,7 @@ import {
   Check,
   Picture,
   View as ViewIcon,
+  CircleClose,
 } from "@element-plus/icons-vue";
 import { POST_PAGE_SIZE, USER_PAGE_SIZE } from "@/constants/pagination";
 
@@ -346,6 +348,54 @@ const onFollowersPageChange = (p) => {
 const handleSendMsg = () => {
   if (!requireLogin("请先登录后再发送私信")) return;
   router.push(`/chat/new?receiverId=${userId.value}`);
+};
+
+// ---- 黑名单 ----
+const blockLoading = ref(false);
+const blocked = computed(() => Boolean(userInfo.value.blocked));
+// 内容因黑名单不可见。被拉黑方不暴露方向信息（不返回 blocked 标记），
+// 其空态沿用普通的「该用户还没有发布任何帖子」，保持模糊策略
+const hiddenByBlock = computed(() => blocked.value);
+
+const toggleBlock = async () => {
+  if (!requireLogin("请先登录后再拉黑")) return;
+  const target = !blocked.value;
+  if (target) {
+    try {
+      await ElMessageBox.confirm(
+        `拉黑后将互相看不到对方的帖子，也无法互发私信，已有的关注关系会被解除。确定拉黑「${userInfo.value.nickname || userInfo.value.username}」吗？`,
+        "拉黑用户",
+        {
+          confirmButtonText: "拉黑",
+          cancelButtonText: "取消",
+          type: "warning",
+        },
+      );
+    } catch {
+      return; // 用户取消
+    }
+  }
+  if (blockLoading.value) return;
+  blockLoading.value = true;
+  try {
+    const res = await (target ? blockUserApi : unblockUserApi)(
+      userInfo.value.id,
+    );
+    if (res.data.code !== 1) return;
+    ElMessage.success(res.data.message || (target ? "已拉黑" : "已解除拉黑"));
+    // 拉黑会联动解除关注、隐藏帖子与关注/粉丝列表，直接重载最稳妥
+    await loadUserInfo();
+    postsPageNum.value = 1;
+    postsLoaded.value = false;
+    posts.value = [];
+    followingsLoaded.value = false;
+    followersLoaded.value = false;
+    if (activeTab.value === "posts") loadPosts();
+    else if (activeTab.value === "follow") loadFollowings();
+    else if (activeTab.value === "fans") loadFollowers();
+  } finally {
+    blockLoading.value = false;
+  }
 };
 
 // 复制个人主页链接
@@ -660,17 +710,36 @@ watch(previewAsOther, (isOther) => {
             <div class="header-action-group">
               <template v-if="viewAsOther">
                 <FollowButton
+                  v-if="!blocked"
                   :user-id="userInfo.id"
                   :followed="userInfo.followed"
                 />
                 <button
                   type="button"
                   class="action-btn outline-btn"
-                  :disabled="!userInfo.enabled"
+                  :disabled="!userInfo.enabled || blocked"
+                  :title="blocked ? '已拉黑，无法发送私信' : ''"
                   @click="handleSendMsg"
                 >
                   <el-icon><ChatDotRound /></el-icon>
                   <span>发私信</span>
+                </button>
+                <button
+                  type="button"
+                  class="action-btn"
+                  :class="blocked ? 'outline-btn' : 'danger-outline-btn'"
+                  :disabled="blockLoading"
+                  :title="
+                    blocked
+                      ? '解除拉黑后内容恢复可见'
+                      : '拉黑后互相看不到对方的帖子'
+                  "
+                  @click="toggleBlock"
+                >
+                  <el-icon
+                    ><CircleClose v-if="blocked" /><Warning v-else
+                  /></el-icon>
+                  <span>{{ blocked ? "解除拉黑" : "拉黑" }}</span>
                 </button>
               </template>
               <template v-else>
@@ -705,6 +774,14 @@ watch(previewAsOther, (isOther) => {
                 </el-icon>
               </button>
             </div>
+          </div>
+
+          <!-- 我拉黑了对方：给出可撤销的显式提示，避免用户以为「这人主页怎么空了」 -->
+          <div v-if="blocked" class="blocked-banner">
+            <el-icon><CircleClose /></el-icon>
+            <span class="banner-text"
+              >你已拉黑 TA，双方互相看不到对方的帖子，也无法互发私信</span
+            >
           </div>
 
           <!-- 用户名与标签信息 -->
@@ -854,20 +931,26 @@ watch(previewAsOther, (isOther) => {
 
           <div v-else-if="displayedPosts.length === 0" class="empty-tab-card">
             <div class="empty-icon-circle">
-              <el-icon :size="36"><Document /></el-icon>
+              <el-icon :size="36">
+                <CircleClose v-if="hiddenByBlock" /><Document v-else />
+              </el-icon>
             </div>
             <h4>
               {{
-                viewAsOther
-                  ? "该用户还没有发布任何帖子"
-                  : "你还没有发布任何帖子"
+                hiddenByBlock
+                  ? "该用户暂无可查看内容"
+                  : viewAsOther
+                    ? "该用户还没有发布任何帖子"
+                    : "你还没有发布任何帖子"
               }}
             </h4>
             <p>
               {{
-                viewAsOther
-                  ? "等待TA发布第一条精彩内容吧"
-                  : "分享你的见解、创作与生活，让社区认识你"
+                hiddenByBlock
+                  ? "你已拉黑 TA，解除拉黑后可重新查看"
+                  : viewAsOther
+                    ? "等待TA发布第一条精彩内容吧"
+                    : "分享你的见解、创作与生活，让社区认识你"
               }}
             </p>
             <el-button
@@ -1339,6 +1422,25 @@ watch(previewAsOther, (isOther) => {
   }
 }
 
+.blocked-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--el-color-danger-light-9);
+  border: 1px solid var(--el-color-danger-light-7);
+  color: var(--el-color-danger);
+  font-size: 13px;
+
+  .banner-text {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.5;
+  }
+}
+
 .profile-main-body {
   padding: 0 32px 24px;
   position: relative;
@@ -1421,6 +1523,17 @@ watch(previewAsOther, (isOther) => {
     &:hover {
       transform: translateY(-1px);
       box-shadow: var(--glow-primary);
+    }
+  }
+
+  &.danger-outline-btn {
+    color: var(--el-color-danger);
+    border-color: var(--el-color-danger-light-5);
+    background: var(--bg-card);
+
+    &:hover:not(:disabled) {
+      background: var(--el-color-danger-light-9);
+      border-color: var(--el-color-danger);
     }
   }
 

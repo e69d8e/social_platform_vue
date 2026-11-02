@@ -9,6 +9,8 @@ const props = defineProps({
   sending: { type: Boolean, default: false },
   /** 触屏设备：Enter 换行、按钮发送 */
   isTouchDevice: { type: Boolean, default: false },
+  /** 禁用（如双方已互相拉黑）：仍可回看历史，但不能再发送 */
+  disabled: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["update:modelValue", "send"]);
@@ -29,6 +31,7 @@ watch(
 );
 
 const handleKeyDown = (e) => {
+  if (props.disabled) return;
   // 触屏软键盘的 Enter 用于换行，发送走右侧按钮
   if (e.key === "Enter" && !e.shiftKey && !props.isTouchDevice) {
     e.preventDefault();
@@ -47,18 +50,21 @@ defineExpose({ focus });
       <textarea
         ref="textareaRef"
         :value="modelValue"
+        :disabled="disabled"
         @input="emit('update:modelValue', $event.target.value)"
         @keydown="handleKeyDown"
         :placeholder="
-          isTouchDevice
-            ? '说点什么...（点右侧按钮发送）'
-            : '说点什么...（Enter 发送，Shift+Enter 换行）'
+          disabled
+            ? '你们之间已无法继续对话'
+            : isTouchDevice
+              ? '说点什么...（点右侧按钮发送）'
+              : '说点什么...（Enter 发送，Shift+Enter 换行）'
         "
         rows="1"
       />
       <button
         class="send-btn"
-        :disabled="!modelValue.trim() || sending"
+        :disabled="disabled || !modelValue.trim() || sending"
         :aria-label="sending ? '发送中' : '发送'"
         @click="emit('send')"
       >

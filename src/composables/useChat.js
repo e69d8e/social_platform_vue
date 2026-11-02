@@ -6,6 +6,7 @@ import {
   sendMessageApi,
   markReadApi,
   getConversationsApi,
+  getConversationApi,
 } from "@/api/messageApi";
 import { getUserInfoByIdApi } from "@/api/userApi";
 import { connect, disconnect } from "@/utils/websocket";
@@ -49,6 +50,8 @@ export function useChat({ messagesAreaRef } = {}) {
     window.matchMedia("(hover: none)").matches;
 
   const otherUser = ref({ nickname: "", avatar: "" });
+  // 能否继续发送：任一方向拉黑即为 false（服务端判定，前端只负责禁用输入）
+  const canSend = ref(true);
 
   const getContainer = () => messagesAreaRef?.value?.container;
 
@@ -108,24 +111,34 @@ export function useChat({ messagesAreaRef } = {}) {
     loadHistory();
   };
 
-  /** 深链（/chat/5）里没有 receiverId：从会话列表反查对方身份，否则头部只能显示「私信」 */
-  const resolveReceiverFromConversations = async () => {
-    if (receiverId.value || isNewChat.value || !conversationId.value) return;
+  /**
+   * 会话详情：拿到对方身份与 canSend。
+   * 用会话接口而不是用户资料接口——被拉黑后用户资料可能不完整，
+   * 而会话数据始终可用（历史消息要能继续翻）。
+   */
+  const loadConversationMeta = async () => {
+    if (isNewChat.value || !conversationId.value) return;
     try {
-      const convRes = await getConversationsApi({ pageNum: 1, pageSize: 50 });
-      const payload = convRes.data.data;
-      const convs = Array.isArray(payload) ? payload : payload?.list || [];
-      const hit = convs.find(
-        (c) => String(c.conversationId) === String(conversationId.value),
-      );
-      if (hit?.otherUserId) receiverId.value = hit.otherUserId;
+      const res = await getConversationApi(conversationId.value);
+      if (res.data.code !== 1 || !res.data.data) return;
+      const data = res.data.data;
+      if (data.otherUserId && !receiverId.value) {
+        receiverId.value = data.otherUserId;
+      }
+      canSend.value = data.canSend !== false;
+      if (data.otherUserNickname || data.otherUserAvatar) {
+        otherUser.value = {
+          nickname: data.otherUserNickname || otherUser.value.nickname,
+          avatar: data.otherUserAvatar || otherUser.value.avatar,
+        };
+      }
     } catch {
-      // 拿不到就保持占位标题，不影响聊天
+      // 失败时保持默认（可发送），真正发送时后端仍会拦截
     }
   };
 
   const loadOtherUserInfo = async () => {
-    await resolveReceiverFromConversations();
+    await loadConversationMeta();
     if (!receiverId.value) return;
     try {
       const res = await getUserInfoByIdApi(receiverId.value);
@@ -189,6 +202,7 @@ export function useChat({ messagesAreaRef } = {}) {
       disconnect();
       conversationId.value = next;
       isNewChat.value = next === "new";
+      canSend.value = true;
       messages.value = [];
       pageNum.value = 1;
       historyFinished.value = false;
@@ -225,6 +239,10 @@ export function useChat({ messagesAreaRef } = {}) {
   const sendMessage = async () => {
     const content = inputMessage.value.trim();
     if (!content || sending.value) return;
+    if (!canSend.value) {
+      ElMessage.warning("对方不接收你的私信");
+      return;
+    }
 
     sending.value = true;
     inputMessage.value = "";
@@ -327,9 +345,11 @@ export function useChat({ messagesAreaRef } = {}) {
     isNewChat,
     receiverId,
     otherUser,
+    canSend,
     isTouchDevice,
     // actions
     scrollToBottom,
+    refreshConversationMeta: loadConversationMeta,
     retryHistory,
     sendMessage,
     retryMessage,

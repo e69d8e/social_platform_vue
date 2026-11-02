@@ -32,6 +32,7 @@ import {
   CircleCheck,
   Edit,
   CollectionTag,
+  CircleClose,
 } from "@element-plus/icons-vue";
 
 const router = useRouter();
@@ -523,6 +524,18 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
                 ? "收藏的帖子会保存在这里，仅自己可见"
                 : `共 ${starTotal} 篇帖子已收藏，仅自己可见`
             }}</span>
+          </div>
+        </div>
+
+        <div class="social-entry-card" @click="$router.push('/blacklist')">
+          <div class="entry-icon block-icon">
+            <el-icon :size="24"><CircleClose /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">黑名单</span>
+            <span class="entry-desc"
+              >被拉黑后双方互相看不到帖子，也无法互发私信</span
+            >
           </div>
         </div>
 
@@ -1026,6 +1039,11 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     &.fan-icon {
       background: rgba(217, 148, 38, 0.12);
       color: var(--el-color-warning);
+    }
+
+    &.block-icon {
+      background: var(--el-color-danger-light-9);
+      color: var(--el-color-danger);
     }
 
     &.star-icon {

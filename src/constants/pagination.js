@@ -24,3 +24,6 @@ export const SEARCH_HISTORY_PAGE_SIZE = 20;
 
 /** 顶栏搜索下拉展示的历史条数 */
 export const HEADER_HISTORY_PAGE_SIZE = 10;
+
+/** 黑名单列表（每页人数） */
+export const BLACKLIST_PAGE_SIZE = 10;

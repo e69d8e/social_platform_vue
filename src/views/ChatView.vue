@@ -1,6 +1,14 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { ArrowLeft, ArrowDownBold } from "@element-plus/icons-vue";
+import {
+  ArrowLeft,
+  ArrowDownBold,
+  MoreFilled,
+  CircleClose,
+  RemoveFilled,
+} from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { blockUserApi } from "@/api/blacklistApi";
 import ChatMessages from "@/components/chat/ChatMessages.vue";
 import ChatInputBox from "@/components/chat/ChatInputBox.vue";
 import { useChat } from "@/composables/useChat";
@@ -13,6 +21,8 @@ const goBack = useGoBack("/conversations");
 
 const {
   messages,
+  canSend,
+  refreshConversationMeta,
   inputMessage,
   sending,
   loadingHistory,
@@ -37,6 +47,29 @@ onMounted(() => {
     inputBoxRef.value?.focus();
   }
 });
+
+// ---- 聊天页拉黑入口：在这个上下文里用户已经明确在跟对方对话，误触率最低 ----
+const handleChatCommand = async (command) => {
+  if (command !== "block" || !receiverId.value) return;
+  try {
+    await ElMessageBox.confirm(
+      `拉黑后将互相看不到对方的帖子，也无法继续互发私信。确定拉黑「${otherUser.value.nickname || "该用户"}」吗？`,
+      "拉黑用户",
+      { confirmButtonText: "拉黑", cancelButtonText: "取消", type: "warning" },
+    );
+  } catch {
+    return; // 用户取消
+  }
+  try {
+    const res = await blockUserApi(receiverId.value);
+    if (res.data.code !== 1) return;
+    ElMessage.success(res.data.message || "已拉黑");
+    // 立即刷新 canSend，输入框就地禁用，不需要用户重新进会话
+    await refreshConversationMeta();
+  } catch {
+    // 提示由拦截器统一给出
+  }
+};
 </script>
 
 <template>
@@ -73,6 +106,24 @@ onMounted(() => {
             <span class="header-name">{{ otherUser.nickname || "私信" }}</span>
           </div>
         </button>
+
+        <el-dropdown
+          v-if="receiverId && !isNewChat"
+          trigger="click"
+          @command="handleChatCommand"
+        >
+          <button class="header-more" type="button" aria-label="更多操作">
+            <el-icon :size="18"><MoreFilled /></el-icon>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="block">
+                <el-icon><RemoveFilled /></el-icon>
+                拉黑该用户
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
 
@@ -104,12 +155,19 @@ onMounted(() => {
       </button>
     </Transition>
 
+    <!-- 拉黑关系提示：会话保留可回看，但禁止继续发送 -->
+    <div v-if="!canSend" class="blocked-tip">
+      <el-icon :size="14"><CircleClose /></el-icon>
+      <span>对方不接收你的私信，你们之间已无法继续对话</span>
+    </div>
+
     <!-- 输入区域 -->
     <ChatInputBox
       ref="inputBoxRef"
       v-model="inputMessage"
       :sending="sending"
       :is-touch-device="isTouchDevice"
+      :disabled="!canSend"
       @send="sendMessage"
     />
   </div>
@@ -226,6 +284,45 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: var(--chat-text);
+}
+
+.header-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--chat-text-secondary);
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-muted);
+    color: var(--chat-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.blocked-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+  border-top: 1px solid var(--el-color-danger-light-7);
+  flex-shrink: 0;
 }
 
 /* 回到底部悬浮按钮 */

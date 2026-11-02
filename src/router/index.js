@@ -60,6 +60,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: "/blacklist",
+          name: "blacklist",
+          component: () => import("@/views/BlacklistView.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
           path: "/category/:id",
           name: "category",
           component: () => import("@/views/CategoryPostsView.vue"),
