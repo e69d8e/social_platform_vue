@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { searchPostsApi, searchUsersApi } from "@/api/searchApi";
+import { getHotTagsApi, getTagPostsApi } from "@/api/postApi";
 import PostCard from "@/components/PostCard.vue";
 import UserCard from "@/components/UserCard.vue";
 import SkeletonGrid from "@/components/SkeletonGrid.vue";
@@ -32,8 +33,16 @@ const userPageSize = USER_PAGE_SIZE;
 
 const localKeyword = ref("");
 const searchQuery = computed(() => route.query.keyword || "");
+const selectedTagId = computed(() =>
+  route.query.tagId ? Number(route.query.tagId) : null,
+);
+const selectedTagName = computed(() => route.query.tagName || "");
+const hasSearchCriteria = computed(() =>
+  Boolean(searchQuery.value || selectedTagId.value || selectedTagName.value),
+);
 /** 当前维度：'1' 帖子 / '2' 用户 */
 const activeName = ref("1");
+const hotTags = ref([]);
 
 // ---- 两个维度各自维护分页状态 ----
 // 之前共用一个 pageNum，导致「帖子翻到第 3 页 → 切到用户 → 切回来」页码错位。
@@ -82,18 +91,25 @@ const historyClick = (item) => {
 
 const handlePageSearch = () => {
   const kw = localKeyword.value.trim();
-  if (!kw) {
+  if (!kw && !selectedTagId.value && !selectedTagName.value) {
     ElMessage.warning("请输入搜索关键词");
     return;
   }
-  if (kw === searchQuery.value) {
+  if (
+    kw === searchQuery.value &&
+    !selectedTagId.value &&
+    !selectedTagName.value
+  ) {
     // 关键词没变就没必要重复请求，只保证当前维度是第一页
     resetToFirstPage();
     return;
   }
   router.push({
     path: "/search",
-    query: { keyword: kw, type: activeName.value === "2" ? 1 : 0 },
+    query: {
+      keyword: kw || undefined,
+      type: activeName.value === "2" ? 1 : 0,
+    },
   });
 };
 
@@ -105,23 +121,68 @@ const quickSearch = (kw) => {
   });
 };
 
+const quickTagSearch = (tag) => {
+  if (!tag?.name) return;
+  localKeyword.value = "";
+  activeName.value = "1";
+  router.push({
+    path: "/search",
+    query: {
+      tagId: tag.id || undefined,
+      tagName: tag.name,
+      type: 0,
+    },
+  });
+};
+
+const clearTagFilter = () => {
+  router.push({
+    path: "/search",
+    query: searchQuery.value ? { keyword: searchQuery.value } : {},
+  });
+};
+
 const clearSearch = () => {
   localKeyword.value = "";
   router.push({ path: "/search" });
 };
 
+const fetchHotTags = async () => {
+  try {
+    const res = await getHotTagsApi({ limit: 16 });
+    if (res.data?.code === 1 && Array.isArray(res.data.data)) {
+      hotTags.value = res.data.data;
+    }
+  } catch {
+    hotTags.value = [];
+  }
+};
+
 // ---- 数据加载 ----
 const fetchPosts = async (page = postPage.value) => {
   const keyword = searchQuery.value;
-  if (!keyword) return;
+  const tagId = selectedTagId.value;
+  const tagName = selectedTagName.value;
+  if (!keyword && !tagId && !tagName) return;
   postLoading.value = true;
   postError.value = false;
   try {
-    const res = await searchPostsApi({
-      pageNum: page,
-      pageSize: postPageSize,
-      keyword,
-    });
+    let res;
+    if (!keyword && (tagId || tagName)) {
+      res = await getTagPostsApi({
+        tagId: tagId || undefined,
+        tagName: tagId ? undefined : tagName,
+        pageNum: page,
+        pageSize: postPageSize,
+      });
+    } else {
+      res = await searchPostsApi({
+        pageNum: page,
+        pageSize: postPageSize,
+        keyword,
+        tagId: tagId || undefined,
+      });
+    }
     if (res.data.code !== 1) throw new Error(res.data.message || "搜索失败");
     posts.value = res.data.data || [];
     postTotal.value = Number(res.data.total ?? 0);
@@ -136,7 +197,12 @@ const fetchPosts = async (page = postPage.value) => {
 
 const fetchUsers = async (page = userPage.value) => {
   const keyword = searchQuery.value;
-  if (!keyword) return;
+  if (!keyword) {
+    users.value = [];
+    usersTotal.value = 0;
+    userLoadedPage.value = 0;
+    return;
+  }
   userLoading.value = true;
   userError.value = false;
   try {
@@ -156,10 +222,9 @@ const fetchUsers = async (page = userPage.value) => {
   }
 };
 
-/** 首次搜索/关键词变化：两侧同时请求，另一个 tab 的计数徽标即时可用 */
+/** 首次搜索/关键词变化：按条件拉取帖子与用户结果 */
 const fetchAll = async () => {
-  const keyword = searchQuery.value;
-  if (!keyword) {
+  if (!hasSearchCriteria.value) {
     posts.value = [];
     users.value = [];
     postTotal.value = 0;
@@ -232,21 +297,21 @@ const handleTabChange = (name) => {
 onMounted(async () => {
   localKeyword.value = searchQuery.value;
   syncTabFromQuery();
+  fetchHotTags();
   await fetchAll();
   // 搜索历史是「搜索请求」的副作用（服务端在结果返回时才写入），
   // 必须等结果回来再拉，否则刚搜过的关键词不会出现在历史条里
   fetchHistory();
 });
 
-watch(
-  () => searchQuery.value,
-  async () => {
-    localKeyword.value = searchQuery.value;
-    syncTabFromQuery();
-    await fetchAll();
+watch([searchQuery, selectedTagId, selectedTagName], async () => {
+  localKeyword.value = searchQuery.value;
+  syncTabFromQuery();
+  await fetchAll();
+  if (searchQuery.value) {
     fetchHistory();
-  },
-);
+  }
+});
 
 watch(
   () => route.query.type,
@@ -307,18 +372,36 @@ const activePageSize = computed(() =>
       <div class="hero-hot-tags">
         <span class="hot-label">
           <el-icon><TrendCharts /></el-icon>
-          热门话题:
+          热门标签:
         </span>
-        <button
-          v-for="tag in HOT_SEARCHES"
-          :key="tag"
-          type="button"
-          class="hot-chip"
-          :class="{ active: searchQuery === tag }"
-          @click="quickSearch(tag)"
-        >
-          {{ tag }}
-        </button>
+        <template v-if="hotTags.length">
+          <button
+            v-for="tag in hotTags.slice(0, 10)"
+            :key="tag.id"
+            type="button"
+            class="hot-chip"
+            :class="{
+              active:
+                String(selectedTagId) === String(tag.id) ||
+                selectedTagName === tag.name,
+            }"
+            @click="quickTagSearch(tag)"
+          >
+            #{{ tag.name }}
+          </button>
+        </template>
+        <template v-else>
+          <button
+            v-for="tag in HOT_SEARCHES"
+            :key="tag"
+            type="button"
+            class="hot-chip"
+            :class="{ active: searchQuery === tag }"
+            @click="quickSearch(tag)"
+          >
+            {{ tag }}
+          </button>
+        </template>
       </div>
     </div>
 
@@ -356,13 +439,29 @@ const activePageSize = computed(() =>
     </div>
 
     <!-- 结果统计与状态提示 -->
-    <div v-if="searchQuery" class="search-summary-bar">
+    <div v-if="hasSearchCriteria" class="search-summary-bar">
       <div class="summary-text">
-        关于
-        <strong class="keyword-highlight">“{{ searchQuery }}”</strong>
+        <template v-if="selectedTagId || selectedTagName">
+          标签
+          <button
+            type="button"
+            class="active-tag-filter"
+            title="点击清除标签筛选"
+            @click="clearTagFilter"
+          >
+            <span>#{{ selectedTagName || selectedTagId }}</span>
+            <el-icon :size="12"><Close /></el-icon>
+          </button>
+        </template>
+        <template v-if="searchQuery">
+          关键词
+          <strong class="keyword-highlight">“{{ searchQuery }}”</strong>
+        </template>
         的搜索结果
         <span class="summary-count">
-          （找到 {{ postTotal }} 篇帖子，{{ usersTotal }} 位用户）
+          （找到 {{ postTotal }} 篇帖子{{
+            searchQuery ? `，${usersTotal} 位用户` : ""
+          }}）
         </span>
       </div>
       <button class="reset-search-btn" type="button" @click="clearSearch">
@@ -370,23 +469,36 @@ const activePageSize = computed(() =>
       </button>
     </div>
 
-    <!-- 空白状态：未输入关键词时的探索指引 -->
-    <div v-if="!searchQuery && !loading" class="empty-explore-prompt">
+    <!-- 空白状态：未输入关键词或标签时的探索指引 -->
+    <div v-if="!hasSearchCriteria && !loading" class="empty-explore-prompt">
       <div class="prompt-icon">
         <el-icon :size="48"><Search /></el-icon>
       </div>
       <h3>开始探索社区精彩内容</h3>
-      <p>输入关键词，或点击上方的热门标签探索最新帖子与创作者</p>
+      <p>输入关键词，或点击热门话题与 #标签 探索精选帖子</p>
       <div class="prompt-chips">
-        <button
-          v-for="tag in HOT_SEARCHES"
-          :key="tag"
-          type="button"
-          class="prompt-chip"
-          @click="quickSearch(tag)"
-        >
-          {{ tag }}
-        </button>
+        <template v-if="hotTags.length">
+          <button
+            v-for="tag in hotTags"
+            :key="tag.id"
+            type="button"
+            class="prompt-chip"
+            @click="quickTagSearch(tag)"
+          >
+            #{{ tag.name }}
+          </button>
+        </template>
+        <template v-else>
+          <button
+            v-for="tag in HOT_SEARCHES"
+            :key="tag"
+            type="button"
+            class="prompt-chip"
+            @click="quickSearch(tag)"
+          >
+            {{ tag }}
+          </button>
+        </template>
       </div>
     </div>
 
@@ -443,18 +555,37 @@ const activePageSize = computed(() =>
           <div class="no-result-icon">
             <el-icon :size="40"><Document /></el-icon>
           </div>
-          <h4>未找到与“{{ searchQuery }}”相关的帖子</h4>
-          <p>尝试更换关键词、检查错别字，或探索下方热门推荐</p>
+          <h4>
+            未找到与{{
+              searchQuery
+                ? `“${searchQuery}”`
+                : `#${selectedTagName || selectedTagId}`
+            }}相关的帖子
+          </h4>
+          <p>尝试更换关键词、切换标签，或探索下方热门标签</p>
           <div class="suggest-chips">
-            <button
-              v-for="tag in HOT_SEARCHES.slice(0, 5)"
-              :key="tag"
-              type="button"
-              class="suggest-chip"
-              @click="quickSearch(tag)"
-            >
-              {{ tag }}
-            </button>
+            <template v-if="hotTags.length">
+              <button
+                v-for="tag in hotTags.slice(0, 6)"
+                :key="tag.id"
+                type="button"
+                class="suggest-chip"
+                @click="quickTagSearch(tag)"
+              >
+                #{{ tag.name }}
+              </button>
+            </template>
+            <template v-else>
+              <button
+                v-for="tag in HOT_SEARCHES.slice(0, 5)"
+                :key="tag"
+                type="button"
+                class="suggest-chip"
+                @click="quickSearch(tag)"
+              >
+                {{ tag }}
+              </button>
+            </template>
           </div>
         </div>
 
@@ -1008,6 +1139,26 @@ const activePageSize = computed(() =>
 
 .pagination-wrap {
   margin-top: 32px;
+}
+
+.active-tag-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  margin: 0 4px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--el-color-primary-light-7);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.85;
+  }
 }
 
 @media (max-width: 768px) {

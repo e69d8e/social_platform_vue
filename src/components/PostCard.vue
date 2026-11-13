@@ -11,6 +11,8 @@ import {
   User,
   Lock,
   Unlock,
+  ChatDotRound,
+  MoreFilled,
 } from "@element-plus/icons-vue";
 import HeartIcon from "@/components/icons/HeartIcon.vue";
 import { useLike } from "@/composables/useLike";
@@ -27,6 +29,10 @@ const props = defineProps({
   delay: { type: Number, default: 0 },
   // 搜索关键词高亮
   keyword: { type: String, default: "" },
+  // 是否展示推荐理由角标（仅首页推荐流启用）
+  showRecommendMeta: { type: Boolean, default: false },
+  // 是否展示负反馈菜单（仅首页推荐流启用）
+  showFeedback: { type: Boolean, default: false },
 });
 
 const router = useRouter();
@@ -94,7 +100,7 @@ const hasCover = computed(
   () => Boolean(props.post.cover) && !coverFailed.value,
 );
 
-const emit = defineEmits(["privacyChange"]);
+const emit = defineEmits(["privacyChange", "feedback"]);
 
 const localIsPrivate = ref(Boolean(props.post.isPrivate));
 watch(
@@ -139,6 +145,75 @@ const openUser = (e) => {
   e?.stopPropagation?.();
   if (props.post.userId) {
     router.push(`/user/${props.post.userId}`);
+  }
+};
+
+const visibleTags = computed(() =>
+  Array.isArray(props.post.tags) ? props.post.tags.slice(0, 3) : [],
+);
+
+const firstTag = computed(() => visibleTags.value[0] || null);
+
+const commentCount = computed(() => Number(props.post.commentCount || 0));
+
+const reasonTone = computed(() => {
+  const r = props.post.recommendReason || "";
+  if (r.includes("拓展")) return "explore";
+  if (r.includes("热度") || r.includes("高赞")) return "hot";
+  if (r.includes("关注") || r.includes("偏爱") || r.includes("常看")) {
+    return "match";
+  }
+  return "neutral";
+});
+
+const openCategory = (e) => {
+  e?.stopPropagation?.();
+  if (props.post.categoryId) {
+    router.push(`/category/${props.post.categoryId}`);
+  }
+};
+
+const openTag = (tag, e) => {
+  e?.stopPropagation?.();
+  if (!tag?.name) return;
+  router.push({
+    path: "/search",
+    query: {
+      tagId: tag.id || undefined,
+      tagName: tag.name,
+    },
+  });
+};
+
+const handleFeedbackCommand = (command) => {
+  if (command === "post") {
+    emit("feedback", {
+      targetType: "POST",
+      targetId: props.post.id,
+      label: "这条帖子",
+      postId: props.post.id,
+    });
+  } else if (command === "category" && props.post.categoryId) {
+    emit("feedback", {
+      targetType: "CATEGORY",
+      targetId: props.post.categoryId,
+      label: `「${props.post.categoryName || "该分类"}」`,
+      postId: props.post.id,
+    });
+  } else if (command === "tag" && firstTag.value?.id) {
+    emit("feedback", {
+      targetType: "TAG",
+      targetId: firstTag.value.id,
+      label: `#${firstTag.value.name}`,
+      postId: props.post.id,
+    });
+  } else if (command === "author" && props.post.userId) {
+    emit("feedback", {
+      targetType: "AUTHOR",
+      targetId: props.post.userId,
+      label: `作者 ${authorDisplayName.value || ""}`.trim(),
+      postId: props.post.id,
+    });
   }
 };
 </script>
@@ -198,7 +273,85 @@ const openUser = (e) => {
       </div>
 
       <div class="body">
+        <div
+          v-if="
+            post.categoryName ||
+            (showRecommendMeta && post.recommendReason) ||
+            (showFeedback && !isAuthor)
+          "
+          class="card-top-row"
+        >
+          <div class="card-badges">
+            <button
+              v-if="post.categoryName"
+              type="button"
+              class="category-pill"
+              :class="{ clickable: Boolean(post.categoryId) }"
+              :title="post.categoryId ? `进入「${post.categoryName}」专栏` : ''"
+              @click.stop="openCategory"
+            >
+              {{ post.categoryName }}
+            </button>
+            <span
+              v-if="showRecommendMeta && post.recommendReason"
+              class="reason-pill"
+              :class="`tone-${reasonTone}`"
+            >
+              {{ post.recommendReason }}
+            </span>
+          </div>
+
+          <el-dropdown
+            v-if="showFeedback && !isAuthor"
+            trigger="click"
+            placement="bottom-end"
+            @command="handleFeedbackCommand"
+          >
+            <button
+              type="button"
+              class="feedback-trigger"
+              title="不感兴趣 / 减少推荐"
+              aria-label="调整推荐偏好"
+              @click.stop.prevent
+            >
+              <el-icon :size="13"><MoreFilled /></el-icon>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="post">
+                  不看这条帖子
+                </el-dropdown-item>
+                <el-dropdown-item
+                  v-if="post.categoryId && post.categoryName"
+                  command="category"
+                >
+                  减少「{{ post.categoryName }}」推荐
+                </el-dropdown-item>
+                <el-dropdown-item v-if="firstTag?.id" command="tag">
+                  减少 #{{ firstTag.name }} 推荐
+                </el-dropdown-item>
+                <el-dropdown-item v-if="post.userId" command="author">
+                  不再推荐 @{{ authorDisplayName || "该作者" }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+
         <h4 class="title" v-html="highlightedTitle"></h4>
+
+        <div v-if="visibleTags.length" class="card-tags">
+          <button
+            v-for="tag in visibleTags"
+            :key="tag.id || tag.name"
+            type="button"
+            class="tag-pill"
+            :title="`搜索 #${tag.name} 相关帖子`"
+            @click.stop="openTag(tag, $event)"
+          >
+            #{{ tag.name }}
+          </button>
+        </div>
 
         <div class="meta">
           <div class="meta-left">
@@ -219,8 +372,12 @@ const openUser = (e) => {
             <span class="time" :title="post.createTime">{{ timeText }}</span>
           </div>
           <div class="stats">
+            <span v-if="commentCount > 0" class="stat-static" title="评论数">
+              <el-icon size="14"><ChatDotRound /></el-icon>
+              <span class="count">{{ formattedCount(commentCount) }}</span>
+            </span>
             <button
-              class="stat-btn"
+              class="stat-btn is-star"
               type="button"
               :aria-pressed="starred"
               :aria-label="starred ? '取消收藏' : '收藏'"
@@ -241,7 +398,7 @@ const openUser = (e) => {
               </span>
             </button>
             <button
-              class="stat-btn"
+              class="stat-btn is-like"
               type="button"
               :aria-pressed="liked"
               :aria-label="liked ? '取消点赞' : '点赞'"
@@ -336,7 +493,10 @@ const openUser = (e) => {
 
 // 可交互元素浮在拉伸链接之上，保证各自的点击热区
 .author,
-.stat-btn {
+.stat-btn,
+.category-pill,
+.tag-pill,
+.feedback-trigger {
   position: relative;
   z-index: 2;
 }
@@ -491,8 +651,137 @@ const openUser = (e) => {
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  gap: 8px;
-  padding: 12px 14px 10px;
+  gap: 7px;
+  padding: 11px 14px 10px;
+}
+
+.card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 20px;
+}
+
+.card-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.category-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.5;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--el-color-primary);
+      border-color: var(--el-color-primary-light-7);
+      background: var(--el-color-primary-light-9);
+    }
+  }
+}
+
+.reason-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+
+  &.tone-match {
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+  }
+
+  &.tone-hot {
+    background: rgba(230, 162, 60, 0.14);
+    color: var(--el-color-warning);
+  }
+
+  &.tone-explore {
+    background: rgba(82, 140, 114, 0.14);
+    color: #528c72;
+  }
+
+  &.tone-neutral {
+    background: var(--bg-muted);
+    color: var(--text-muted);
+  }
+}
+
+.feedback-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-placeholder);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+  }
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: -1px;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 112px;
+  padding: 1px 7px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+
+  &:hover {
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+  }
 }
 
 .title {
@@ -586,6 +875,20 @@ const openUser = (e) => {
     margin-left: auto;
   }
 
+  .stat-static {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 5px;
+    color: var(--text-placeholder);
+    font-size: 12px;
+
+    .count {
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
   .stat-btn {
     display: inline-flex;
     align-items: center;
@@ -628,12 +931,11 @@ const openUser = (e) => {
       font-weight: 600;
     }
 
-    // 收藏按钮在首位、点赞按钮居次，激活色分别呼应图标色
-    &:first-child .count.active {
+    &.is-star .count.active {
       color: var(--el-color-warning);
     }
 
-    &:nth-child(2) .count.active {
+    &.is-like .count.active {
       color: var(--el-color-danger);
     }
 

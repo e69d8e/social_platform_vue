@@ -4,6 +4,26 @@ import { ElMessage } from "element-plus";
 import { navigateTo, loginLocation, isPublicPath } from "@/utils/navigation";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const VISITOR_STORAGE_KEY = "sp_visitor_id";
+let fallbackVisitorId = "";
+
+function getOrCreateVisitorId() {
+  try {
+    let vid = localStorage.getItem(VISITOR_STORAGE_KEY);
+    if (vid) return vid;
+    vid =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID().replace(/-/g, "").slice(0, 24)
+        : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(VISITOR_STORAGE_KEY, vid);
+    return vid;
+  } catch {
+    if (!fallbackVisitorId) {
+      fallbackVisitorId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    }
+    return fallbackVisitorId;
+  }
+}
 
 const request = axios.create({
   baseURL: BASE_URL,
@@ -11,13 +31,14 @@ const request = axios.create({
   withCredentials: true,
 });
 
-// 请求拦截器：附加 Authorization
+// 请求拦截器：附加 Authorization 与匿名访客标识（用于推荐流已曝光去重）
 request.interceptors.request.use(
   (config) => {
     const token = useUserStore().token?.accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    config.headers["X-Visitor-Id"] = getOrCreateVisitorId();
     return config;
   },
   (error) => Promise.reject(error),

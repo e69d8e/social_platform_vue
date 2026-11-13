@@ -147,10 +147,12 @@ const onMessageClick = (e) => {
   if (draftBtn) {
     const rawTitle = draftBtn.getAttribute("data-draft-title") || "";
     const rawCategory = draftBtn.getAttribute("data-draft-category") || "";
+    const rawTags = draftBtn.getAttribute("data-draft-tags") || "";
     const rawContent = draftBtn.getAttribute("data-draft-content") || "";
 
     const draftTitle = decodeURIComponent(rawTitle);
     const draftCategory = decodeURIComponent(rawCategory);
+    const draftTags = decodeURIComponent(rawTags);
     const draftContent = decodeURIComponent(rawContent);
 
     router.push({
@@ -158,6 +160,7 @@ const onMessageClick = (e) => {
       state: {
         draftTitle,
         draftCategory,
+        draftTags,
         draftContent,
       },
     });

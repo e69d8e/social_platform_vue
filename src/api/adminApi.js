@@ -29,3 +29,20 @@ export const searchBanUsersApi = (params) => {
 export const getDashboardApi = (params) => {
   return request.get("/admin/dashboard", { params });
 };
+
+// 分类管理（管理员）
+export const getAdminCategoriesApi = () => {
+  return request.get("/admin/category");
+};
+
+export const createAdminCategoryApi = (data) => {
+  return request.post("/admin/category", data);
+};
+
+export const updateAdminCategoryApi = (data) => {
+  return request.put("/admin/category", data);
+};
+
+export const toggleAdminCategoryApi = (id) => {
+  return request.put(`/admin/category/${id}/toggle`);
+};

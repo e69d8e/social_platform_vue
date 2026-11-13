@@ -39,12 +39,31 @@ export function useInfiniteScroll({
       items.value = [...items.value, ...newItems];
       cursor.value.lastId = res.minTime ?? cursor.value.lastId;
       cursor.value.offset = res.offset ?? cursor.value.offset;
-      if (list.length === 0 || newItems.length === 0) noMore.value = true;
+      if (typeof res.hasMore === "boolean") {
+        noMore.value = !res.hasMore;
+      } else if (list.length === 0 || newItems.length === 0) {
+        noMore.value = true;
+      }
     } catch (e) {
       isError.value = true;
       onError?.(e);
     } finally {
       loadingMore.value = false;
+    }
+  };
+
+  const fillViewportIfNeeded = async () => {
+    if (!autoFill) return;
+    // 内容不满一屏时自动加载更多，最多重试 10 次防止死循环
+    let fillAttempts = 0;
+    while (
+      !noMore.value &&
+      !isError.value &&
+      fillAttempts < 10 &&
+      document.documentElement.scrollHeight <= window.innerHeight + 100
+    ) {
+      fillAttempts++;
+      await append();
     }
   };
 
@@ -60,7 +79,13 @@ export function useInfiniteScroll({
     cursor.value = { lastId: Date.now(), offset: 0 };
     noMore.value = false;
     isError.value = false;
-    await append();
+    loading.value = true;
+    try {
+      await append();
+    } finally {
+      loading.value = false;
+    }
+    await fillViewportIfNeeded();
   };
 
   const checkAndLoad = () => {
@@ -83,19 +108,7 @@ export function useInfiniteScroll({
     } finally {
       loading.value = false;
     }
-    if (autoFill) {
-      // 内容不满一屏时自动加载更多，最多重试 10 次防止死循环
-      let fillAttempts = 0;
-      while (
-        !noMore.value &&
-        !isError.value &&
-        fillAttempts < 10 &&
-        document.documentElement.scrollHeight <= window.innerHeight + 100
-      ) {
-        fillAttempts++;
-        await append();
-      }
-    }
+    await fillViewportIfNeeded();
     window.addEventListener("scroll", handleScroll);
   });
 

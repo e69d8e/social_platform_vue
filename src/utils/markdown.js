@@ -38,6 +38,7 @@ function renderInline(text) {
 function renderDraftPostCard(rawCode) {
   let title = "";
   let category = "";
+  let tagsRaw = "";
   const contentLines = [];
   let inContent = false;
 
@@ -52,6 +53,11 @@ function renderDraftPostCard(rawCode) {
       const catMatch = line.match(/^(?:分类|板块|Category)[:：]\s*(.*)$/i);
       if (catMatch) {
         category = catMatch[1].trim();
+        continue;
+      }
+      const tagMatch = line.match(/^(?:标签|Tags?)[:：]\s*(.*)$/i);
+      if (tagMatch) {
+        tagsRaw = tagMatch[1].trim();
         continue;
       }
       const contentStartMatch = line.match(
@@ -87,6 +93,7 @@ function renderDraftPostCard(rawCode) {
 
   const attrTitle = encodeURIComponent(title);
   const attrCategory = encodeURIComponent(category || "生活");
+  const attrTags = encodeURIComponent(tagsRaw);
   const attrContent = encodeURIComponent(content);
 
   return `
@@ -101,7 +108,7 @@ function renderDraftPostCard(rawCode) {
   <div class="ai-draft-title">${escapedTitle}</div>
   <div class="ai-draft-content">${escapedContent.replace(/\n/g, "<br/>")}</div>
   <div class="ai-draft-footer">
-    <button type="button" class="draft-apply-btn" data-draft-title="${attrTitle}" data-draft-category="${attrCategory}" data-draft-content="${attrContent}">
+    <button type="button" class="draft-apply-btn" data-draft-title="${attrTitle}" data-draft-category="${attrCategory}" data-draft-tags="${attrTags}" data-draft-content="${attrContent}">
       <span class="btn-icon">🚀</span>
       一键填入发帖页
     </button>

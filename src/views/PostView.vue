@@ -6,7 +6,7 @@ import {
   recordPostViewApi,
   updatePostPrivacyApi,
 } from "@/api/postApi";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { banPostApi } from "@/api/reviewerApi";
 import DOMPurify from "dompurify";
@@ -36,6 +36,7 @@ import { ElMessage } from "element-plus";
 
 const userStore = useUserStore();
 const route = useRoute();
+const router = useRouter();
 // 详情页可能是落地页（无站内历史），删除/返回都走统一回退策略
 const goBack = useGoBack("/home");
 // 评论区锚点：由 CommentComponent expose，避免按类名全局查询 DOM
@@ -45,7 +46,10 @@ const post = ref({
   id: "",
   title: "",
   content: "",
+  categoryId: null,
   category: "",
+  tags: [],
+  commentCount: 0,
   createTime: "",
   cover: "",
   liked: false,
@@ -59,6 +63,25 @@ const post = ref({
   followed: false,
   viewCount: 0,
 });
+
+const openCategory = () => {
+  if (!post.value.categoryId) return;
+  router.push({
+    path: `/category/${post.value.categoryId}`,
+    query: post.value.category ? { category: post.value.category } : undefined,
+  });
+};
+
+const openTag = (tag) => {
+  if (!tag?.name) return;
+  router.push({
+    path: "/search",
+    query: {
+      tagId: tag.id || undefined,
+      tagName: tag.name,
+    },
+  });
+};
 const dialogVisible = ref(false);
 const loading = ref(true);
 const loadFailed = ref(false);
@@ -256,9 +279,26 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
 
       <header class="paper-head">
         <div class="chip-row">
-          <div v-if="post.category" class="category-chip">
+          <button
+            v-if="post.category"
+            type="button"
+            class="category-chip"
+            :class="{ clickable: Boolean(post.categoryId) }"
+            :title="post.categoryId ? `进入「${post.category}」专栏` : ''"
+            @click="openCategory"
+          >
             {{ post.category }}
-          </div>
+          </button>
+          <button
+            v-for="tag in post.tags || []"
+            :key="tag.id || tag.name"
+            type="button"
+            class="tag-chip"
+            :title="`查看 #${tag.name} 相关内容`"
+            @click="openTag(tag)"
+          >
+            #{{ tag.name }}
+          </button>
           <div v-if="post.isPrivate" class="private-chip" title="仅自己可见">
             <el-icon :size="12"><Lock /></el-icon>
             <span>私密</span>
@@ -526,6 +566,7 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
       .chip-row {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 16px;
       }
@@ -537,10 +578,20 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
         padding: 4px 14px;
         font-size: 12.5px;
         font-weight: 500;
+        font-family: inherit;
         color: var(--el-color-primary);
         background: var(--el-color-primary-light-9);
         border: 1px solid var(--el-color-primary-light-7);
         border-radius: var(--radius-full);
+        transition: all var(--transition-fast);
+
+        &.clickable {
+          cursor: pointer;
+
+          &:hover {
+            background: var(--el-color-primary-light-8);
+          }
+        }
 
         &::before {
           content: "";
@@ -548,6 +599,27 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
           height: 6px;
           border-radius: 50%;
           background: var(--el-color-primary);
+        }
+      }
+
+      .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        font-size: 12.5px;
+        font-weight: 500;
+        font-family: inherit;
+        color: var(--text-secondary);
+        background: var(--bg-subtle);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+
+        &:hover {
+          color: var(--el-color-primary);
+          border-color: var(--el-color-primary-light-7);
+          background: var(--el-color-primary-light-9);
         }
       }
 

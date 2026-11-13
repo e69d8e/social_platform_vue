@@ -3,6 +3,12 @@ import { getPostCategoryApi } from "@/api/postApi";
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Grid } from "@element-plus/icons-vue";
+import formattedCount from "@/utils/formattedCount";
+
+const props = defineProps({
+  showHeader: { type: Boolean, default: true },
+  compact: { type: Boolean, default: false },
+});
 
 const route = useRoute();
 const router = useRouter();
@@ -11,7 +17,7 @@ const categoryList = ref([]);
 const loading = ref(true);
 const loadError = ref(false);
 
-// 调色板：按分类 id 稳定分配一个主题色，用于分类图标底色
+// 兜底调色板：当分类未配置独立主题色时，按分类 id 稳定分配主题色
 const palette = [
   "#cc6d4e",
   "#5a947a",
@@ -28,6 +34,7 @@ const palette = [
 ];
 
 const colorFor = (category) => {
+  if (category?.color) return category.color;
   const id = Number(category.id);
   const n = Number.isFinite(id)
     ? Math.abs(id)
@@ -37,10 +44,15 @@ const colorFor = (category) => {
   return palette[n % palette.length];
 };
 
-const firstChar = (name) => (name ? name.charAt(0) : "?");
+const iconFor = (category) =>
+  category?.icon?.trim() || (category?.name ? category.name.charAt(0) : "?");
 
 // 「全部」在首页时即为当前视图，高亮展示
 const isAllActive = computed(() => route.path === "/home");
+
+const isCategoryActive = (category) =>
+  route.path.startsWith("/category/") &&
+  String(route.params.id) === String(category.id);
 
 const getCategoryList = async () => {
   loading.value = true;
@@ -61,6 +73,7 @@ const goAll = () => {
 };
 
 const goCategory = (category) => {
+  if (isCategoryActive(category)) return;
   router.push({
     path: `/category/${category.id}`,
     query: { category: category.name },
@@ -71,8 +84,8 @@ onMounted(getCategoryList);
 </script>
 
 <template>
-  <div class="category">
-    <div class="category-header">
+  <div class="category" :class="{ compact: props.compact }">
+    <div v-if="props.showHeader" class="category-header">
       <span class="category-title">分类</span>
       <span
         v-if="!loading && !loadError && categoryList.length"
@@ -112,11 +125,16 @@ onMounted(getCategoryList);
         v-for="category in categoryList"
         :key="category.id"
         class="chip"
+        :class="{ active: isCategoryActive(category) }"
         :style="{ '--cat-color': colorFor(category) }"
+        :title="category.description || category.name"
         @click="goCategory(category)"
       >
-        <span class="chip-icon">{{ firstChar(category.name) }}</span>
+        <span class="chip-icon">{{ iconFor(category) }}</span>
         <span class="chip-name">{{ category.name }}</span>
+        <span v-if="category.postCount > 0" class="chip-count">
+          {{ formattedCount(category.postCount) }}
+        </span>
       </div>
     </div>
   </div>
@@ -125,6 +143,10 @@ onMounted(getCategoryList);
 <style lang="scss" scoped>
 .category {
   margin-bottom: 20px;
+
+  &.compact {
+    margin-bottom: 12px;
+  }
 
   .category-header {
     display: flex;
@@ -153,7 +175,7 @@ onMounted(getCategoryList);
 
   .category-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
     gap: 10px;
   }
 
@@ -161,7 +183,7 @@ onMounted(getCategoryList);
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
+    padding: 8px 11px;
     background: var(--bg-card);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
@@ -179,6 +201,21 @@ onMounted(getCategoryList);
 
     &:active {
       transform: translateY(0);
+    }
+
+    &.active {
+      border-color: var(--cat-color, var(--el-color-primary));
+      background: color-mix(
+        in srgb,
+        var(--cat-color, var(--el-color-primary)) 11%,
+        var(--bg-card)
+      );
+      box-shadow: var(--shadow-sm);
+
+      .chip-name {
+        color: var(--text-ink);
+        font-weight: 600;
+      }
     }
 
     .chip-icon {
@@ -203,6 +240,15 @@ onMounted(getCategoryList);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .chip-count {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-placeholder);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
     }
 
     &.chip-all {

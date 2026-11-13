@@ -1,8 +1,18 @@
 <script setup>
-import { ref, onMounted, shallowRef, onBeforeUnmount } from "vue";
-import { Lock } from "@element-plus/icons-vue";
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  shallowRef,
+  onBeforeUnmount,
+} from "vue";
+import { Lock, Plus, Close } from "@element-plus/icons-vue";
 import {
   getPostCategoryApi,
+  getCategoryTagsApi,
+  getHotTagsApi,
+  searchTagsApi,
   getPostIdApi,
   publishPostApi,
 } from "@/api/postApi";
@@ -22,9 +32,15 @@ const router = useRouter();
 const goBack = useGoBack("/home");
 
 // ---- Form & Editor State ----
+const MAX_TAGS = 5;
 const id = ref("");
 const title = ref("");
 const categoryId = ref("");
+const selectedTags = ref([]);
+const tagInput = ref("");
+const tagSearchResults = ref([]);
+const suggestedTags = ref([]);
+const tagSearching = ref(false);
 const isPrivate = ref(false);
 const categoryList = ref([]);
 const valueHtml = ref("");
@@ -32,6 +48,106 @@ const editorRef = shallowRef();
 const loading = ref(false);
 const dialogConfirmVisible = ref(false);
 const isPublished = ref(false);
+let tagSearchTimer = null;
+
+const selectedCategory = computed(() =>
+  categoryList.value.find((c) => String(c.id) === String(categoryId.value)),
+);
+
+const availableSuggestedTags = computed(() => {
+  const chosen = new Set(selectedTags.value.map((t) => t.toLowerCase()));
+  return suggestedTags.value.filter(
+    (tag) => tag?.name && !chosen.has(tag.name.toLowerCase()),
+  );
+});
+
+const categoryIconFor = (cat) =>
+  cat?.icon?.trim() || (cat?.name ? cat.name.charAt(0) : "分");
+
+const selectCategory = (cat) => {
+  if (!cat) return;
+  categoryId.value = String(categoryId.value) === String(cat.id) ? "" : cat.id;
+};
+
+const normalizeTagName = (raw) => {
+  if (!raw) return "";
+  return String(raw)
+    .trim()
+    .replace(/^#+/, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 20)
+    .trim();
+};
+
+const addTag = (rawName) => {
+  const clean = normalizeTagName(rawName ?? tagInput.value);
+  if (!clean) return;
+  if (selectedTags.value.length >= MAX_TAGS) {
+    ElMessage.warning(`最多可选择 ${MAX_TAGS} 个标签`);
+    return;
+  }
+  const exists = selectedTags.value.some(
+    (t) => t.toLowerCase() === clean.toLowerCase(),
+  );
+  if (exists) {
+    tagInput.value = "";
+    tagSearchResults.value = [];
+    return;
+  }
+  selectedTags.value = [...selectedTags.value, clean];
+  tagInput.value = "";
+  tagSearchResults.value = [];
+};
+
+const removeTag = (index) => {
+  selectedTags.value = selectedTags.value.filter((_, idx) => idx !== index);
+};
+
+const handleTagInput = () => {
+  const kw = normalizeTagName(tagInput.value);
+  if (tagSearchTimer) clearTimeout(tagSearchTimer);
+  if (!kw) {
+    tagSearchResults.value = [];
+    return;
+  }
+  tagSearchTimer = setTimeout(async () => {
+    tagSearching.value = true;
+    try {
+      const res = await searchTagsApi({
+        keyword: kw,
+        categoryId: categoryId.value || undefined,
+        limit: 8,
+      });
+      if (res.data?.code === 1) {
+        const chosen = new Set(selectedTags.value.map((t) => t.toLowerCase()));
+        tagSearchResults.value = (res.data.data || []).filter(
+          (t) => !chosen.has(t.name.toLowerCase()),
+        );
+      }
+    } catch {
+      tagSearchResults.value = [];
+    } finally {
+      tagSearching.value = false;
+    }
+  }, 180);
+};
+
+const loadSuggestedTags = async (catId) => {
+  try {
+    const res = catId
+      ? await getCategoryTagsApi(catId, { limit: 12 })
+      : await getHotTagsApi({ limit: 12 });
+    if (res.data?.code === 1 && Array.isArray(res.data.data)) {
+      suggestedTags.value = res.data.data;
+    }
+  } catch {
+    suggestedTags.value = [];
+  }
+};
+
+watch(categoryId, (val) => {
+  loadSuggestedTags(val || null);
+});
 
 // ---- Cover & Upload State ----
 // 封面文件由 CoverUploader 裁切压缩后回传
@@ -160,6 +276,7 @@ const publicPost = async () => {
       content: valueHtml.value,
       // 未选择分类时传 null，后端默认归入“其他”分类
       categoryId: categoryId.value === "" ? null : categoryId.value,
+      tags: selectedTags.value,
       isPrivate: isPrivate.value,
     });
     // 失败时保留确认弹窗（提示已由拦截器给出），用户可以直接重试，不用重新点发布
@@ -191,7 +308,8 @@ onBeforeRouteLeave(async (to, from, next) => {
     title.value.trim() ||
     (valueHtml.value && valueHtml.value !== "<p><br></p>") ||
     coverFile.value ||
-    hasUploadedImg.value;
+    hasUploadedImg.value ||
+    selectedTags.value.length > 0;
 
   if (hasContent) {
     try {
@@ -215,6 +333,7 @@ onBeforeRouteLeave(async (to, from, next) => {
 
 onMounted(async () => {
   await getCategoryList();
+  await loadSuggestedTags(categoryId.value || null);
   const res = await getPostIdApi();
   id.value = res.data.data;
   if (id.value === null) ElMessage.error("网络错误");
@@ -224,7 +343,10 @@ onMounted(async () => {
   const state = history.state;
   if (
     state &&
-    (state.draftTitle || state.draftContent || state.draftCategory)
+    (state.draftTitle ||
+      state.draftContent ||
+      state.draftCategory ||
+      state.draftTags)
   ) {
     if (state.draftTitle) {
       title.value = state.draftTitle;
@@ -239,6 +361,12 @@ onMounted(async () => {
       if (matched) {
         categoryId.value = matched.id;
       }
+    }
+    if (state.draftTags) {
+      const rawList = Array.isArray(state.draftTags)
+        ? state.draftTags
+        : String(state.draftTags).split(/[,，、\s]+/);
+      rawList.slice(0, MAX_TAGS).forEach((t) => addTag(t));
     }
     if (state.draftContent) {
       // 将文本换行格式化为富文本编辑器段落
@@ -257,6 +385,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(async () => {
+  if (tagSearchTimer) clearTimeout(tagSearchTimer);
   window.removeEventListener("beforeunload", handleBeforeUnload);
   await cleanupResources();
   const editor = editorRef.value;
@@ -307,19 +436,129 @@ onBeforeUnmount(async () => {
 
       <div class="section">
         <div class="section-label">分类</div>
-        <el-select
-          v-model="categoryId"
-          placeholder="请选择分类（默认：其他）"
-          clearable
-          class="category-select"
-        >
-          <el-option
+        <div class="section-hint">
+          {{
+            selectedCategory?.description ||
+            "选择一个内容专栏（默认归入“其他”，选定后将同步推荐该分类热门标签）"
+          }}
+        </div>
+        <div class="category-picker">
+          <button
             v-for="item in categoryList"
             :key="item.id"
-            :label="item.name"
-            :value="item.id"
-          />
-        </el-select>
+            type="button"
+            class="cat-option"
+            :class="{ active: String(categoryId) === String(item.id) }"
+            :style="{ '--cat-color': item.color || 'var(--el-color-primary)' }"
+            @click="selectCategory(item)"
+          >
+            <span class="cat-icon">{{ categoryIconFor(item) }}</span>
+            <span class="cat-name">{{ item.name }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label-row">
+          <span class="section-label">标签</span>
+          <span class="tag-counter"
+            >已选 {{ selectedTags.length }} / {{ MAX_TAGS }}</span
+          >
+        </div>
+        <div class="section-hint">
+          添加话题标签能让对口的读者在推荐流与搜索中更快发现你的内容（按回车创建新标签）
+        </div>
+
+        <div class="tag-editor">
+          <div v-if="selectedTags.length" class="selected-tags">
+            <span
+              v-for="(tag, index) in selectedTags"
+              :key="tag"
+              class="selected-tag-chip"
+            >
+              <span>#{{ tag }}</span>
+              <button
+                type="button"
+                class="tag-remove-btn"
+                :aria-label="`移除标签 ${tag}`"
+                @click="removeTag(index)"
+              >
+                <el-icon :size="11"><Close /></el-icon>
+              </button>
+            </span>
+          </div>
+
+          <div v-if="selectedTags.length < MAX_TAGS" class="tag-input-box">
+            <div class="tag-input-row">
+              <span class="tag-hash">#</span>
+              <input
+                v-model="tagInput"
+                type="text"
+                class="tag-native-input"
+                maxlength="20"
+                placeholder="输入标签名（如 SpringBoot / 旅拍 / 评测）"
+                @input="handleTagInput"
+                @keydown.enter.prevent="addTag()"
+              />
+              <button
+                type="button"
+                class="tag-add-btn"
+                :disabled="!normalizeTagName(tagInput)"
+                @click="addTag()"
+              >
+                <el-icon :size="13"><Plus /></el-icon>
+                <span>添加</span>
+              </button>
+            </div>
+
+            <div
+              v-if="
+                normalizeTagName(tagInput) &&
+                (tagSearchResults.length || tagSearching)
+              "
+              class="tag-autocomplete"
+            >
+              <div
+                v-if="tagSearching && !tagSearchResults.length"
+                class="tag-searching"
+              >
+                正在检索已有标签...
+              </div>
+              <button
+                v-for="item in tagSearchResults"
+                :key="item.id"
+                type="button"
+                class="tag-suggestion-item"
+                @click="addTag(item.name)"
+              >
+                <span>#{{ item.name }}</span>
+                <span class="suggestion-count"
+                  >{{ item.useCount || 0 }} 篇</span
+                >
+              </button>
+            </div>
+          </div>
+
+          <div v-if="availableSuggestedTags.length" class="suggested-tags-row">
+            <span class="suggest-label">
+              {{
+                selectedCategory
+                  ? `「${selectedCategory.name}」推荐标签：`
+                  : "社区热门标签："
+              }}
+            </span>
+            <button
+              v-for="tag in availableSuggestedTags.slice(0, 10)"
+              :key="tag.id || tag.name"
+              type="button"
+              class="suggest-tag-chip"
+              :disabled="selectedTags.length >= MAX_TAGS"
+              @click="addTag(tag.name)"
+            >
+              + #{{ tag.name }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="section">
@@ -362,7 +601,7 @@ onBeforeUnmount(async () => {
         style="
           text-align: center;
           color: var(--text-secondary);
-          margin-bottom: 8px;
+          margin-bottom: 10px;
         "
       >
         {{
@@ -371,6 +610,12 @@ onBeforeUnmount(async () => {
             : "发布后所有社区成员均可浏览该帖子"
         }}
       </p>
+      <div class="confirm-meta">
+        <span>分类：{{ selectedCategory?.name || "其他" }}</span>
+        <span v-if="selectedTags.length">
+          标签：{{ selectedTags.map((t) => `#${t}`).join(" ") }}
+        </span>
+      </div>
       <template #footer>
         <el-button :disabled="loading" @click="dialogConfirmVisible = false"
           >取消</el-button
@@ -439,8 +684,260 @@ onBeforeUnmount(async () => {
   }
 }
 
-.category-select {
-  width: 240px;
+.section-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+
+  .tag-counter {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.category-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cat-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    border-color: var(--cat-color, var(--el-color-primary));
+    color: var(--text-ink);
+  }
+
+  &.active {
+    border-color: var(--cat-color, var(--el-color-primary));
+    background: color-mix(
+      in srgb,
+      var(--cat-color, var(--el-color-primary)) 13%,
+      var(--bg-card)
+    );
+    color: var(--text-ink);
+    font-weight: 600;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .cat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    background: var(--cat-color, var(--el-color-primary));
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+  }
+}
+
+.tag-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.selected-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  color: var(--el-color-primary);
+  font-size: 12.5px;
+  font-weight: 500;
+
+  .tag-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+      background: var(--el-color-primary-light-7);
+    }
+  }
+}
+
+.tag-input-box {
+  position: relative;
+  max-width: 440px;
+}
+
+.tag-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-card);
+
+  &:focus-within {
+    border-color: var(--el-color-primary);
+  }
+
+  .tag-hash {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .tag-native-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13.5px;
+    font-family: inherit;
+    padding: 4px 0;
+  }
+
+  .tag-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+    font-size: 12.5px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.tag-autocomplete {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.tag-searching {
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.tag-suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-subtle);
+    color: var(--el-color-primary);
+  }
+
+  .suggestion-count {
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+}
+
+.suggested-tags-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  .suggest-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .suggest-tag-chip {
+    padding: 3px 9px;
+    border-radius: var(--radius-full);
+    border: 1px dashed var(--border-default);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+
+    &:hover:not(:disabled) {
+      border-color: var(--el-color-primary);
+      color: var(--el-color-primary);
+      background: var(--el-color-primary-light-9);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.confirm-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 .privacy-row {
@@ -524,8 +1021,8 @@ onBeforeUnmount(async () => {
     }
   }
 
-  .category-select {
-    width: 100% !important;
+  .tag-input-box {
+    max-width: 100%;
   }
 
   .submit-area .submit-btn {
