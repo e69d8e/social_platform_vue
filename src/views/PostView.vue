@@ -172,12 +172,26 @@ const {
   starCount: () => post.value.starCount,
 });
 
-const copyPostLink = () => {
+const copyPostLink = async () => {
   const url = window.location.href;
-  navigator.clipboard?.writeText(url).then(
-    () => ElMessage.success("链接已复制，去分享给好友吧！"),
-    () => ElMessage.error("复制链接失败"),
-  );
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    ElMessage.success("链接已复制，去分享给好友吧！");
+  } catch {
+    ElMessage.error("复制链接失败，请手动复制地址栏链接");
+  }
 };
 
 const scrollToComments = () => {
@@ -312,12 +326,18 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               :size="44"
               :src="post.avatar"
               class="author-avatar"
+              role="button"
+              tabindex="0"
               @click="$router.push('/user/' + post.userId)"
+              @keydown.enter="$router.push('/user/' + post.userId)"
             />
             <div class="author-col">
               <span
                 class="nickname"
+                role="button"
+                tabindex="0"
                 @click="$router.push('/user/' + post.userId)"
+                @keydown.enter="$router.push('/user/' + post.userId)"
                 >{{ post.nickname || post.username }}</span
               >
               <span class="publish-time" :title="post.createTime">{{
@@ -350,16 +370,19 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               </el-icon>
               <span>{{ post.isPrivate ? "私密" : "设为私密" }}</span>
             </button>
-            <el-icon
+            <button
               v-if="
                 userStore.userInfo.id &&
                 String(userStore.userInfo.id) === String(post.userId)
               "
+              type="button"
               title="删除作品"
+              aria-label="删除作品"
               class="admin-icon"
               @click="dialogVisible = true"
-              ><Delete
-            /></el-icon>
+            >
+              <el-icon><Delete /></el-icon>
+            </button>
             <el-popconfirm
               v-if="userStore.isModerator"
               :title="
@@ -368,11 +391,14 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
               @confirm="banPost"
             >
               <template #reference>
-                <el-icon
+                <button
+                  type="button"
                   :title="post.enabled ? '封禁文章' : '解封文章'"
+                  :aria-label="post.enabled ? '封禁文章' : '解封文章'"
                   class="admin-icon"
-                  ><RemoveFilled
-                /></el-icon>
+                >
+                  <el-icon><RemoveFilled /></el-icon>
+                </button>
               </template>
             </el-popconfirm>
           </div>
@@ -734,6 +760,12 @@ const timeText = computed(() => formatExactTime(post.value.createTime));
           }
 
           .admin-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: 0;
+            background: transparent;
             font-size: 20px;
             color: var(--el-color-danger);
             cursor: pointer;

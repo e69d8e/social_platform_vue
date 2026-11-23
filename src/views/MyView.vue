@@ -11,12 +11,14 @@ import {
 import { uploadAvatar } from "@/api/uploadApi";
 import { getStarListApi } from "@/api/starApi";
 import { useSignStore } from "@/stores/sign";
+import { useThemeStore } from "@/stores/theme";
 import { disconnect } from "@/utils/websocket";
 import AuthorityComponent from "@/components/AuthorityComponent.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import ImageCropper from "@/components/ImageCropper.vue";
 import compressImage from "@/utils/compressImage";
 import { uploadWithDedup } from "@/utils/uploadDedup";
+import { useUnreadNotifications } from "@/composables/useUnreadNotifications";
 import formattedCount from "@/utils/formattedCount";
 import {
   Male,
@@ -33,11 +35,16 @@ import {
   Edit,
   CollectionTag,
   CircleClose,
+  EditPen,
+  Bell,
+  Trophy,
 } from "@element-plus/icons-vue";
 
 const router = useRouter();
 const userStore = useUserStore();
 const signStore = useSignStore();
+const themeStore = useThemeStore();
+const { unreadCount: notificationUnreadCount } = useUnreadNotifications();
 
 // 始终跟随 store，避免 setInfo 整体替换后本地引用失效
 const userInfo = computed(() => userStore.userInfo);
@@ -474,7 +481,11 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
       <div class="social-grid">
         <div
           class="social-entry-card"
+          role="button"
+          tabindex="0"
           @click="$router.push('/postList/' + userInfo.id)"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
         >
           <div class="entry-icon post-icon">
             <el-icon :size="24"><Document /></el-icon>
@@ -487,7 +498,11 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 
         <div
           class="social-entry-card"
+          role="button"
+          tabindex="0"
           @click="$router.push('/follow/' + userInfo.id)"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
         >
           <div class="entry-icon follow-icon">
             <el-icon :size="24"><User /></el-icon>
@@ -500,7 +515,11 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
 
         <div
           class="social-entry-card"
+          role="button"
+          tabindex="0"
           @click="$router.push('/fans/' + userInfo.id)"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
         >
           <div class="entry-icon fan-icon">
             <el-icon :size="24"><CircleCheck /></el-icon>
@@ -513,7 +532,14 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           </div>
         </div>
 
-        <div class="social-entry-card" @click="$router.push('/favorites')">
+        <div
+          class="social-entry-card"
+          role="button"
+          tabindex="0"
+          @click="$router.push('/favorites')"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
+        >
           <div class="entry-icon star-icon">
             <el-icon :size="24"><CollectionTag /></el-icon>
           </div>
@@ -527,7 +553,14 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           </div>
         </div>
 
-        <div class="social-entry-card" @click="$router.push('/blacklist')">
+        <div
+          class="social-entry-card"
+          role="button"
+          tabindex="0"
+          @click="$router.push('/blacklist')"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
+        >
           <div class="entry-icon block-icon">
             <el-icon :size="24"><CircleClose /></el-icon>
           </div>
@@ -539,13 +572,93 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           </div>
         </div>
 
-        <div class="social-entry-card" @click="$router.push('/friends')">
+        <div
+          class="social-entry-card"
+          role="button"
+          tabindex="0"
+          @click="$router.push('/friends')"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
+        >
           <div class="entry-icon friend-icon">
             <el-icon :size="24"><Share /></el-icon>
           </div>
           <div class="entry-details">
             <span class="entry-title">我的好友</span>
             <span class="entry-desc">互相关注的社区好友列表</span>
+          </div>
+        </div>
+
+        <div
+          class="social-entry-card"
+          role="button"
+          tabindex="0"
+          @click="$router.push('/drafts')"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
+        >
+          <div class="entry-icon draft-icon">
+            <el-icon :size="24"><EditPen /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">草稿箱</span>
+            <span class="entry-desc">未发布的草稿和定时发布管理</span>
+          </div>
+        </div>
+
+        <div
+          class="social-entry-card"
+          role="button"
+          tabindex="0"
+          @click="$router.push('/aiChat')"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
+        >
+          <div class="entry-icon ai-icon">
+            <el-icon :size="24"><ChatDotRound /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">AI 助手</span>
+            <span class="entry-desc">提问、润色标题、查找社区内容</span>
+          </div>
+        </div>
+
+        <div
+          class="social-entry-card"
+          role="button"
+          tabindex="0"
+          @click="$router.push('/notifications')"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
+        >
+          <div class="entry-icon notify-icon">
+            <el-icon :size="24"><Bell /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title"
+              >互动通知
+              <span v-if="notificationUnreadCount > 0" class="entry-unread">{{
+                notificationUnreadCount > 99 ? "99+" : notificationUnreadCount
+              }}</span></span
+            >
+            <span class="entry-desc">点赞、评论、关注等互动消息</span>
+          </div>
+        </div>
+
+        <div
+          class="social-entry-card"
+          role="button"
+          tabindex="0"
+          @click="$router.push('/featured')"
+          @keydown.enter="$event.currentTarget.click()"
+          @keydown.space.prevent="$event.currentTarget.click()"
+        >
+          <div class="entry-icon featured-icon">
+            <el-icon :size="24"><Trophy /></el-icon>
+          </div>
+          <div class="entry-details">
+            <span class="entry-title">每周精选</span>
+            <span class="entry-desc">官方推荐的优质帖子</span>
           </div>
         </div>
       </div>
@@ -601,6 +714,23 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
           </div>
           <el-divider />
         </template>
+
+        <div class="security-row">
+          <div class="security-info">
+            <div class="row-title">
+              <el-icon><Moon /></el-icon>
+              <span>深色模式</span>
+            </div>
+            <p class="row-desc">切换浅色 / 深色外观，跟随本设备保存</p>
+          </div>
+          <el-switch
+            :model-value="themeStore.isDark"
+            aria-label="切换深色模式"
+            @change="themeStore.toggle"
+          />
+        </div>
+
+        <el-divider />
 
         <div class="security-row">
           <div class="security-info">
@@ -999,6 +1129,22 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
   gap: 16px;
 }
 
+.entry-unread {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: var(--el-color-danger);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  vertical-align: 1px;
+}
+
 .social-entry-card {
   display: flex;
   align-items: center;
@@ -1054,6 +1200,26 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     &.friend-icon {
       background: rgba(74, 144, 226, 0.12);
       color: #4a90e2;
+    }
+
+    &.draft-icon {
+      background: rgba(144, 147, 153, 0.12);
+      color: var(--el-color-info);
+    }
+
+    &.notify-icon {
+      background: rgba(245, 108, 108, 0.12);
+      color: var(--el-color-danger);
+    }
+
+    &.ai-icon {
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
+
+    &.featured-icon {
+      background: rgba(247, 186, 42, 0.12);
+      color: #f7ba2a;
     }
   }
 
@@ -1129,6 +1295,12 @@ const fansCount = computed(() => formattedCount(userInfo.value.fansCount || 0));
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 24px),
+      transparent
+    );
+    mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 
     &::-webkit-scrollbar {
       display: none;

@@ -113,7 +113,14 @@ onUnmounted(() => {
         </el-avatar>
       </div>
 
-      <div class="compact-trigger" @click="emit('open')">
+      <div
+        class="compact-trigger"
+        role="button"
+        tabindex="0"
+        @click="emit('open')"
+        @keydown.enter="emit('open')"
+        @keydown.space.prevent="emit('open')"
+      >
         <el-icon class="input-icon" :size="15"><EditPen /></el-icon>
         <span class="placeholder">
           {{ replyUserName ? `回复 @${replyUserName}...` : "写下你的评论..." }}

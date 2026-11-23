@@ -17,7 +17,7 @@ export function useUnreadMessages() {
     try {
       const res = await getUnreadCountApi();
       if (res.data.code === 1) {
-        unreadCount.value = res.data.data || 0;
+        unreadCount.value = Number(res.data.data || 0);
       }
     } catch {
       // silently fail

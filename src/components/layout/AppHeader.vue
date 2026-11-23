@@ -9,6 +9,7 @@ import { signInApi } from "@/api/userApi";
 import { ElMessage } from "element-plus";
 import { logoUrl } from "@/utils/request";
 import GlobalSearch from "@/components/layout/GlobalSearch.vue";
+import NotificationBell from "@/components/layout/NotificationBell.vue";
 
 defineProps({
   /** 未读私信数（由 Layout 统一轮询下发） */
@@ -105,6 +106,8 @@ const sign = async () => {
         <button
           class="theme-toggle-btn"
           :title="themeStore.isDark ? '切换浅色模式' : '切换暗色模式'"
+          :aria-label="themeStore.isDark ? '切换浅色模式' : '切换暗色模式'"
+          :aria-pressed="themeStore.isDark"
           type="button"
           @click="themeStore.toggle"
         >
@@ -180,6 +183,10 @@ const sign = async () => {
               <span>发布</span>
             </button>
           </template>
+        </div>
+
+        <div v-if="userStore.userInfo.username" class="notification-bell-entry">
+          <NotificationBell />
         </div>
 
         <!-- 右侧用户 -->
@@ -569,7 +576,7 @@ const sign = async () => {
 }
 
 @media (max-width: 960px) {
-  // 梯度2：平板端彻底隐藏顶栏所有动作按钮与签到（底部导航已集成完整的关注、发布、消息、我的）
+  // 梯度2：平板端隐藏顶栏动作按钮与签到（底部导航覆盖首页/关注/发布/私信/我的；通知铃铛单独保留）
   .header-actions {
     display: none !important;
   }
@@ -577,6 +584,12 @@ const sign = async () => {
   .sign {
     display: none !important;
   }
+}
+
+.notification-bell-entry {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {

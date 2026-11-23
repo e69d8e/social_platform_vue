@@ -1660,6 +1660,12 @@ watch(previewAsOther, (isOther) => {
   border-top: 1px solid var(--border-light);
   overflow-x: auto;
   scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 24px),
+    transparent
+  );
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 
   &::-webkit-scrollbar {
     display: none;

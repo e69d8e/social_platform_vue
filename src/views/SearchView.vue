@@ -332,6 +332,7 @@ const activePageSize = computed(() =>
 
 <template>
   <div class="search-page-container">
+    <h1 class="sr-only">搜索</h1>
     <!-- 顶部综合搜索面板 -->
     <div class="search-hero">
       <div class="hero-nav">
@@ -418,7 +419,10 @@ const activePageSize = computed(() =>
             v-for="item in historyList"
             :key="item.id"
             class="history-tag"
+            role="button"
+            tabindex="0"
             @click="historyClick(item)"
+            @keydown.enter="historyClick(item)"
           >
             <span class="tag-keyword">{{ item.keyword }}</span>
             <button

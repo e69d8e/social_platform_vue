@@ -58,6 +58,7 @@ const goToMy = () => {
       class="bottom-tab"
       type="button"
       :class="{ active: isHomeActive }"
+      :aria-current="isHomeActive ? 'page' : undefined"
       @click="$router.push('/home')"
     >
       <el-icon :size="20"><HomeFilled /></el-icon>
@@ -68,6 +69,7 @@ const goToMy = () => {
       class="bottom-tab"
       type="button"
       :class="{ active: isMyFollowPostsActive }"
+      :aria-current="isMyFollowPostsActive ? 'page' : undefined"
       @click="goToFollowPosts"
     >
       <el-icon :size="20"
@@ -87,6 +89,7 @@ const goToMy = () => {
       class="bottom-tab"
       type="button"
       :class="{ active: isConversationsActive }"
+      :aria-current="isConversationsActive ? 'page' : undefined"
       @click="goToConversations"
     >
       <div class="tab-icon-wrap">
@@ -102,6 +105,7 @@ const goToMy = () => {
       class="bottom-tab"
       type="button"
       :class="{ active: isMyActive }"
+      :aria-current="isMyActive ? 'page' : undefined"
       @click="goToMy"
     >
       <el-avatar
@@ -154,7 +158,7 @@ const goToMy = () => {
     -webkit-tap-highlight-color: transparent;
 
     .tab-label {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 500;
       line-height: 1;
     }
@@ -254,7 +258,7 @@ const goToMy = () => {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .mobile-bottom-nav {
     display: flex;
   }

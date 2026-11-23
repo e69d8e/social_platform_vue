@@ -40,13 +40,13 @@ $transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 // ============================================================
 :root {
   // Primary (Terracotta Coral) — !important needed to override Element Plus
-  --el-color-primary: #cc6d4e !important;
+  --el-color-primary: #b5573d !important;
   --el-color-primary-light-3: #da8e74 !important;
   --el-color-primary-light-5: #e6ab97 !important;
   --el-color-primary-light-7: #f1cbbe !important;
   --el-color-primary-light-8: #f7ded6 !important;
   --el-color-primary-light-9: #fbf0ec !important;
-  --el-color-primary-dark-2: #a75034 !important;
+  --el-color-primary-dark-2: #8f3f2a !important;
 
   // Success (Sage Green)
   --el-color-success: #5a947a !important;
@@ -130,17 +130,17 @@ $transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --text-ink: #181816;
   --text-body: #3c3b37;
   --text-body-strong: #222220;
-  --text-muted: #78756d;
-  --text-muted-soft: #9b9891;
+  --text-muted: #6f6c64;
+  --text-muted-soft: #736f67;
   --text-placeholder: #b5b2aa;
 
   // Backward compat aliases
   --text-primary: #181816;
-  --text-secondary: #78756d;
+  --text-secondary: #6f6c64;
 
   --border-default: #e8e3dc;
   --border-light: #eee9e2;
-  --border-focus: #cc6d4e;
+  --border-focus: #b5573d;
 
   --shadow-xs: #{$shadow-xs};
   --shadow-sm: #{$shadow-sm};
@@ -163,8 +163,8 @@ $transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --transition-slow: #{$transition-slow};
 
   // Gradients
-  --gradient-primary: linear-gradient(135deg, #cc6d4e 0%, #e08264 100%);
-  --gradient-accent: linear-gradient(135deg, #e59a42 0%, #cc6d4e 100%);
+  --gradient-primary: linear-gradient(135deg, #b5573d 0%, #a84f35 100%);
+  --gradient-accent: linear-gradient(135deg, #d99426 0%, #b5573d 100%);
   --gradient-warm: linear-gradient(135deg, #e59a42 0%, #c24c4c 100%);
   --gradient-cool: linear-gradient(135deg, #5a947a 0%, #4a8d80 100%);
   --gradient-success: linear-gradient(135deg, #5a947a 0%, #41755e 100%);
@@ -175,7 +175,7 @@ $transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   );
 
   // Glow
-  --glow-primary: 0 4px 24px rgba(204, 109, 78, 0.28);
+  --glow-primary: 0 4px 24px rgba(181, 87, 61, 0.28);
   --glow-accent: 0 4px 24px rgba(229, 154, 66, 0.28);
 
   // On-color text
@@ -194,13 +194,13 @@ $transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 // ============================================================
 html.dark {
   // Primary (Warm Coral Ember)
-  --el-color-primary: #e68a6e !important;
+  --el-color-primary: #d4785f !important;
   --el-color-primary-light-3: #ed9f88 !important;
   --el-color-primary-light-5: #f2b7a5 !important;
   --el-color-primary-light-7: #f8cfc3 !important;
   --el-color-primary-light-8: #fae0d9 !important;
   --el-color-primary-light-9: #2d1e19 !important;
-  --el-color-primary-dark-2: #cc6d4e !important;
+  --el-color-primary-dark-2: #b5573d !important;
 
   // Success
   --el-color-success: #6eb395 !important;
@@ -275,7 +275,7 @@ html.dark {
   --text-body: #dedad2;
   --text-body-strong: #f3f0ea;
   --text-muted: #a6a39b;
-  --text-muted-soft: #737068;
+  --text-muted-soft: #8f8b82;
   --text-placeholder: #57554e;
 
   // Backward compat aliases
@@ -284,11 +284,11 @@ html.dark {
 
   --border-default: #2e2c27;
   --border-light: #252420;
-  --border-focus: #e68a6e;
+  --border-focus: #d4785f;
 
   // Gradients (adjusted for dark)
-  --gradient-primary: linear-gradient(135deg, #e68a6e 0%, #f0a38b 100%);
-  --gradient-accent: linear-gradient(135deg, #f0b858 0%, #e68a6e 100%);
+  --gradient-primary: linear-gradient(135deg, #b5573d 0%, #a84f35 100%);
+  --gradient-accent: linear-gradient(135deg, #f0b858 0%, #b5573d 100%);
   --gradient-warm: linear-gradient(135deg, #f0b858 0%, #e06c6c 100%);
   --gradient-cool: linear-gradient(135deg, #6eb395 0%, #5a947a 100%);
   --gradient-success: linear-gradient(135deg, #6eb395 0%, #5a947a 100%);
@@ -299,7 +299,7 @@ html.dark {
   );
 
   // Glow
-  --glow-primary: 0 4px 28px rgba(230, 138, 110, 0.35);
+  --glow-primary: 0 4px 28px rgba(181, 87, 61, 0.35);
   --glow-accent: 0 4px 28px rgba(240, 184, 88, 0.35);
 
   // On-color text

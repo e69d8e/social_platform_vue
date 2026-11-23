@@ -96,6 +96,36 @@ const onDragMove = (e) => {
   updatePosition(clientX, clientY);
 };
 
+// 键盘操作：←/→ 调整滑块，Enter/Space 提交；为无法使用鼠标的用户提供最低限度可达路径
+const onSliderKeydown = (e) => {
+  if (sliderState.status === "success") return;
+  const maxMove = props.w - 40;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    e.preventDefault();
+    if (sliderState.status === "default") {
+      sliderState.status = "active";
+      sliderState.startTime = Date.now();
+    }
+    const step = e.shiftKey ? 10 : 2;
+    const delta = e.key === "ArrowRight" ? step : -step;
+    sliderState.sliderLeft = Math.max(
+      0,
+      Math.min(sliderState.sliderLeft + delta, maxMove),
+    );
+    sliderState.blockLeft = sliderState.sliderLeft;
+    return;
+  }
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    if (sliderState.sliderLeft <= MIN_DRAG) return;
+    sliderState.status = "success";
+    emit("success", {
+      timestamp: Math.max(1, Date.now() - sliderState.startTime),
+      left: parseFloat(sliderState.sliderLeft.toFixed(2)),
+    });
+  }
+};
+
 const onDragEnd = (e) => {
   if (!sliderState.isMouseDown) return;
   sliderState.isMouseDown = false;
@@ -187,8 +217,15 @@ onBeforeUnmount(() => {
       <div
         class="slide-verify-slider-mask-item"
         :style="{ left: `${sliderState.sliderLeft}px` }"
+        role="slider"
+        tabindex="0"
+        aria-label="向右滑动完成验证"
+        aria-valuemin="0"
+        :aria-valuemax="w - 40"
+        :aria-valuenow="sliderState.sliderLeft"
         @mousedown.prevent="onDragStart"
         @touchstart.prevent="onDragStart"
+        @keydown="onSliderKeydown"
       >
         <el-icon v-if="sliderState.status === 'success'" class="slider-icon"
           ><Check

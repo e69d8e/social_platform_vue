@@ -49,7 +49,7 @@ export function usePageList({
         return;
       }
       list.value = res?.data ?? [];
-      total.value = res?.total ?? 0;
+      total.value = Number(res?.total ?? 0);
       loadedPage.value = pageNum.value;
     } catch {
       // 请求级错误提示已由拦截器统一弹出，这里只标记状态供页面渲染重试入口

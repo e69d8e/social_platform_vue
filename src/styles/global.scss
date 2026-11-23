@@ -571,3 +571,71 @@ html.dark .el-empty {
     transition-duration: 0.01ms !important;
   }
 }
+
+// ============================================================
+// Native controls follow the app theme
+// ============================================================
+:root {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+// Dark mode primary buttons need a darker fill so white labels keep AA contrast
+html.dark .el-button--primary:not(.is-plain) {
+  --el-button-bg-color: #b5573d;
+  --el-button-border-color: #b5573d;
+  --el-button-hover-bg-color: #a84f35;
+  --el-button-hover-border-color: #a84f35;
+  --el-button-active-bg-color: #8f3f2a;
+  --el-button-active-border-color: #8f3f2a;
+  --el-button-text-color: #ffffff;
+}
+
+// Keep frequently used compact controls at least 24×24 CSS px (WCAG 2.5.8)
+.tag-pill,
+.category-pill,
+.stat-btn,
+.feedback-trigger,
+.clear-btn,
+.submit-action-btn,
+.hot-chip {
+  min-height: 24px;
+}
+
+.clear-btn,
+.submit-action-btn,
+.feedback-trigger {
+  min-width: 24px;
+}
+
+@media (pointer: coarse) {
+  .tag-pill,
+  .category-pill,
+  .stat-btn,
+  .hot-chip,
+  .mode-tab {
+    min-height: 32px;
+  }
+}
+
+// Skip link for keyboard users
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 10000;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: #b5573d;
+  color: #fff;
+  font-size: 13px;
+  transform: translateY(-200%);
+  transition: transform var(--transition-fast);
+
+  &:focus {
+    transform: translateY(0);
+  }
+}

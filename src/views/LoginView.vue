@@ -232,6 +232,9 @@ const toRegister = () => {
 const resetForm = (formEl) => {
   if (!formEl) return;
   formEl.resetFields();
+  isCheck.value = false;
+  // 滑块验证是一次性的，清空表单后必须同时刷新，否则无法再次提交
+  loadSlideCaptcha();
 };
 
 // 新窗口打开协议：当前页的表单与滑块验证状态不会丢失
@@ -339,10 +342,7 @@ const openAgreement = () => {
         </div>
 
         <div class="agreement">
-          <el-checkbox v-model="isCheck" />
-          <span class="agree-text" @click="isCheck = !isCheck"
-            >我已阅读并同意</span
-          >
+          <el-checkbox v-model="isCheck">我已阅读并同意</el-checkbox>
           <el-link @click="openAgreement" underline="never" type="primary"
             >《用户协议》</el-link
           >
@@ -359,12 +359,25 @@ const openAgreement = () => {
           </el-button>
           <el-button @click="resetForm(ruleFormRef)">清空</el-button>
         </el-form-item>
+        <div v-if="isLogin" class="login-forgot">
+          <el-link
+            type="info"
+            :underline="false"
+            @click="ElMessage.info('请联系管理员重置密码')"
+            >忘记密码？</el-link
+          >
+        </div>
       </el-form>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.login-forgot {
+  margin-top: -6px;
+  text-align: right;
+}
+
 .login-page {
   display: flex;
   justify-content: center;

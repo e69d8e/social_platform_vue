@@ -66,9 +66,49 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: "/notifications",
+          name: "notifications",
+          component: () => import("@/views/NotificationsView.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "/drafts",
+          name: "drafts",
+          component: () => import("@/views/DraftsView.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "/featured",
+          name: "featured",
+          component: () => import("@/views/FeaturedView.vue"),
+        },
+        {
           path: "/category/:id",
           name: "category",
           component: () => import("@/views/CategoryPostsView.vue"),
+        },
+        {
+          path: "/my",
+          name: "my",
+          component: () => import("@/views/MyView.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "/publicPost",
+          name: "publicPost",
+          component: () => import("@/views/PublicPostView.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "/conversations",
+          name: "conversations",
+          component: () => import("@/views/ConversationsView.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "/:pathMatch(.*)*",
+          name: "notFound",
+          component: () => import("@/views/NotFoundView.vue"),
         },
       ],
     },
@@ -76,18 +116,6 @@ const router = createRouter({
       path: "/login",
       name: "login",
       component: () => import("@/views/LoginView.vue"),
-    },
-    {
-      path: "/my",
-      name: "my",
-      component: () => import("@/views/MyView.vue"),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: "/publicPost",
-      name: "publicPost",
-      component: () => import("@/views/PublicPostView.vue"),
-      meta: { requiresAuth: true },
     },
     {
       path: "/post/:id",
@@ -124,22 +152,51 @@ const router = createRouter({
       component: () => import("@/views/UserAgreementView.vue"),
     },
     {
-      path: "/conversations",
-      name: "conversations",
-      component: () => import("@/views/ConversationsView.vue"),
-      meta: { requiresAuth: true },
-    },
-    {
       path: "/chat/:conversationId",
       name: "chat",
       component: () => import("@/views/ChatView.vue"),
       meta: { requiresAuth: true },
     },
   ],
-  // 跳转后回到顶部：列表页之间不继承滚动位置，新页面从顶部读起
-  scrollBehavior() {
+  // 浏览器前进/后退恢复滚动位置；站内新跳转回到顶部
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
     return { top: 0 };
   },
+});
+
+const PAGE_TITLES = {
+  home: "首页",
+  search: "搜索",
+  follow: "关注",
+  fans: "粉丝",
+  user: "个人主页",
+  friend: "好友",
+  postList: "帖子",
+  MyFollowPostsView: "关注动态",
+  favorites: "收藏",
+  blacklist: "黑名单",
+  notifications: "互动通知",
+  drafts: "草稿箱",
+  featured: "每周精选",
+  category: "专栏",
+  my: "个人中心",
+  publicPost: "发布帖子",
+  post: "帖子详情",
+  bannedPosts: "违规帖子",
+  bannedUsers: "违规用户",
+  adminDashboard: "数据与运营后台",
+  AIChat: "AI 助手",
+  userAgreement: "用户协议",
+  conversations: "私信",
+  chat: "聊天",
+  login: "登录",
+  notFound: "页面不存在",
+};
+
+router.afterEach((to) => {
+  const title = PAGE_TITLES[to.name];
+  document.title = title ? `${title} - Y社区` : "Y社区";
 });
 
 // 路由守卫：校验页面访问权限与角色权限

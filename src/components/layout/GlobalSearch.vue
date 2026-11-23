@@ -217,6 +217,10 @@ const isMac = computed(() => {
           v-model="searchContent"
           type="text"
           class="native-search-input"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="global-search-dropdown"
+          :aria-expanded="dropdownVisible"
           placeholder="搜索帖子、用户、话题..."
           @keyup.enter="handleSearchSubmit"
           @focus="onSearchFocus"
@@ -246,7 +250,12 @@ const isMac = computed(() => {
 
       <!-- 下拉联想与探索浮层 -->
       <transition name="dropdown-pop">
-        <div v-show="dropdownVisible" class="search-dropdown">
+        <div
+          v-show="dropdownVisible"
+          id="global-search-dropdown"
+          class="search-dropdown"
+          role="listbox"
+        >
           <!-- 模式一：用户输入了关键词 -> 展示实时搜索联想 -->
           <div v-if="searchContent.trim()" class="suggest-panel">
             <div
@@ -268,7 +277,10 @@ const isMac = computed(() => {
                   v-for="post in suggestPosts"
                   :key="post.id"
                   class="suggest-item"
+                  role="option"
+                  tabindex="0"
                   @mousedown.prevent="goToPost(post.id)"
+                  @keydown.enter="goToPost(post.id)"
                 >
                   <span
                     class="item-title"
@@ -297,7 +309,10 @@ const isMac = computed(() => {
                   v-for="user in suggestUsers"
                   :key="user.id"
                   class="suggest-user-item"
+                  role="option"
+                  tabindex="0"
                   @mousedown.prevent="goToUser(user.id)"
+                  @keydown.enter="goToUser(user.id)"
                 >
                   <el-avatar
                     :size="26"
@@ -352,7 +367,10 @@ const isMac = computed(() => {
                   v-for="tag in HOT_SEARCHES"
                   :key="tag"
                   class="hot-tag"
+                  role="button"
+                  tabindex="0"
                   @mousedown.prevent="selectHotSearch(tag)"
+                  @keydown.enter="selectHotSearch(tag)"
                 >
                   {{ tag }}
                 </span>
@@ -380,7 +398,10 @@ const isMac = computed(() => {
                   v-for="item in historyList"
                   :key="item.id"
                   class="history-row"
+                  role="button"
+                  tabindex="0"
                   @mousedown.prevent="historySearch(item)"
+                  @keydown.enter="historySearch(item)"
                 >
                   <span class="history-keyword">{{ item.keyword }}</span>
                   <button
@@ -404,6 +425,7 @@ const isMac = computed(() => {
   <button
     class="mobile-tool-btn header-search-btn-mobile"
     title="搜索"
+    aria-label="打开搜索"
     type="button"
     @click="mobileSearchVisible = true"
   >
@@ -448,7 +470,10 @@ const isMac = computed(() => {
             v-for="tag in HOT_SEARCHES"
             :key="tag"
             class="mobile-tag"
+            role="button"
+            tabindex="0"
             @click="selectHotSearch(tag)"
+            @keydown.enter="selectHotSearch(tag)"
           >
             {{ tag }}
           </span>
@@ -468,7 +493,10 @@ const isMac = computed(() => {
             v-for="item in historyList"
             :key="item.id"
             class="mobile-tag history-tag"
+            role="button"
+            tabindex="0"
             @click="historySearch(item)"
+            @keydown.enter="historySearch(item)"
           >
             {{ item.keyword }}
           </span>
@@ -1030,8 +1058,18 @@ const isMac = computed(() => {
   }
 }
 
-// 移动端搜索按钮彻底禁用，统一以原生输入框呈现
+// 桌面端隐藏移动搜索按钮；手机端反过来显示按钮并收起内联输入框
 .mobile-tool-btn.header-search-btn-mobile {
-  display: none !important;
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .header-center {
+    display: none !important;
+  }
+
+  .mobile-tool-btn.header-search-btn-mobile {
+    display: inline-flex !important;
+  }
 }
 </style>

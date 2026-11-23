@@ -243,6 +243,7 @@ const undoLastFeedback = async () => {
 
 <template>
   <div class="home">
+    <h1 class="sr-only">首页</h1>
     <div class="category">
       <CategoryComponent />
     </div>
@@ -308,7 +309,17 @@ const undoLastFeedback = async () => {
     />
 
     <template v-else>
-      <el-empty v-if="visiblePosts.length === 0" description="暂无更多内容">
+      <el-empty
+        v-if="isError && posts.length === 0"
+        description="内容加载失败，请检查网络后重试"
+      >
+        <el-button type="primary" round @click="retry">重新加载</el-button>
+      </el-empty>
+
+      <el-empty
+        v-else-if="visiblePosts.length === 0"
+        description="暂无更多内容"
+      >
         <el-button
           v-if="userStore.userInfo.username"
           type="primary"

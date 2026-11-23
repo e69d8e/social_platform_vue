@@ -14,10 +14,11 @@ import {
   getHotTagsApi,
   searchTagsApi,
   getPostIdApi,
+  getPostDetailApi,
   publishPostApi,
 } from "@/api/postApi";
 import { deletePostImgApi, uploadPostImgApi } from "@/api/uploadApi";
-import { useRouter, onBeforeRouteLeave } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import { useGoBack } from "@/composables/useGoBack";
 import "@wangeditor/editor/dist/css/style.css";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
@@ -29,6 +30,7 @@ import compressImage from "@/utils/compressImage";
 import { uploadWithDedup } from "@/utils/uploadDedup";
 
 const router = useRouter();
+const route = useRoute();
 const goBack = useGoBack("/home");
 
 // ---- Form & Editor State ----
@@ -48,11 +50,38 @@ const editorRef = shallowRef();
 const loading = ref(false);
 const dialogConfirmVisible = ref(false);
 const isPublished = ref(false);
+const isEditingDraft = ref(false);
+const coverUrl = ref("");
+const savingDraft = ref(false);
+const aiLoading = ref(false);
+const scheduleEnabled = ref(false);
+const scheduleTime = ref(null);
 let tagSearchTimer = null;
 
 const selectedCategory = computed(() =>
   categoryList.value.find((c) => String(c.id) === String(categoryId.value)),
 );
+
+const pad2 = (n) => String(n).padStart(2, "0");
+const toLocalDateTime = (date) =>
+  `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+const disabledScheduleDate = (date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date.getTime() < today.getTime();
+};
+const validateSchedule = () => {
+  if (!scheduleEnabled.value) return true;
+  if (!scheduleTime.value) {
+    ElMessage.warning("请选择定时发布时间");
+    return false;
+  }
+  if (scheduleTime.value.getTime() <= Date.now()) {
+    ElMessage.warning("定时发布时间必须晚于当前时间");
+    return false;
+  }
+  return true;
+};
 
 const availableSuggestedTags = computed(() => {
   const chosen = new Set(selectedTags.value.map((t) => t.toLowerCase()));
@@ -232,7 +261,7 @@ const handleBeforeUnload = (e) => {
   }
 };
 const cleanupResources = async () => {
-  if (isPublished.value) return;
+  if (isPublished.value || isEditingDraft.value) return;
   if (id.value && hasUploadedImg.value) {
     try {
       await deletePostImgApi(id.value);
@@ -254,30 +283,38 @@ const handleOpenPublishDialog = () => {
     ElMessage.warning("请输入帖子正文内容");
     return;
   }
+  if (!validateSchedule()) return;
   dialogConfirmVisible.value = true;
 };
 
 const publicPost = async () => {
-  let coverUrl = null;
+  if (!validateSchedule()) return;
+  let uploadedCover = null;
   loading.value = true;
   try {
     if (coverFile.value) {
       // 秒传：命中哈希直接复用服务端已有 URL，跳过文件传输
-      coverUrl = await uploadWithDedup(coverFile.value, {
+      uploadedCover = await uploadWithDedup(coverFile.value, {
         postId: id.value,
         upload: uploadPostImgApi,
       });
-      if (coverUrl) hasUploadedImg.value = true;
+      if (uploadedCover) {
+        coverUrl.value = uploadedCover;
+        hasUploadedImg.value = true;
+      }
     }
+    const isScheduled = scheduleEnabled.value && scheduleTime.value;
     const res = await publishPostApi({
       id: id.value,
-      cover: coverUrl,
+      cover: uploadedCover || coverUrl.value || null,
       title: title.value.trim(),
       content: valueHtml.value,
       // 未选择分类时传 null，后端默认归入“其他”分类
       categoryId: categoryId.value === "" ? null : categoryId.value,
       tags: selectedTags.value,
       isPrivate: isPrivate.value,
+      publishType: isScheduled ? "schedule" : "now",
+      publishTime: isScheduled ? toLocalDateTime(scheduleTime.value) : null,
     });
     // 失败时保留确认弹窗（提示已由拦截器给出），用户可以直接重试，不用重新点发布
     if (res.data.code !== 1) return;
@@ -291,6 +328,64 @@ const publicPost = async () => {
     // 失败原因由拦截器给出（如标题/内容超长），确认弹窗保持打开可直接重试
   } finally {
     loading.value = false;
+  }
+};
+
+const saveDraft = async () => {
+  const text = editorRef.value?.getText().trim() || "";
+  if (!title.value.trim() && !text) {
+    ElMessage.warning("请先输入内容再保存草稿");
+    return;
+  }
+  savingDraft.value = true;
+  try {
+    const res = await publishPostApi({
+      id: id.value,
+      cover: coverUrl.value || null,
+      title: title.value.trim() || "无标题草稿",
+      content: valueHtml.value || "<p>草稿</p>",
+      categoryId: categoryId.value === "" ? null : categoryId.value,
+      tags: selectedTags.value,
+      isPrivate: true, // 草稿默认私密
+      publishType: "draft",
+    });
+    if (res.data.code === 1) {
+      ElMessage.success("草稿已保存");
+      isPublished.value = true;
+      router.replace("/my");
+    }
+  } finally {
+    savingDraft.value = false;
+  }
+};
+
+const aiSuggestTitle = async () => {
+  const text = editorRef.value?.getText().trim() || "";
+  if (!text) {
+    ElMessage.warning("请先输入帖子内容");
+    return;
+  }
+  aiLoading.value = true;
+  try {
+    const { aiGenerateTitlesApi } = await import("@/api/aiApi");
+    const res = await aiGenerateTitlesApi(text);
+    if (res.data.code === 1 && res.data.data?.length) {
+      const titles = res.data.data;
+      const { value: chosen } = await ElMessageBox.prompt(
+        titles.map((t, i) => `${i + 1}. ${t}`).join("\n"),
+        "AI 推荐标题（输入序号选择）",
+        { confirmButtonText: "使用", cancelButtonText: "取消" },
+      );
+      const idx = parseInt(chosen) - 1;
+      if (idx >= 0 && idx < titles.length) {
+        title.value = titles[idx];
+        ElMessage.success("已填入标题");
+      }
+    }
+  } catch {
+    /* cancelled or error */
+  } finally {
+    aiLoading.value = false;
   }
 };
 
@@ -333,10 +428,35 @@ onBeforeRouteLeave(async (to, from, next) => {
 
 onMounted(async () => {
   await getCategoryList();
+  const draftId = route.query.draftId;
+  if (draftId) {
+    const detailRes = await getPostDetailApi(draftId);
+    if (detailRes.data?.code === 1 && detailRes.data.data) {
+      const data = detailRes.data.data;
+      id.value = data.id;
+      title.value = data.title || "";
+      categoryId.value = data.categoryId == null ? "" : String(data.categoryId);
+      selectedTags.value = (data.tags || []).map((t) => t.name).filter(Boolean);
+      isPrivate.value = Boolean(data.isPrivate);
+      valueHtml.value = data.content || "";
+      coverUrl.value = data.cover || "";
+      hasUploadedImg.value = Boolean(data.cover);
+      isEditingDraft.value = true;
+      if (data.status === "scheduled" && data.publishTime) {
+        scheduleEnabled.value = true;
+        scheduleTime.value = new Date(data.publishTime);
+      }
+    } else {
+      ElMessage.error("草稿不存在或已删除");
+      router.replace("/drafts");
+      return;
+    }
+  } else {
+    const res = await getPostIdApi();
+    id.value = res.data.data;
+    if (id.value === null) ElMessage.error("网络错误");
+  }
   await loadSuggestedTags(categoryId.value || null);
-  const res = await getPostIdApi();
-  id.value = res.data.data;
-  if (id.value === null) ElMessage.error("网络错误");
   window.addEventListener("beforeunload", handleBeforeUnload);
 
   // 检查是否从 AI 助手携带了草稿
@@ -395,7 +515,10 @@ onBeforeUnmount(async () => {
 
 <template>
   <div class="public-page" v-loading="loading">
-    <PageHeader title="发布帖子" @click="handleBackClick" />
+    <PageHeader
+      :title="isEditingDraft ? '编辑草稿' : '发布帖子'"
+      @click="handleBackClick"
+    />
 
     <div class="form-card">
       <div class="section">
@@ -425,6 +548,9 @@ onBeforeUnmount(async () => {
             :defaultConfig="toolbarConfig"
             :mode="mode"
           />
+          <div class="editor-toolbar-hint" aria-hidden="true">
+            左右滑动工具栏查看更多
+          </div>
           <Editor
             v-model="valueHtml"
             :defaultConfig="editorConfig"
@@ -579,6 +705,20 @@ onBeforeUnmount(async () => {
 
       <div class="submit-area">
         <el-button
+          size="large"
+          class="draft-btn"
+          :loading="savingDraft"
+          @click="saveDraft"
+          >存草稿</el-button
+        >
+        <el-button
+          size="large"
+          class="ai-btn"
+          :loading="aiLoading"
+          @click="aiSuggestTitle"
+          >✨ AI标题</el-button
+        >
+        <el-button
           type="primary"
           size="large"
           class="submit-btn"
@@ -617,12 +757,28 @@ onBeforeUnmount(async () => {
         </span>
       </div>
       <template #footer>
-        <el-button :disabled="loading" @click="dialogConfirmVisible = false"
-          >取消</el-button
-        >
-        <el-button type="primary" :loading="loading" @click="publicPost"
-          >确认发布</el-button
-        >
+        <div class="dialog-footer-row">
+          <el-checkbox v-model="scheduleEnabled" size="small"
+            >定时发布</el-checkbox
+          >
+          <el-date-picker
+            v-if="scheduleEnabled"
+            v-model="scheduleTime"
+            type="datetime"
+            placeholder="选择发布时间"
+            size="small"
+            :disabled-date="disabledScheduleDate"
+            style="width: 200px"
+          />
+        </div>
+        <div class="dialog-footer-row">
+          <el-button :disabled="loading" @click="dialogConfirmVisible = false"
+            >取消</el-button
+          >
+          <el-button type="primary" :loading="loading" @click="publicPost"
+            >确认发布</el-button
+          >
+        </div>
       </template>
     </el-dialog>
 
@@ -668,6 +824,10 @@ onBeforeUnmount(async () => {
       margin-bottom: 10px;
     }
   }
+}
+
+.editor-toolbar-hint {
+  display: none;
 }
 
 .editor-wrapper {
@@ -993,7 +1153,7 @@ onBeforeUnmount(async () => {
 
 @media (max-width: 640px) {
   .public-page {
-    padding: 10px 8px 36px;
+    padding: 10px 8px calc(152px + env(safe-area-inset-bottom, 0px));
   }
 
   .form-card {
@@ -1025,8 +1185,33 @@ onBeforeUnmount(async () => {
     max-width: 100%;
   }
 
+  .editor-toolbar-hint {
+    display: block;
+    padding: 4px 2px 2px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .submit-area {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: var(--glass-bg);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .submit-area .draft-btn,
+  .submit-area .ai-btn,
   .submit-area .submit-btn {
-    max-width: 100%;
+    flex: 1;
+    max-width: none;
+    margin: 0 !important;
   }
 }
 </style>

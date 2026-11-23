@@ -97,7 +97,7 @@ const formatTime = (timeStr) => {
         </button>
         <div class="header-title">
           <el-icon :size="20"><ChatDotRound /></el-icon>
-          <h2>私信</h2>
+          <h1>私信</h1>
         </div>
       </div>
     </div>
@@ -140,9 +140,10 @@ const formatTime = (timeStr) => {
 
     <!-- 会话列表 -->
     <div class="conversation-list">
-      <div
+      <button
         v-for="item in conversations"
         :key="item.conversationId"
+        type="button"
         class="conversation-item"
         @click="openChat(item)"
       >
@@ -166,7 +167,7 @@ const formatTime = (timeStr) => {
             />
           </div>
         </div>
-      </div>
+      </button>
     </div>
 
     <!-- 底部状态 -->
@@ -328,6 +329,12 @@ const formatTime = (timeStr) => {
 }
 
 .conversation-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 12px;

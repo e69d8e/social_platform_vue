@@ -7,7 +7,7 @@ defineOptions({ inheritAttrs: false });
 defineProps({
   title: { type: String, default: "" },
   /** 总数，传 null 时不显示“共 x 篇” */
-  total: { type: Number, default: null },
+  total: { type: [Number, String], default: null },
   unit: { type: String, default: "篇" },
   /** 大标题模式（个人中心/个人主页等使用 h2） */
   large: { type: Boolean, default: false },
@@ -20,8 +20,7 @@ const attrs = useAttrs();
 <template>
   <div class="page-header" :class="{ large }">
     <BackButton v-bind="attrs" />
-    <h2 v-if="large" class="page-title">{{ title }}</h2>
-    <span v-else class="page-title">{{ title }}</span>
+    <h1 class="page-title">{{ title }}</h1>
     <span v-if="total !== null" class="total-count">
       共 {{ total }} {{ unit }}
     </span>
@@ -51,6 +50,7 @@ const attrs = useAttrs();
 
   .page-title {
     position: relative;
+    margin: 0;
     font-size: 18px;
     font-weight: 600;
     color: var(--text-primary);

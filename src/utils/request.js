@@ -173,4 +173,4 @@ request.interceptors.response.use(
 export { isPublicPath };
 export default request;
 export const baseURL = BASE_URL;
-export const logoUrl = `${import.meta.env.VITE_BASE_URL}/imgs/logo.png`;
+export const logoUrl = `${import.meta.env.BASE_URL || "/"}logo.png`;

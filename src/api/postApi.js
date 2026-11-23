@@ -92,3 +92,8 @@ export const updatePostPrivacyApi = (id, isPrivate) => {
     silent: true,
   });
 };
+
+// 每周精选帖子
+export const getFeaturedPostsApi = (params) => {
+  return request.get("/tag/featured", { params });
+};

@@ -38,7 +38,13 @@ const fansCount = computed(() =>
 
 <template>
   <div class="usercard" :style="{ '--rise-delay': `${props.delay}ms` }">
-    <div class="card" @click="$router.push(`/user/${user.id}`)">
+    <div
+      class="card"
+      role="button"
+      tabindex="0"
+      @click="$router.push(`/user/${user.id}`)"
+      @keydown.enter="$router.push(`/user/${user.id}`)"
+    >
       <div class="card-header">
         <div class="avatar-wrap">
           <el-avatar :size="48" :src="avatar" class="avatar">

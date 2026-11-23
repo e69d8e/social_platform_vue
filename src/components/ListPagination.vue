@@ -2,7 +2,7 @@
 import { computed } from "vue";
 
 const props = defineProps({
-  total: { type: Number, default: 0 },
+  total: { type: [Number, String], default: 0 },
   pageSize: { type: Number, default: 8 },
   pageNum: { type: Number, default: 1 },
   layout: { type: String, default: "prev, pager, next" },

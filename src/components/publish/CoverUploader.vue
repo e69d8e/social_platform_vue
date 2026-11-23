@@ -94,7 +94,14 @@ onBeforeUnmount(() => {
   >
     <div class="cover-preview-box" :class="{ 'has-image': imageUrl }">
       <img v-if="imageUrl" :src="imageUrl" class="cover-preview" />
-      <div v-if="imageUrl" class="cover-mask" @click="handleRemoveCover">
+      <div
+        v-if="imageUrl"
+        class="cover-mask"
+        role="button"
+        tabindex="0"
+        @click="handleRemoveCover"
+        @keydown.enter="handleRemoveCover"
+      >
         <span>点击移除</span>
       </div>
       <span v-if="!imageUrl" class="cover-empty-text"

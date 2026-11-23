@@ -11,7 +11,7 @@ const { unreadCount } = useUnreadMessages();
   <div class="layout">
     <AppHeader :unread-count="unreadCount" />
 
-    <main class="main">
+    <main id="main-content" class="main" tabindex="-1">
       <router-view v-slot="{ Component, route }">
         <Transition name="page" mode="out-in">
           <component :is="Component" :key="route.path" />
@@ -19,7 +19,7 @@ const { unreadCount } = useUnreadMessages();
       </router-view>
     </main>
 
-    <!-- 移动端底部导航栏 (<768px 显示) -->
+    <!-- 移动端底部导航栏 (<=960px 显示) -->
     <MobileBottomNav :unread-count="unreadCount" />
   </div>
 </template>
@@ -37,7 +37,7 @@ const { unreadCount } = useUnreadMessages();
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   // 给底部导航栏让出空间，避免内容被遮
   .layout .main {
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));

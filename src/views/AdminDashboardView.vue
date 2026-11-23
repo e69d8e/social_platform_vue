@@ -18,6 +18,7 @@ import {
   TooltipComponent,
   GridComponent,
   DataZoomComponent,
+  AriaComponent,
 } from "echarts/components";
 import {
   User,
@@ -40,6 +41,7 @@ use([
   TooltipComponent,
   GridComponent,
   DataZoomComponent,
+  AriaComponent,
 ]);
 
 const themeStore = useThemeStore();
@@ -115,16 +117,38 @@ const lineColor = computed(() => (isDark.value ? "#2e2c27" : "#e8e3dc"));
 // 折线配色与设计 token 同源（primary/success/warning 的明暗两套）
 const seriesColors = computed(() =>
   isDark.value
-    ? ["#e68a6e", "#6eb395", "#f0b858"]
-    : ["#cc6d4e", "#5a947a", "#d99426"],
+    ? ["#d4785f", "#6eb395", "#f0b858"]
+    : ["#b5573d", "#5a947a", "#d99426"],
 );
 
 const baseOption = computed(() => ({
+  aria: { enabled: true, decal: { show: false } },
   tooltip: { trigger: "axis" },
   grid: { left: 48, right: 24, top: 48, bottom: 56 },
   dataZoom: [
     { type: "inside", start: 0, end: 100 },
-    { type: "slider", height: 20, bottom: 4 },
+    {
+      type: "slider",
+      height: 20,
+      bottom: 4,
+      backgroundColor: "transparent",
+      borderColor: "transparent",
+      fillerColor: isDark.value
+        ? "rgba(212, 120, 95, 0.25)"
+        : "rgba(181, 87, 61, 0.18)",
+      handleStyle: {
+        color: isDark.value ? "#d4785f" : "#b5573d",
+        borderColor: isDark.value ? "#d4785f" : "#b5573d",
+      },
+      moveHandleStyle: {
+        color: isDark.value ? "#d4785f" : "#b5573d",
+      },
+      textStyle: { color: subTextColor.value },
+      dataBackground: {
+        lineStyle: { color: lineColor.value },
+        areaStyle: { color: lineColor.value, opacity: 0.2 },
+      },
+    },
   ],
   xAxis: {
     type: "category",
@@ -375,16 +399,27 @@ const handleToggleCategory = async (row) => {
 
         <div class="charts-grid">
           <div class="chart-card">
-            <v-chart :option="postsOption" autoresize class="dashboard-chart" />
+            <v-chart
+              :option="postsOption"
+              autoresize
+              class="dashboard-chart"
+              aria-label="近30天每日发帖趋势"
+            />
           </div>
           <div class="chart-card">
-            <v-chart :option="usersOption" autoresize class="dashboard-chart" />
+            <v-chart
+              :option="usersOption"
+              autoresize
+              class="dashboard-chart"
+              aria-label="用户增长（按周）"
+            />
           </div>
           <div class="chart-card">
             <v-chart
               :option="activeOption"
               autoresize
               class="dashboard-chart"
+              aria-label="每日活跃用户"
             />
           </div>
         </div>
@@ -401,6 +436,7 @@ const handleToggleCategory = async (row) => {
       </div>
 
       <div class="category-table-card">
+        <p class="table-scroll-hint">左右滑动查看完整表格</p>
         <el-table :data="categoryList" stripe style="width: 100%">
           <el-table-column prop="id" label="ID" width="70" />
           <el-table-column label="分类标识" min-width="150">
@@ -515,6 +551,19 @@ const handleToggleCategory = async (row) => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px 12px 40px;
+
+  .table-scroll-hint {
+    display: none;
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .table-scroll-hint {
+      display: block;
+    }
+  }
 
   .admin-tabs {
     display: inline-flex;
